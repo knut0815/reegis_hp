@@ -25,6 +25,7 @@ from oemof.core.network.entities.buses import HeatBus
 from oemof.core.network.entities.components import sinks as sink
 from oemof.core.network.entities.components import sources as source
 from oemof.core.network.entities.components import transformers as transformer
+from oemof.core.network.entities.components import transports as transport
 
 
 def fix_labels(labels, replace_underscore=True):
@@ -49,7 +50,7 @@ import time
 start = time.time()
 logger.define_logging()
 
-periods=2
+periods=5000
 
 get_data_from_db = False
 
@@ -123,8 +124,8 @@ bel = Bus(uid="bel",
 district_heat_bus = HeatBus(
     uid="bus_distr_heat",
     type="distr_heat",
-    temperature=np.ones(periods) * 368 + (
-        np.random.rand(periods) * 20).round(0),
+    temperature=np.ones(periods) * 370 + (
+        np.random.rand(periods) * 10).round(0),
     re_temperature=np.ones(periods) * 340,
     excess=True)
 
@@ -132,7 +133,7 @@ storage_heat_bus = HeatBus(
     uid="bus_stor_heat",
     type="distr_heat",
     temperature=370,
-    excess=True)
+    excess=False)
 
 print(storage_heat_bus.temperature)
 print(district_heat_bus.temperature)
@@ -145,7 +146,7 @@ oil_heat_bus = Bus(uid="bus_oil_heat",
 # Demand
 district_heat_demand = sink.Simple(uid="district_heat",
                                    inputs=[district_heat_bus],
-                                   val=data['dst0'] * 20)
+                                   val=data['dst0'] * 4)
 
 oil_heat_demand = sink.Simple(uid="oil_heat",
                               inputs=[oil_heat_bus],
@@ -164,9 +165,9 @@ gas_boiler = transformer.Simple(uid='boiler_gas',
                                 capex=5000,
                                 opex_var=0, out_max=[10e10], eta=[0.88])
 
-pp_gas = transformer.Simple(uid='pp_gas',
-                            inputs=[bgas], outputs=[bel], capex=5000,
-                            opex_var=0, out_max=[10e10], eta=[0.55])
+#pp_gas = transformer.Simple(uid='pp_gas',
+#                            inputs=[bgas], outputs=[bel], capex=5000,
+#                            opex_var=0, out_max=[10e10], eta=[0.55])
 
 chp_gas = transformer.CHP(
     uid='chp_gas', inputs=[bgas], outputs=[bel, district_heat_bus], capex=5000,
@@ -188,12 +189,30 @@ heating_rod_oil = transformer.Simple(
     eta=[0.95])
 
 post_heating = transformer.PostHeating(
-    uid='postheat_elec',
+    uid='from storage',
     inputs=[bel, storage_heat_bus], outputs=[district_heat_bus],
     opex_var=0, capex=99999,
     out_max=[999993],
     in_max=[9999, 9999],
-    eta=[0.95, 1])
+    eta=[0.95, 0.99])
+
+transport.Simple(uid='heat_transport', outputs=[storage_heat_bus],
+                 inputs=[district_heat_bus], out_max=[float('inf')],
+                 in_max=[float('inf')], eta=[1])
+
+heat_storage = transformer.Storage(uid='heat storage',
+                                   inputs=[storage_heat_bus],
+                                   outputs=[storage_heat_bus],
+                                   eta_in=1,
+                                   eta_out=1,
+                                   cap_loss=0.01,
+                                   opex_fix=35,
+                                   opex_var=50,
+                                   capex=1000,
+                                   cap_max=0,
+                                   cap_initial=0,
+                                   c_rate_in=1,
+                                   c_rate_out=1)
 
 # Renewables
 wind = source.FixedSource(uid="wind",
@@ -217,19 +236,19 @@ pv = source.FixedSource(uid="pv",
                         crf=0.08)
 
 # Storages
-storage = transformer.Storage(uid='sto_simple',
-                              inputs=[bel],
-                              outputs=[bel],
-                              eta_in=1,
-                              eta_out=0.8,
-                              cap_loss=0.00,
-                              opex_fix=35,
-                              opex_var=50,
-                              capex=1000,
-                              cap_max=0,
-                              cap_initial=0,
-                              c_rate_in=1/6,
-                              c_rate_out=1/6)
+#storage = transformer.Storage(uid='sto_simple',
+#                              inputs=[bel],
+#                              outputs=[bel],
+#                              eta_in=1,
+#                              eta_out=0.8,
+#                              cap_loss=0.00,
+#                              opex_fix=35,
+#                              opex_var=50,
+#                              capex=1000,
+#                              cap_max=0,
+#                              cap_initial=0,
+#                              c_rate_in=1/6,
+#                              c_rate_out=1/6)
 
 ###############################################################################
 # Create, solve and postprocess OptimizationModel instance
@@ -258,7 +277,18 @@ cdict = {'wind': '#5b5bae',
          'heatrod_oil': '#7fffc7',
          'heatrod_distr': '#ff7f7f',
          'heatstorage_oil': '#6161e2',
+         'heat_transport': '#0000ee',
+         'heat storage': '#105b10',
+         'postheat_elec': '#cf5b10',
          }
+
+esplot.slice_unstacked(bus_uid="bus_stor_heat", type="input")
+colorlist = esplot.color_from_dict(cdict)
+esplot.plot(color=colorlist, linewidth=2, title="January 2012")
+plt.show()
+
+
+plt.show()
 
 fig = plt.figure(figsize=(24, 14))
 plt.rc('legend', **{'fontsize': 14})
@@ -270,7 +300,7 @@ plt.subplots_adjust(hspace=0.1, left=0.07, right=0.9)
 
 handles, labels = esplot.io_plot(
     "bel", cdict, ax=fig.add_subplot(3, 1, 1),
-#    date_from="2010-06-01 00:00:00", date_to="2010-06-8 00:00:00",
+    date_from="2010-06-01 00:00:00", date_to="2010-06-8 00:00:00",
     line_kwa={'linewidth': 4})
 
 labels = fix_labels(labels)
@@ -282,7 +312,7 @@ esplot.ax.set_xticklabels([])
 
 handles, labels = esplot.io_plot(
     "bus_distr_heat", cdict, ax=fig.add_subplot(3, 1, 2),
-#    date_from="2010-06-01 00:00:00", date_to="2010-06-8 00:00:00",
+    date_from="2010-06-01 00:00:00", date_to="2010-06-8 00:00:00",
     line_kwa={'linewidth': 4})
 
 labels = fix_labels(labels)
@@ -292,17 +322,33 @@ esplot.ax.set_xlabel('')
 esplot.set_datetime_ticks(tick_distance=24, date_format='%d-%m-%Y')
 esplot.ax.set_xticklabels([])
 
-handles, labels = esplot.io_plot(
-    "bus_oil_heat", cdict, ax=fig.add_subplot(3, 1, 3),
-#    date_from="2010-06-01 00:00:00", date_to="2010-06-8 00:00:00",
-    line_kwa={'linewidth': 4})
+esplot.slice_unstacked(obj_uid="heat storage", type="other",
+                       date_from="2010-06-01 00:00:00",
+                       date_to="2010-06-8 00:00:00")
+colorlist = esplot.color_from_dict(cdict)
+esplot.plot(
+    color=colorlist, linewidth=2,
+    ax=fig.add_subplot(3, 1, 3))
 
+handles, labels = esplot.ax.get_legend_handles_labels()
 labels = fix_labels(labels)
 esplot.outside_legend(handles=handles, labels=labels)
 esplot.ax.set_ylabel('Power in MW')
-esplot.ax.set_xlabel('Date')
+esplot.ax.set_xlabel('')
 esplot.set_datetime_ticks(tick_distance=24, date_format='%d-%m-%Y')
+#esplot.ax.set_xticklabels([])
+#
+#handles, labels = esplot.io_plot(
+#    "bus_oil_heat", cdict, ax=fig.add_subplot(4, 1, 4),
+#    date_from="2010-06-01 00:00:00", date_to="2010-06-8 00:00:00",
+#    line_kwa={'linewidth': 4})
+#
+#labels = fix_labels(labels)
+#esplot.outside_legend(handles=handles, labels=labels)
+#esplot.ax.set_ylabel('Power in MW')
+#esplot.ax.set_xlabel('Date')
+#esplot.set_datetime_ticks(tick_distance=24, date_format='%d-%m-%Y')
 
 fig.savefig(os.path.join('/home/uwe/', 'test' + '.pdf'))
-#plt.show(fig)
+plt.show(fig)
 plt.close(fig)
