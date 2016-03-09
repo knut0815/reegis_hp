@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from oemof.outputlib import to_pandas as tpd
 from oemof import db
 from oemof.tools import logger
+from oemof.tools import create_components as cc
 from oemof.solph import predefined_objectives as predefined_objectives
 # import oemof base classes to create energy system objects
 from oemof.core import energy_system as es
@@ -188,12 +189,13 @@ heating_rod_oil = transformer.Simple(
     ub_out=[oil_heat_demand.val * fraction],
     eta=[0.95])
 
-post_heating = transformer.PostHeating(
+post_heating = transformer.TwoInputsOneOutput(
     uid='from storage',
     inputs=[bel, storage_heat_bus], outputs=[district_heat_bus],
     opex_var=0, capex=99999,
     out_max=[999993],
     in_max=[9999, 9999],
+    f=cc.instant_flow_heater(storage_heat_bus, district_heat_bus),
     eta=[0.95, 0.99])
 
 transport.Simple(uid='heat_transport', outputs=[storage_heat_bus],
