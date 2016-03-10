@@ -190,7 +190,7 @@ heating_rod_oil = transformer.Simple(
     eta=[0.95])
 
 post_heating = transformer.TwoInputsOneOutput(
-    uid='from storage',
+    uid='heat storage output',
     inputs=[bel, storage_heat_bus], outputs=[district_heat_bus],
     opex_var=0, capex=99999,
     out_max=[999993],
@@ -282,6 +282,7 @@ cdict = {'wind': '#5b5bae',
          'heat_transport': '#0000ee',
          'heat storage': '#105b10',
          'postheat_elec': '#cf5b10',
+         'heat storage output': '#105b10',
          }
 
 esplot.slice_unstacked(bus_uid="bus_stor_heat", type="input")
@@ -293,7 +294,7 @@ plt.show()
 plt.show()
 
 fig = plt.figure(figsize=(24, 14))
-plt.rc('legend', **{'fontsize': 14})
+plt.rc('legend', **{'fontsize': 16})
 plt.rcParams.update({'font.size': 24})
 plt.style.use('ggplot')
 
@@ -335,7 +336,7 @@ esplot.plot(
 handles, labels = esplot.ax.get_legend_handles_labels()
 labels = fix_labels(labels)
 esplot.outside_legend(handles=handles, labels=labels)
-esplot.ax.set_ylabel('Power in MW')
+esplot.ax.set_ylabel('Energy in MWh')
 esplot.ax.set_xlabel('')
 esplot.set_datetime_ticks(tick_distance=24, date_format='%d-%m-%Y')
 #esplot.ax.set_xticklabels([])
