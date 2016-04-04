@@ -42,13 +42,14 @@ from Open_eQuarterPy.stat_util import building_evaluation as be
 #    floors=pd.Series([3.5, 3.5, 5.5, 3.5]),
 #    year_of_construction=pd.Series([2004, 1937, 1884, 2004])
 #    ))
-gid = pd.Series([11, 12, 13, 14], name='gid')
-population_density = pd.Series([52, 52, 52, 52], name='population_density')
-area = pd.Series([166.7, 228.136, 314.468, 236.846], name='area')
-floors = pd.Series([3.5, 3.5, 5.5, 0], name='floors')
-year_of_construction = pd.Series([2004, 1937, 1884, 2004],
+gid = pd.Series([11, 12, 13, 14, 15], name='gid')
+population_density = pd.Series([52, 52, 52, 52, 52], name='population_density')
+area = pd.Series([166.7, 228.136, 314.468, 236.846, 86.9251], name='area')
+floors = pd.Series([3.5, 3.5, 5.5, 3.5, 3.5], name='floors')
+year_of_construction = pd.Series([2004, 1937, 1884, 2004, 2004],
                                  name='year_of_construction')
-perimeter = pd.Series([61.166, 60.281, 74.821, 62.175], name='perimeter')
+length = pd.Series([None, 30.278, None, None, None], name='length')
+perimeter = pd.Series([61.166, 60.281, 74.821, 62.175, 38.65817], name='perimeter')
 
 data = pd.concat([gid, population_density, area, floors, year_of_construction,
                   perimeter],
@@ -56,6 +57,8 @@ data = pd.concat([gid, population_density, area, floors, year_of_construction,
 
 data.set_index('gid', drop=True, inplace=True)
 
-print(be.evaluate_building(data))
 
-print(be.evaluate_building(15000, 10000, year_of_construction=1970))
+result = be.evaluate_building(data)
+result.to_csv("/home/uwe/haus.csv")
+print(result)
+#print(be.evaluate_building(15000, 10000, year_of_construction=1970))
