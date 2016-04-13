@@ -17,6 +17,10 @@ def sql_string(spacetype, space_gid=None):
     spacetype (string): Type of space (berlin, bezirk, block, planungsraum...)
     space_gid (tuple): chosen gids for
     """
+    if space_gid is None:
+        space_gid = "everything"
+    logging.info("From table berlin.{1} get {0}.".format(
+        space_gid, spacetype))
     if spacetype != "berlin":
         if isinstance(space_gid, int):
             space_gid = "({0})".format(space_gid)
@@ -25,30 +29,22 @@ def sql_string(spacetype, space_gid=None):
         where_space = ''
 
     return '''
-        SELECT
-            space.gid, alkis_ew.ew_ha2014, alkis_ew.gid, alkis_ew.anzahldero,
-            alkis_ew.strassen_n, alkis_ew.hausnummer, alkis_ew.pseudonumm,
-            alkis_ew.st_area, alkis_ew.st_perimeter
-        FROM
-            (SELECT
-                    ew.ew_ha2014, ag.gid, ag.anzahldero, ag.strassen_n,
-                    ag.hausnummer, ag.pseudonumm,
-                    st_area(st_transform(ag.geom, 3068)),
-                    st_perimeter(st_transform(ag.geom, 3068)), ag.geom,
-                    ag.bauart_sch
-                FROM
-                    berlin.einwohner ew
-                INNER JOIN
-                    berlin.alkis_gebaeude ag ON st_within(ag.geom, ew.geom)
-                WHERE
-                    ag.bauart_sch is NULL) as alkis_ew,
-
-            berlin.{0} as space
+        SELECT DISTINCT ag.*, ew.ew_ha2014, sn.neubklar, sn.ststrname,
+            sn.typklar, hz."PRZ_FERN"
+        FROM berlin.{0} as space, berlin.alkis_gebaeude ag
+        INNER JOIN berlin.stadtnutzung sn ON st_within(
+            st_centroid(ag.geom), sn.geom)
+        INNER JOIN berlin.einwohner ew ON st_within(
+            st_centroid(ag.geom), ew.geom)
+        INNER JOIN berlin.heizungsarten_geo hz ON st_within(
+            st_centroid(ag.geom), hz.geom)
         WHERE
-            ST_contains(space.geom, st_centroid(alkis_ew.geom)) AND
+            space.geom && ag.geom AND
+            st_contains(space.geom, st_centroid(ag.geom)) AND
+            ag.bauart_sch is NULL AND
             {1}
-            alkis_ew.bauart_sch is NULL
-    ;
+            ag.anzahldero::int > 0 AND
+        ;
     '''.format(spacetype, where_space)
 
 logger.define_logging()
@@ -57,12 +53,13 @@ start = time.time()
 
 filename = "/home/uwe/haus.csv"
 
-sql = sql_string('berlin')
-sql = sql_string('bezirk', 7)
-sql = sql_string('planungsraum', (1, 2, 3))
+# sql = sql_string('berlin')
+#sql = sql_string('bezirk', 7)
+# sql = sql_string('planungsraum', (1, 2, 3))
 sql = sql_string('block', (5812, 9335))
 
-logging.info("Retrieving data from db....")
+logging.debug("SQL query: {0}".format(sql))
+logging.info("Retrieving data from db...")
 results = (conn.execute(sql))
 
 data = pd.DataFrame(results.fetchall(), columns=[
