@@ -48,7 +48,7 @@ def electricity_by_region():
     for region in regions:
         sql = """
             SELECT usage FROM berlin.stromdaten
-            WHERE name = '{0}'
+            WHERE name = '{0}' order by id;
             """.format(region)
 
         # Fetch data from the data base
