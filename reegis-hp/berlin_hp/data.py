@@ -36,7 +36,7 @@ def electricity_by_region():
     """
     Returns a DataFrame with the electricity usage of Berlin 2012 by region
     """
-    regions = ['Pankow', 'Lichtenberg ', 'Marzahn-Hellersdorf',
+    regions = ['Pankow', 'Lichtenberg', 'Marzahn-Hellersdorf',
                'Treptow-Koepenick', 'Neukölln', 'Friedrichshain-Kreuzberg',
                'Mitte', 'Tempelhof-Schöneberg', 'Steglitz-Zehlendorf',
                'Charlottenburg-Wilmersdorf', 'Reinickendorf', 'Spandau',
