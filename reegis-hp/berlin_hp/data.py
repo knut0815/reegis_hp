@@ -69,5 +69,8 @@ def electricity_by_region():
     data.index = pd.date_range(pd.datetime(2012, 1, 1, 0), periods=8784*4,
                                freq='15Min')
 
+    # Convert power kWh
+    data = data * 0.25
+
     # Resample to hourly values (sum? or mean?)
     return data.resample('H').agg({'usage': np.sum})
