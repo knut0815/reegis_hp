@@ -29,8 +29,10 @@ def sql_string(spacetype, space_gid=None):
         where_space = ''
 
     return '''
-        SELECT DISTINCT ag.*, ew.ew_ha2014, sn.neubklar, sn.ststrname,
-            sn.typklar, hz."PRZ_FERN"
+        SELECT DISTINCT ag.gid, ew.ew_ha2014, ag.anzahldero, ag.strassen_n,
+            ag.hausnummer, ag.pseudonumm, st_area(st_transform(ag.geom, 3068)),
+            st_perimeter(st_transform(ag.geom, 3068)), sn.neubklar,
+            sn.ststrname, sn.typklar, hz."PRZ_FERN"
         FROM berlin.{0} as space, berlin.alkis_gebaeude ag
         INNER JOIN berlin.stadtnutzung sn ON st_within(
             st_centroid(ag.geom), sn.geom)
@@ -43,7 +45,7 @@ def sql_string(spacetype, space_gid=None):
             st_contains(space.geom, st_centroid(ag.geom)) AND
             ag.bauart_sch is NULL AND
             {1}
-            ag.anzahldero::int > 0 AND
+            ag.anzahldero::int > 0
         ;
     '''.format(spacetype, where_space)
 
@@ -63,8 +65,9 @@ logging.info("Retrieving data from db...")
 results = (conn.execute(sql))
 
 data = pd.DataFrame(results.fetchall(), columns=[
-    'block_id', 'population_density', 'gid', 'floors', 'name_street', 'number',
-    'alt_number', 'area', 'perimeter'])
+    'gid', 'population_density', 'floors', 'name_street', 'number',
+    'alt_number', 'area', 'perimeter', 'regionname', 'blocktype', 'subtype',
+    'frac_district_heating'])
 
 data.set_index('gid', drop=True, inplace=True)
 data.number.fillna(data.alt_number, inplace=True)
