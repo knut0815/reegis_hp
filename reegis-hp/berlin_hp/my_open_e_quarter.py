@@ -9,7 +9,7 @@ import time
 import pandas as pd
 from oemof import db
 from oemof.tools import logger
-from Open_eQuarterPy.stat_util import building_evaluation as be
+from Open_eQuarterPy import building_evaluation as be
 
 
 def sql_string(spacetype, space_gid=None):
@@ -56,7 +56,7 @@ start = time.time()
 filename = "/home/uwe/haus.csv"
 
 # sql = sql_string('berlin')
-#sql = sql_string('bezirk', 7)
+# sql = sql_string('bezirk', 7)
 # sql = sql_string('planungsraum', (1, 2, 3))
 sql = sql_string('block', (5812, 9335))
 
