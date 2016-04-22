@@ -31,8 +31,8 @@ def sql_string(spacetype, space_gid=None):
     return '''
         SELECT DISTINCT ag.gid, ew.ew_ha2014, ag.anzahldero, ag.strassen_n,
             ag.hausnummer, ag.pseudonumm, st_area(st_transform(ag.geom, 3068)),
-            st_perimeter(st_transform(ag.geom, 3068)), sn.neubklar,
-            sn.ststrname, sn.typklar, hz."PRZ_FERN"
+            st_perimeter(st_transform(ag.geom, 3068)), ag.gebaeudefu,
+            sn.neubklar, sn.ststrname, sn.typklar, hz."PRZ_FERN"
         FROM berlin.{0} as space, berlin.alkis_gebaeude ag
         INNER JOIN berlin.stadtnutzung sn ON st_within(
             st_centroid(ag.geom), sn.geom)
@@ -53,12 +53,12 @@ logger.define_logging()
 conn = db.connection()
 start = time.time()
 
-filename = "/home/uwe/haus.csv"
+filename = "/home/uwe/haus_berlin.csv"
 
-# sql = sql_string('berlin')
+sql = sql_string('berlin')
 # sql = sql_string('bezirk', 7)
 # sql = sql_string('planungsraum', (1, 2, 3))
-sql = sql_string('block', (5812, 9335))
+# sql = sql_string('block', (5812, 9335))
 
 logging.debug("SQL query: {0}".format(sql))
 logging.info("Retrieving data from db...")
@@ -66,16 +66,16 @@ results = (conn.execute(sql))
 
 data = pd.DataFrame(results.fetchall(), columns=[
     'gid', 'population_density', 'floors', 'name_street', 'number',
-    'alt_number', 'area', 'perimeter', 'regionname', 'blocktype', 'subtype',
-    'frac_district_heating'])
+    'alt_number', 'area', 'perimeter', 'gebaeudefu','regionname', 'blocktype',
+    'subtype', 'frac_district_heating'])
 
-data.set_index('gid', drop=True, inplace=True)
 data.number.fillna(data.alt_number, inplace=True)
 data.drop('alt_number', 1, inplace=True)
 
 # Convert objects from db to floats:
 data.floors = data.floors.astype(float)
 data.population_density = data.population_density.astype(float)
+data.gebaeudefu = data.gebaeudefu.astype(int)
 
 # Define default year of construction
 data['year_of_construction'] = 1960
@@ -84,6 +84,11 @@ data['year_of_construction'] = 1960
 logging.debug("Data types of the DataFrame: {0}".format(data.dtypes))
 logging.info("Calculate the heat demand of the buildings...")
 result = be.evaluate_building(data)
+
+heatingtypes = pd.read_csv("/home/uwe/heiztypen.csv", sep=';')
+
+result = result.merge(heatingtypes, on='gebaeudefu', how='inner')
+result.set_index('gid', drop=True, inplace=True)
 
 # Store results to csv file
 logging.info("Store results to {0}".format(filename))
