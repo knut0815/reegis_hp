@@ -54,7 +54,7 @@ def electricity_by_region():
         # Fetch data from the data base
         data[region] = query2df(sql).usage
 
-        # Convert colum to float
+        # Convert column to float
         data[region] = data[region].astype(float)
 
     # Add one hour (4 values) that is missing due to change from summer to
