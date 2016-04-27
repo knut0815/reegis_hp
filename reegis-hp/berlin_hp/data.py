@@ -70,7 +70,7 @@ def electricity_by_region():
                                freq='15Min')
 
     # Convert power kWh
-    data = data * 0.25
+    data *= 0.25
 
     # Resample to hourly values (sum? or mean?)
     return data.resample('H').agg({'usage': np.sum})
