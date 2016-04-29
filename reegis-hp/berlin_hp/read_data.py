@@ -22,6 +22,30 @@ wohn_gew_schul = pd.read_csv(
 stadtstrukturtypen = pd.read_csv(
     os.path.join(basic_path, 'stadtstruktur.csv'), index_col=0)
 
+number_floors = pd.read_csv(
+    os.path.join(basic_path, 'number_floors_by_city_structure.csv'),
+    index_col=0)
+
+print(number_floors)
+print(stadtstrukturtypen.beschreibung)
+
+# Todo: Script, um Stadttyp als Nummer hinzuzufügen mit Ausgabe der Typen, die
+# dann keine Nummer haben
+
+# Todo: Geschosszahl und andere fehlende Typen hinzufügen (ods-Datei) [RLI/data]
+
+# ToDo: Verbräuche pro Gebäudetyp aus Wärmetool
+
+# ToDo: Join infos der "Flächentypen" in Gesamtkarte
+
+# Todo: Vergleich der Wohnfläche mit Wärmetool
+
+# Todo: Berechnung des Wärmeverbrauchs nach Wärmetoolmethode
+
+# ToDo Age of building by "Flächentyp"
+
+# ToDo Berechnung des Wärmeverbrauchs nach Open_eQuarter Methode
+
 iwu_typen['EFHv84'] *= wohn_gew_schul.Wohnungen
 iwu_typen['EFHn84'] *= wohn_gew_schul.Wohnungen
 iwu_typen['MFHv84'] *= wohn_gew_schul.Wohnungen
@@ -30,4 +54,5 @@ iwu_typen['Platte'] *= wohn_gew_schul.Wohnungen
 iwu_typen['Buero'] = wohn_gew_schul.Buero
 iwu_typen['Schule'] = wohn_gew_schul.Schule
 
-print(iwu_typen.sum(1))
+
+
