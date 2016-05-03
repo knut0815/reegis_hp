@@ -27,7 +27,7 @@ number_floors = pd.read_csv(
     index_col=0)
 
 print(number_floors)
-print(stadtstrukturtypen.beschreibung)
+print(stadtstrukturtypen)
 
 # Todo: Script, um Stadttyp als Nummer hinzuzufügen mit Ausgabe der Typen, die
 # dann keine Nummer haben
@@ -53,6 +53,11 @@ iwu_typen['MFHn84'] *= wohn_gew_schul.Wohnungen
 iwu_typen['Platte'] *= wohn_gew_schul.Wohnungen
 iwu_typen['Buero'] = wohn_gew_schul.Buero
 iwu_typen['Schule'] = wohn_gew_schul.Schule
+
+# heatingtypes = pd.read_csv("/home/uwe/heiztypen.csv", sep=';')
+
+# result = result.merge(heatingtypes, on='gebaeudefu', how='inner')
+# result.set_index('gid', drop=True, inplace=True)
 
 
 
