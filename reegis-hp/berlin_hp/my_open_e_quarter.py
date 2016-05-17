@@ -54,12 +54,12 @@ logger.define_logging()
 conn = db.connection()
 start = time.time()
 
-filename = "/home/uwe/haus_berlin.csv"
+filename = "/home/uwe/chiba/RLI/data/haus_block_test.csv"
 
-sql = sql_string('berlin')
+# sql = sql_string('berlin')
 # sql = sql_string('bezirk', 7)
 # sql = sql_string('planungsraum', (1, 2, 3))
-# sql = sql_string('block', (5812, 9335))
+sql = sql_string('block', (5812, 9335))
 
 logging.debug("SQL query: {0}".format(sql))
 logging.info("Retrieving data from db...")
