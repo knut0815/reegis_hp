@@ -20,14 +20,16 @@ iwu_typen = pd.read_csv(os.path.join(basic_path, 'iwu_typen.csv'), index_col=0)
 wohn_gew_schul = pd.read_csv(
     os.path.join(basic_path, 'wohn_gew_schul.csv'), index_col=0)
 stadtstrukturtypen = pd.read_csv(
-    os.path.join(basic_path, 'stadtstruktur.csv'), index_col=0)
+    os.path.join(basic_path, 'stadtnutzung_erweitert.csv'), index_col=0)
 
-number_floors = pd.read_csv(
-    os.path.join(basic_path, 'number_floors_by_city_structure.csv'),
-    index_col=0)
-
-print(number_floors)
-print(stadtstrukturtypen)
+# number_floors = pd.read_csv(
+#     os.path.join(basic_path, 'number_floors_by_city_structure.csv'),
+#     index_col=0)
+#
+# print(number_floors)
+stadtstrukturtypen.fillna(0, inplace=True)
+print(sum(stadtstrukturtypen.ew * stadtstrukturtypen.wohnflaeche_pro_ew))
+print(sum(stadtstrukturtypen.ew))
 
 # Todo: Script, um Stadttyp als Nummer hinzuzufügen mit Ausgabe der Typen, die
 # dann keine Nummer haben

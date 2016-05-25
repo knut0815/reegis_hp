@@ -16,9 +16,9 @@ logger.define_logging()
 conn = db.connection()
 start = time.time()
 
-filename = "/home/uwe/data.csv"
+filename = "/home/uwe/chiba/RLI/data/stadtnutzung_erweitert.csv"
 
-sql = "SELECT DISTINCT gebaeude_1 FROM berlin.alkis_gebaeude"
+sql = "SELECT * FROM berlin.stadtnutzung;"
 
 logging.info("SQL query: {0}".format(sql))
 logging.info("Retrieving data from db...")
@@ -26,6 +26,8 @@ results = (conn.execute(sql))
 columns = results.keys()
 
 data = pd.DataFrame(results.fetchall(), columns=columns)
+
+print(data.ew.sum())
 
 # Store results to csv file
 logging.info("Store results to {0}".format(filename))
