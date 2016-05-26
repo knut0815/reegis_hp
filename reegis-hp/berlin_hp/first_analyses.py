@@ -26,14 +26,21 @@ wt_demand = pd.read_csv(os.path.join(basic_path, 'waermetool_demand.csv'),
 print(wt_demand['unsaniert'].values)
 print(wt_demand['saniert'].values)
 
-df = pd.read_csv(os.path.join(basic_path, 'haus_berlin.csv'), index_col=0)
+df = pd.read_csv(os.path.join(basic_path, 'haus_plr_test.csv'), index_col=0)
 iwu_typen = pd.read_csv(os.path.join(basic_path, 'iwu_typen.csv'), index_col=0)
 blocktype = pd.read_csv(os.path.join(basic_path, 'blocktype.csv'), ';',
                         index_col=0)
 stadtstrukturtypen = pd.read_csv(
     os.path.join(basic_path, 'stadtnutzung_erweitert.csv'), index_col=0)
 
-buildings = df.query("building_function == 1010")
+buildings = df.query(
+    "building_function == 1000" +
+    "or building_function == 1010"
+    "or building_function == 1020"
+    "or building_function == 1024"
+    # "or building_function == 1120"
+    )
+# buildings = df
 # print(buildings.blocktype)
 
 iwu_by_blocktype = iwu_typen.merge(blocktype, left_index=True, right_index=True)
@@ -103,6 +110,8 @@ print(buildings_full['total_loss_pres'].sum())
 print(buildings_full['total_loss_contemp'].sum())
 print(buildings_full['living_area'].sum())
 print('Area', area.sum().sum())
+
+print(buildings_full['living_area'].sum())
 
 # print(buildings_full[['MFHv84', 'EFHv84']].values * buildings_full[[
 #     'living_area', 'flatroof_area']].values)

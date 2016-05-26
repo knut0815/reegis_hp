@@ -54,12 +54,12 @@ logger.define_logging()
 conn = db.connection()
 start = time.time()
 
-filename = "/home/uwe/chiba/RLI/data/haus_block_test.csv"
+filename = "/home/uwe/chiba/RLI/data/haus_plr_test.csv"
 
 # sql = sql_string('berlin')
 # sql = sql_string('bezirk', 7)
-# sql = sql_string('planungsraum', (1, 2, 3))
-sql = sql_string('block', (5812, 9335))
+sql = sql_string('planungsraum', 384)
+# sql = sql_string('block', (5812, 9335))
 
 logging.debug("SQL query: {0}".format(sql))
 logging.info("Retrieving data from db...")
@@ -85,7 +85,10 @@ data['year_of_construction'] = 1960
 # Calculate the heat demand of the building
 logging.debug("Data types of the DataFrame: {0}".format(data.dtypes))
 logging.info("Calculate the heat demand of the buildings...")
-result = be.evaluate_building(data)
+
+parameter = {'fraction_living_area': 0.7}
+
+result = be.evaluate_building(data, **parameter)
 
 # Store results to csv file
 logging.info("Store results to {0}".format(filename))
