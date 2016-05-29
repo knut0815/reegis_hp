@@ -26,6 +26,8 @@ wt_demand = pd.read_csv(os.path.join(basic_path, 'waermetool_demand.csv'),
 print(wt_demand['unsaniert'].values)
 print(wt_demand['saniert'].values)
 
+gebaeudetypen = ['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']
+
 df = pd.read_csv(os.path.join(basic_path, 'haus_plr_test.csv'), index_col=0)
 iwu_typen = pd.read_csv(os.path.join(basic_path, 'iwu_typen.csv'), index_col=0)
 blocktype = pd.read_csv(os.path.join(basic_path, 'blocktype.csv'), ';',
@@ -65,41 +67,56 @@ print(stadtstruktur_full.columns)
 #     columns=['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte'])
 # sum_by_type_saniert = demand_by_type_saniert.sum()
 
-area = pd.DataFrame(
-    stadtstruktur_full[[
+area = stadtstruktur_full[[
         'EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']].multiply(
             stadtstruktur_full.ew * stadtstruktur_full.wohnflaeche_pro_ew,
-            axis="index"),
-    columns=['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte'])
+            axis="index")
 
 print('Area', area.sum())
+# Area EFHv84    2.108395e+07
+# EFHn84    2.676466e+06
+# MFHv84    7.980254e+07
+# MFHn84    1.330757e+07
+# Platte    2.111442e+07
 
+print(wt_demand)
+sanierungsquote = pd.Series(data=[0.12, 0.03, 0.08, 0.01, 0.29],
+                            index=wt_demand.index)
+print(sanierungsquote)
+
+print(type(stadtstruktur_full[[
+        'EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']].multiply(
+            stadtstruktur_full.ew * stadtstruktur_full.wohnflaeche_pro_ew,
+            axis="index").values * wt_demand['unsaniert'].values))
+
+# TODO Überprüfe ob die Operation die Reihenfolge erhält
 demand_by_type_unsaniert = pd.DataFrame(
-    stadtstruktur_full[[
+    (stadtstruktur_full[[
         'EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']].multiply(
             stadtstruktur_full.ew * stadtstruktur_full.wohnflaeche_pro_ew,
             axis="index").values *
-    wt_demand['unsaniert'].values,
-    columns=['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte'])
-sum_by_type_unsaniert = demand_by_type_unsaniert.sum()
+        wt_demand['unsaniert'].values *
+        (1 - sanierungsquote).values),
+    columns=['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']).merge(
+        stadtstruktur_full[['spatial_na', 'schluessel_planungsraum']],
+        left_index=True, right_index=True)
 
 demand_by_type_saniert = pd.DataFrame(
-    stadtstruktur_full[[
+    (stadtstruktur_full[[
         'EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']].multiply(
             stadtstruktur_full.ew * stadtstruktur_full.wohnflaeche_pro_ew,
             axis="index").values *
-    wt_demand['saniert'].values,
-    columns=['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte'])
+        wt_demand['saniert'].values *
+        sanierungsquote.values),
+    columns=['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']).merge(
+        stadtstruktur_full[['spatial_na', 'schluessel_planungsraum']],
+        left_index=True, right_index=True)
+
+sum_by_type_unsaniert = demand_by_type_unsaniert.sum()
 sum_by_type_saniert = demand_by_type_saniert.sum()
+print(sum_by_type_unsaniert[gebaeudetypen].sum())
+print(sum_by_type_saniert[gebaeudetypen].sum())
 
-# print(stadtstruktur_full)
-
-sanierungsquote = pd.Series(index=sum_by_type_saniert.index,
-                            data=[0.12, 0.03, 0.08, 0.01, 0.29])
-print(1 - sanierungsquote)
-unsan = (sum_by_type_saniert * sanierungsquote).sum()
-san = (sum_by_type_unsaniert * (1 - sanierungsquote)).sum()
-print(unsan + san)
 print(sum_by_type_saniert.sum() / buildings_full['living_area'].sum())
 print(sum_by_type_unsaniert.sum() / buildings_full['living_area'].sum())
 print(sum_by_type_saniert.sum() / (stadtstruktur_full.ew *
