@@ -86,7 +86,7 @@ data['year_of_construction'] = 1960
 logging.debug("Data types of the DataFrame: {0}".format(data.dtypes))
 logging.info("Calculate the heat demand of the buildings...")
 
-parameter = {'fraction_living_area': 0.7}
+parameter = {'fraction_living_area': 0.8}
 
 result = be.evaluate_building(data, **parameter)
 
