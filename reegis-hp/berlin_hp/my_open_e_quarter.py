@@ -6,6 +6,7 @@ Created on Wed Mar 23 14:35:28 2016
 """
 import logging
 import time
+import os
 import pandas as pd
 from oemof import db
 from oemof.tools import logger
@@ -29,7 +30,8 @@ def sql_string(spacetype, space_gid=None):
         where_space = ''
 
     return '''
-        SELECT DISTINCT ag.gid, ew.ew_ha2014, ag.anzahldero, ag.strassen_n,
+        SELECT DISTINCT ag.gid, ew.ew_ha2014, block.schluessel,
+            ag.anzahldero, ag.strassen_n,
             ag.hausnummer, ag.pseudonumm, st_area(st_transform(ag.geom, 3068)),
             st_perimeter(st_transform(ag.geom, 3068)), ag.gebaeudefu,
             sn.typklar, hz."PRZ_NASTRO", hz."PRZ_FERN", hz."PRZ_GAS",
@@ -41,6 +43,8 @@ def sql_string(spacetype, space_gid=None):
             st_centroid(ag.geom), ew.geom)
         INNER JOIN berlin.heizungsarten_geo hz ON st_within(
             st_centroid(ag.geom), hz.geom)
+        INNER JOIN berlin.block block ON st_within(
+            st_centroid(ag.geom), block.geom)
         WHERE
             space.geom && ag.geom AND
             st_contains(space.geom, st_centroid(ag.geom)) AND
@@ -54,43 +58,57 @@ logger.define_logging()
 conn = db.connection()
 start = time.time()
 
-filename = "/home/uwe/chiba/RLI/data/haus_plr_test.csv"
+# Select region
+level, selection = ('berlin', None)
+# level, selection = ('bezirk', )
+# level, selection = ('planungsraum', 384)
+# level, selection = ('block', (5812, 9335))
 
-# sql = sql_string('berlin')
-# sql = sql_string('bezirk', 7)
-sql = sql_string('planungsraum', 384)
-# sql = sql_string('block', (5812, 9335))
+sql = sql_string(level, selection)
 
-logging.debug("SQL query: {0}".format(sql))
-logging.info("Retrieving data from db...")
-results = (conn.execute(sql))
+filename = "/home/uwe/chiba/RLI/data/eQuarter_0-694_{0}.hdf".format(level)
+dfilename = "/home/uwe/chiba/RLI/data/eQuarter_data_{0}.hdf".format(level)
 
-data = pd.DataFrame(results.fetchall(), columns=[
-    'gid', 'population_density', 'floors', 'name_street', 'number',
-    'alt_number', 'area', 'perimeter', 'building_function', 'blocktype',
-    'frac_off-peak_electricity_heating', 'frac_district_heating',
-    'frac_natural_gas_heating', 'frac_oil_heating', 'frac_coal_stove'])
+if not os.path.isfile(dfilename):
+    logging.debug("SQL query: {0}".format(sql))
+    logging.info("Retrieving data from db...")
+    results = (conn.execute(sql))
 
-data.number.fillna(data.alt_number, inplace=True)
-data.drop('alt_number', 1, inplace=True)
+    data = pd.DataFrame(results.fetchall(), columns=[
+        'gid', 'population_density', 'spatial_na', 'floors', 'name_street',
+        'number', 'alt_number', 'area', 'perimeter', 'building_function',
+        'blocktype', 'frac_off-peak_electricity_heating',
+        'frac_district_heating', 'frac_natural_gas_heating',
+        'frac_oil_heating', 'frac_coal_stove'])
 
-# Convert objects from db to floats:
-data.floors = data.floors.astype(float)
-data.population_density = data.population_density.astype(float)
-data.building_function = data.building_function.astype(int)
+    data.number.fillna(data.alt_number, inplace=True)
+    data.drop('alt_number', 1, inplace=True)
 
-# Define default year of construction
-data['year_of_construction'] = 1960
+    # Convert objects from db to floats:
+    data.floors = data.floors.astype(float)
+    data.population_density = data.population_density.astype(float)
+    data.building_function = data.building_function.astype(int)
+
+    # Define default year of construction
+    data['year_of_construction'] = 1960
+else:
+    logging.info("Retrieving data from file...")
+    data = pd.read_hdf(dfilename, 'data')
 
 # Calculate the heat demand of the building
 logging.debug("Data types of the DataFrame: {0}".format(data.dtypes))
 logging.info("Calculate the heat demand of the buildings...")
 
-parameter = {'fraction_living_area': 0.8}
+parameter = {}
+# parameter = {'fraction_living_area': 0.694}
 
 result = be.evaluate_building(data, **parameter)
 
-# Store results to csv file
+str_cols = [
+    'spatial_na', 'name_street', 'number', 'blocktype', 'share_non_tilted_roof']
+result.loc[:, str_cols] = result[str_cols].applymap(str)
+
+# Store results to hdf5 file
 logging.info("Store results to {0}".format(filename))
-result.to_csv(filename)
+result.to_hdf(filename, 'oeq')
 logging.info("Elapsed time: {0}".format(time.time() - start))
