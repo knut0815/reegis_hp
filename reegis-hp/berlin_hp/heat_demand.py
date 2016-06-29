@@ -7,7 +7,6 @@ Created on Wed Mar 23 14:35:28 2016
 import logging
 import time
 import os
-import pickle
 import pandas as pd
 import oemof.db
 from oemof.tools import logger
