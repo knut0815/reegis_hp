@@ -8,5 +8,5 @@ setup(name='reegis-hp',
       author_email='uwe.krien@rl-institut.de',
       description='A local heat and power system',
       package_dir={'reegis-hp': 'reegis-hp'},
-      install_requires=['oemof_base >= 0.0.2']
+      install_requires=['oemof >= 0.0.6']
       )
