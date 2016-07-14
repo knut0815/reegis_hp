@@ -10,7 +10,7 @@ import time
 import os
 import pandas as pd
 import geoplot
-import oemof.db
+import oemof.db as db
 import numpy as np
 from oemof.tools import logger
 plt.style.use('ggplot')
@@ -28,7 +28,7 @@ def fetch_geometries(**kwargs):
         ORDER BY {id_col} DESC;'''
 
     db_string = sql_str.format(**kwargs)
-    results = oemof.db.connection().execute(db_string)
+    results = db.connection().execute(db_string)
     cols = results.keys()
     return pd.DataFrame(results.fetchall(), columns=cols)
 
@@ -59,23 +59,49 @@ basic_path = '/home/uwe/chiba/RLI/data'
 logging.info("Datapath: {0}:".format(basic_path))
 
 # Read tables from csv
-df = pd.read_hdf(os.path.join(basic_path, 'haus_berlin_0_694.hdf'), 'alkis')
+df = pd.read_hdf(os.path.join(basic_path, 'eQuarter_0-73_berlin.hdf'), 'oeq')
+df['spatial_int'] = df.spatial_na.apply(int)
 bloecke = pd.read_hdf(os.path.join(basic_path, 'bloecke.hdf'), 'block')
 stadtnutzung = pd.read_hdf(
     os.path.join(basic_path, 'stadtnutzung_erweitert.hdf'), 'stadtnutzung')
 
-# Filter by building_types to get only residential buildings
-buildings = df.query(
-    "building_function == 1000" +
-    "or building_function == 1010"
-    "or building_function == 1020"
-    "or building_function == 1024"
-    "or building_function == 1120"
-    )
+# 1100 - Gemischt genutztes Gebäude mit Wohnen
+# 1110 - Wohngebäude mit Gemeinbedarf
+# 1120 - Wohngebäude mit Handel und Dienstleistungen
+# 1130 - Wohngebäude mit Gewerbe und Industrie
+# 1220 - Land- und forstwirtschaftliches Wohn- und Betriebsgebäude
+# 2310 - Gebäude für Gewerbe und Industrie mit Wohnen
+# 3100 - Gebäude für öffentliche Zwecke mit Wohnen
+
+typelist = {
+    1000: 1,
+    1010: 1,
+    1020: 1,
+    1024: 1,
+    1100: 0.5,
+    1110: 0.5,
+    1120: 0.5,
+    1130: 0.5,
+    1220: 0.5,
+    2310: 0.45,
+    3100: 0.45}
+
+# Filter by building_types to get only (partly) residential buildings
+query_str = ""
+for typ in typelist.keys():
+    query_str += "building_function == {} or ".format(typ)
+buildings = df.query(query_str[:-4])
 
 # Add schluessel_planungsraum to every building by merging the block table
 buildings = buildings.merge(
-    bloecke, right_on='schluessel', left_on='spatial_na')
+    bloecke, right_on='schluessel', left_on='spatial_int')
+
+for typ, value in typelist.items():
+    if value < 1:
+        buildings.loc[buildings.building_function == typ, 'living_area'] = (
+            buildings.living_area * 0.496)
+
+buildings.to_hdf(os.path.join(basic_path, 'buildings.hdf'), 'oeq')
 
 # Sum up the area within every planungsraum (buildings)
 area_plr_buildings = pd.DataFrame(
@@ -101,7 +127,7 @@ planungsraum = planungsraum.merge(area_plr, left_on='key',
                                   right_index=True)
 
 # Create columns to calculate the difference between both models
-planungsraum['diff'] = planungsraum.area_stadtnutz - planungsraum.area_alkis
+planungsraum['diff'] = - planungsraum.area_stadtnutz + planungsraum.area_alkis
 
 
 sigma = np.std(planungsraum['diff'])
@@ -111,10 +137,11 @@ import matplotlib.mlab as mlab
 bins = 50
 
 # the histogram of the data
-n, bins, patches = plt.hist(planungsraum['diff'], 50, facecolor='green', alpha=0.75, normed=1)
+n, bins, patches = plt.hist(planungsraum['diff'], 50, facecolor='green',
+                            alpha=0.75, normed=1)
 
 # add a 'best fit' line
-y = (mlab.normpdf(bins, mu, sigma))
+y = mlab.normpdf(bins, mu, sigma)
 l = plt.plot(bins, y, 'r--', linewidth=1)
 
 plt.xlabel('Smarts')
@@ -139,9 +166,9 @@ plr_def['geom'] = planungsraum.geom
 berlinplot = geoplot.GeoPlotter(**plr_def)
 plt.box(on=None)
 berlinplot.plot(plt.subplot(111), linewidth=0)
-berlinplot.draw_legend((-100000, 100000), legendlabel="EW*spez_Wohnf - Alkis",
+berlinplot.draw_legend((-100000, 100000), legendlabel="", location='right',
                        extend='both', integer=True)
 plt.tight_layout()
 plt.show()
 
-print(area_plr.sum() / 450)
+print(area_plr.sum())

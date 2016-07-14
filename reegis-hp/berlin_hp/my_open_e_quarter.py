@@ -8,9 +8,9 @@ import logging
 import time
 import os
 import pandas as pd
-from oemof import db
+import oemof.db as db
 from oemof.tools import logger
-from Open_eQuarterPy import building_evaluation as be
+import Open_eQuarterPy.building_evaluation as be
 
 
 def sql_string(spacetype, space_gid=None):
@@ -60,13 +60,13 @@ start = time.time()
 
 # Select region
 level, selection = ('berlin', None)
-# level, selection = ('bezirk', )
+# level, selection = ('bezirk', 6)
 # level, selection = ('planungsraum', 384)
 # level, selection = ('block', (5812, 9335))
 
 sql = sql_string(level, selection)
 
-filename = "/home/uwe/chiba/RLI/data/eQuarter_0-694_{0}.hdf".format(level)
+filename = "/home/uwe/chiba/RLI/data/eQuarter_0-73_{0}.hdf".format(level)
 dfilename = "/home/uwe/chiba/RLI/data/eQuarter_data_{0}.hdf".format(level)
 
 if not os.path.isfile(dfilename):
@@ -91,6 +91,7 @@ if not os.path.isfile(dfilename):
 
     # Define default year of construction
     data['year_of_construction'] = 1960
+    data.to_hdf(dfilename, 'data')
 else:
     logging.info("Retrieving data from file...")
     data = pd.read_hdf(dfilename, 'data')
@@ -99,8 +100,7 @@ else:
 logging.debug("Data types of the DataFrame: {0}".format(data.dtypes))
 logging.info("Calculate the heat demand of the buildings...")
 
-parameter = {}
-# parameter = {'fraction_living_area': 0.694}
+parameter = {'fraction_living_area': 0.73}
 
 result = be.evaluate_building(data, **parameter)
 

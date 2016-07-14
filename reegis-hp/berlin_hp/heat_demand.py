@@ -8,6 +8,7 @@ import logging
 import time
 import os
 import pandas as pd
+import numpy as np
 import oemof.db
 from oemof.tools import logger
 
@@ -44,7 +45,7 @@ wt_demand = pd.read_csv(os.path.join(basic_path, 'waermetool_demand.csv'),
 std_buildings = ['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']
 
 # Load results of Open_eQuarter analyses
-oeq = pd.read_hdf(os.path.join(basic_path, 'eQuarter_0-694_berlin.hdf'), 'oeq')
+oeq = pd.read_hdf(os.path.join(basic_path, 'buildings.hdf'), 'oeq')
 
 # Load assignment of standardised building types to all area types
 iwu4types = pd.read_csv(os.path.join(basic_path, 'iwu_typen.csv'), index_col=0)
@@ -60,13 +61,13 @@ bloecke = pd.read_hdf(os.path.join(basic_path, 'bloecke.hdf'), 'bloecke')
 stadtnutzung = pd.read_csv(
     os.path.join(basic_path, 'stadtnutzung_erweitert.csv'), index_col=0)
 
-oeq_query = oeq.query(
-    "building_function == 1000" +
-    "or building_function == 1010"
-    "or building_function == 1020"
-    "or building_function == 1024"
-    "or building_function == 1120"
-    )
+oeq_query = oeq#.query(
+    # "building_function == 1000" +
+    # "or building_function == 1010"
+    # "or building_function == 1020"
+    # "or building_function == 1024"
+    # "or building_function == 1120"
+    # )
 
 # Merge "typklar" as blocktype to fraction of each iwu-type
 iwu4block = iwu4types.merge(blocktype, left_index=True, right_index=True)
@@ -78,16 +79,16 @@ buildings = oeq_query.merge(iwu4block, on='blocktype')
 stadtnutzung_full = stadtnutzung.merge(iwu4block, right_on='blocktype',
                                        left_on='typklar')
 
-sanierungsquote = pd.Series(data=[0.12, 0.03, 0.08, 0.01, 0.29],
-                            index=wt_demand.index)
+sanierungsquote = np.array([0.12, 0.03, 0.08, 0.01, 0.29])
+
+stadtnutzung_full['living_area'] = (stadtnutzung_full.ew *
+                                    stadtnutzung_full.wohnflaeche_pro_ew)
 
 demand_by_type_unsaniert = pd.DataFrame(
     (stadtnutzung_full[[
         'EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']].multiply(
-            stadtnutzung_full.ew * stadtnutzung_full.wohnflaeche_pro_ew,
-            axis="index").values *
-        wt_demand['unsaniert'].values *
-        (1 - sanierungsquote).values),
+            stadtnutzung_full.living_area, axis="index").values *
+        wt_demand['unsaniert'].values * (1 - sanierungsquote)),
     columns=['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']).merge(
         stadtnutzung_full[['spatial_na', 'schluessel_planungsraum']],
         left_index=True, right_index=True)
@@ -95,10 +96,8 @@ demand_by_type_unsaniert = pd.DataFrame(
 demand_by_type_saniert = pd.DataFrame(
     (stadtnutzung_full[[
         'EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']].multiply(
-            stadtnutzung_full.ew * stadtnutzung_full.wohnflaeche_pro_ew,
-            axis="index").values *
-        wt_demand['saniert'].values *
-        sanierungsquote.values),
+            stadtnutzung_full.living_area, axis="index").values *
+        wt_demand['saniert'].values * sanierungsquote),
     columns=['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']).merge(
         stadtnutzung_full[['spatial_na', 'schluessel_planungsraum']],
         left_index=True, right_index=True)
@@ -106,9 +105,24 @@ demand_by_type_saniert = pd.DataFrame(
 total_demand_wt = (demand_by_type_saniert[std_buildings].sum().sum() +
                    demand_by_type_unsaniert[std_buildings].sum().sum())
 
+demand_by_type = demand_by_type_unsaniert.merge(
+    demand_by_type_saniert, left_index=True, right_index=True)
+
+for typ in std_buildings:
+    demand_by_type[typ] = (demand_by_type[typ + '_y'] +
+                           demand_by_type[typ + '_x'])
+
+print("Neu", demand_by_type[std_buildings].sum().sum())
+demand_by_type.to_csv("/home/uwe/waermetool.csv")
+
 print(buildings['total_loss_pres'].sum())
 print(buildings['total_loss_contemp'].sum())
 print(buildings.living_area.sum())
-print(total_demand_wt)
+print(stadtnutzung_full.living_area.sum())
+print("Alt", total_demand_wt)
+print(buildings['total_loss_pres'].sum() * 0.2 +
+      buildings['total_loss_contemp'].sum() * 0.8)
+
+print(38019371118.9 / 21063506794.6)
 
 print(time.time() - start)
