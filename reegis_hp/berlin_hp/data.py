@@ -5,17 +5,16 @@ Created on Wed Mar 23 14:35:28 2016
 @author: uwe
 """
 import logging
-import time
+import os
 import pandas as pd
-import numpy as np
 
-from oemof import db
+import oemof.db as db
 from oemof.tools import logger
+from oemof.tools import helpers
 
 
 logger.define_logging()
 conn = db.connection()
-start = time.time()
 
 
 def query2df(sql, columns=None):
@@ -42,7 +41,6 @@ def electricity_by_region():
                'Charlottenburg-Wilmersdorf', 'Reinickendorf', 'Spandau',
                'Tempelhof-Schöneberg']
 
-    # Create empty DataFrame to collect the results
     data = pd.DataFrame()
 
     for region in regions:
@@ -69,8 +67,17 @@ def electricity_by_region():
     data.index = pd.date_range(pd.datetime(2012, 1, 1, 0), periods=8784*4,
                                freq='15Min')
 
-    # Convert power kWh
-    data *= 0.25
+    # Resample to hourly values
+    return data.resample('H').mean()
 
-    # Resample to hourly values (sum? or mean?)
-    return data.resample('H').agg({'usage': np.sum})
+
+def electricity_usage(fullpath=None):
+    if fullpath is None:
+        fullpath = os.path.join(helpers.extend_basic_path('reegis_hp'),
+                                'berlin_electricity_2012.csv')
+    try:
+        return pd.read_csv(fullpath)
+    except OSError:
+        tmp_df = electricity_by_region().sum(axis=1)
+        tmp_df.to_csv(fullpath)
+        return tmp_df
