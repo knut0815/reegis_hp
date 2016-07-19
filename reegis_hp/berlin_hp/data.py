@@ -35,25 +35,25 @@ def electricity_by_region():
     """
     Returns a DataFrame with the electricity usage of Berlin 2012 by region
     """
-    regions = ['Pankow', 'Lichtenberg', 'Marzahn-Hellersdorf',
-               'Treptow-Koepenick', 'Neukölln', 'Friedrichshain-Kreuzberg',
-               'Mitte', 'Tempelhof-Schöneberg', 'Steglitz-Zehlendorf',
-               'Charlottenburg-Wilmersdorf', 'Reinickendorf', 'Spandau',
-               'Tempelhof-Schöneberg']
+    sql = 'SELECT distinct name FROM berlin.stromdaten;'
+    regions = list(conn.execute(sql).fetchall())
 
     data = pd.DataFrame()
-
+    n = 0
+    total = len(regions)
     for region in regions:
+        n += 1
         sql = """
             SELECT usage FROM berlin.stromdaten
             WHERE name = '{0}' order by id;
-            """.format(region)
+            """.format(region[0])
 
         # Fetch data from the data base
-        data[region] = query2df(sql).usage
+        data[region[0]] = query2df(sql).usage
 
         # Convert column to float
-        data[region] = data[region].astype(float)
+        data[region[0]] = data[region[0]].astype(float)
+        logging.info("{0} regions remaining".format(total - n))
 
     # Add one hour (4 values) that is missing due to change from summer to
     # winter time on October the 28th (Only valid for 2012!!)
@@ -71,13 +71,15 @@ def electricity_by_region():
     return data.resample('H').mean()
 
 
-def electricity_usage(fullpath=None):
+def get_electricity_usage(fullpath=None):
     if fullpath is None:
         fullpath = os.path.join(helpers.extend_basic_path('reegis_hp'),
                                 'berlin_electricity_2012.csv')
     try:
-        return pd.read_csv(fullpath)
+        return pd.read_csv(fullpath).berlin
     except OSError:
         tmp_df = electricity_by_region().sum(axis=1)
+        tmp_df.name = 'berlin'
+        tmp_df = pd.DataFrame(tmp_df)
         tmp_df.to_csv(fullpath)
-        return tmp_df
+    return tmp_df.berlin

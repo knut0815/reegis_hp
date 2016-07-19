@@ -50,12 +50,11 @@ solph.Bus(label='biomass')
 for n in range(number_of_district_heating_systems):
     solph.Bus(label='distr' + str(n + 1))
 
-# Create sources
-demand = data.electricity_usage()
+# Create sinks
+demand = data.get_electricity_usage()
 max_demand = demand.max()
-print(demand)
 demand = demand.div(max_demand)
 solph.Sink(label='elec_demand', inputs={bel: solph.Flow(
     actual_value=demand, fixed=True, nominal_value=max_demand)})
 
-# Create sinks
+# Create sources
