@@ -35,7 +35,7 @@ def sql_string(spacetype, space_gid=None):
             ag.hausnummer, ag.pseudonumm, st_area(st_transform(ag.geom, 3068)),
             st_perimeter(st_transform(ag.geom, 3068)), ag.gebaeudefu,
             sn.typklar, hz."PRZ_NASTRO", hz."PRZ_FERN", hz."PRZ_GAS",
-            hz."PRZ_OEL", hz."PRZ_KOHLE"
+            hz."PRZ_OEL", hz."PRZ_KOHLE", ga.age
         FROM berlin.{0} as space, berlin.alkis_gebaeude ag
         INNER JOIN berlin.stadtnutzung sn ON st_within(
             st_centroid(ag.geom), sn.geom)
@@ -45,6 +45,8 @@ def sql_string(spacetype, space_gid=None):
             st_centroid(ag.geom), hz.geom)
         INNER JOIN berlin.block block ON st_within(
             st_centroid(ag.geom), block.geom)
+        LEFT JOIN berlin.gebaeudealter_alkis ga ON st_within(
+            st_centroid(ag.geom), ga.geom)
         WHERE
             space.geom && ag.geom AND
             st_contains(space.geom, st_centroid(ag.geom)) AND
@@ -66,7 +68,7 @@ level, selection = ('berlin', None)
 
 sql = sql_string(level, selection)
 
-filename = "/home/uwe/chiba/RLI/data/eQuarter_0-73_{0}.hdf".format(level)
+filename = "/home/uwe/chiba/RLI/data/eQuarter_0-73_{0}_newage.hdf".format(level)
 dfilename = "/home/uwe/chiba/RLI/data/eQuarter_data_{0}.hdf".format(level)
 
 if not os.path.isfile(dfilename):
@@ -79,10 +81,11 @@ if not os.path.isfile(dfilename):
         'number', 'alt_number', 'area', 'perimeter', 'building_function',
         'blocktype', 'frac_off-peak_electricity_heating',
         'frac_district_heating', 'frac_natural_gas_heating',
-        'frac_oil_heating', 'frac_coal_stove'])
+        'frac_oil_heating', 'frac_coal_stove', 'age_scan'])
 
     data.number.fillna(data.alt_number, inplace=True)
     data.drop('alt_number', 1, inplace=True)
+    print(len(data))
 
     # Convert objects from db to floats:
     data.floors = data.floors.astype(float)
@@ -91,11 +94,70 @@ if not os.path.isfile(dfilename):
 
     # Define default year of construction
     data['year_of_construction'] = 1960
+    sn_data = pd.read_csv("/home/uwe/chiba/RLI/data/data_by_blocktype.csv", ';')
+    data = data.merge(sn_data, on='blocktype')
     data.to_hdf(dfilename, 'data')
 else:
-    logging.info("Retrieving data from file...")
+    logging.info("Retrieving data from file: {0}".format(dfilename))
     data = pd.read_hdf(dfilename, 'data')
 
+print(data)
+# *** Year of construction ***
+# Fill up the nan values in the scan data with the data from the area types
+data['age_scan'].fillna(data['building_age'], inplace=True)
+
+# Replace ranges with one year.
+age_of_construction = {
+    '1950-1979': 1964,
+    'ab 1945': 1970,
+    '1920-1939': 1929,
+    '1920-1949': 1934,
+    '1870-1918': 1894,
+    'bis 1945': 1920,
+    '1870-1945': 1908,
+    '1890-1930': 1910,
+    '1960-1989': 1975,
+    'ab 1990': 2003,
+    '1870-1899': 1885,
+    'bis 1869': 1860,
+    '1900-1918': 1909,
+    '1975-1992': 1984,
+    '1962-1974': 1968,
+    '1946-1961': 1954,
+    '1919-1932': 1926,
+    '1933-1945': 1939
+    }
+data['age_scan'].replace(age_of_construction, inplace=True)
+
+# Fill all remaining nan values with a default value of 1960
+data['year_of_construction'] = data['age_scan'].fillna(1960)
+
+# *** Type of the building ***
+typelist = {
+    1000: 1,
+    1010: 1,
+    1020: 1,
+    1024: 1,
+    1100: 0.5,
+    1110: 0.5,
+    1120: 0.5,
+    1130: 0.5,
+    1220: 0.5,
+    2310: 0.45,
+    3100: 0.45}
+
+# Filter by building_types to get only (partly) residential buildings
+query_str = ""
+for typ in typelist.keys():
+    query_str += "building_function == {0} or ".format(typ)
+data = data.query(query_str[:-4])
+
+
+for typ, value in typelist.items():
+    if value < 1:
+        data.loc[data.building_function == typ, 'residential_fraction'] = value
+
+print(len(data))
 # Calculate the heat demand of the building
 logging.debug("Data types of the DataFrame: {0}".format(data.dtypes))
 logging.info("Calculate the heat demand of the buildings...")
@@ -104,8 +166,9 @@ parameter = {'fraction_living_area': 0.73}
 
 result = be.evaluate_building(data, **parameter)
 
-str_cols = [
-    'spatial_na', 'name_street', 'number', 'blocktype', 'share_non_tilted_roof']
+str_cols = ['spatial_na', 'name_street', 'number', 'blocktype',
+            'age_scan', 'floors_average', 'floor_area_fraction',
+            'building_age', 'share_non_tilted_roof']
 result.loc[:, str_cols] = result[str_cols].applymap(str)
 
 # Store results to hdf5 file

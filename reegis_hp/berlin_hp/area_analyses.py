@@ -5,6 +5,7 @@ Created on Wed Mar 23 14:35:28 2016
 @author: uwe
 """
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 import logging
 import time
 import os
@@ -59,7 +60,9 @@ basic_path = '/home/uwe/chiba/RLI/data'
 logging.info("Datapath: {0}:".format(basic_path))
 
 # Read tables from csv
-df = pd.read_hdf(os.path.join(basic_path, 'eQuarter_0-73_berlin.hdf'), 'oeq')
+df = pd.read_hdf(os.path.join(basic_path, 'eQuarter_0-73_berlin_newage.hdf'),
+                 'oeq')
+# df.to_csv(os.path.join(basic_path, 'eQuarter_0-73_berlin_newage.csv'))
 df['spatial_int'] = df.spatial_na.apply(int)
 bloecke = pd.read_hdf(os.path.join(basic_path, 'bloecke.hdf'), 'block')
 stadtnutzung = pd.read_hdf(
@@ -73,34 +76,34 @@ stadtnutzung = pd.read_hdf(
 # 2310 - Gebäude für Gewerbe und Industrie mit Wohnen
 # 3100 - Gebäude für öffentliche Zwecke mit Wohnen
 
-typelist = {
-    1000: 1,
-    1010: 1,
-    1020: 1,
-    1024: 1,
-    1100: 0.5,
-    1110: 0.5,
-    1120: 0.5,
-    1130: 0.5,
-    1220: 0.5,
-    2310: 0.45,
-    3100: 0.45}
-
-# Filter by building_types to get only (partly) residential buildings
-query_str = ""
-for typ in typelist.keys():
-    query_str += "building_function == {} or ".format(typ)
-buildings = df.query(query_str[:-4])
-
+# typelist = {
+#     1000: 1,
+#     1010: 1,
+#     1020: 1,
+#     1024: 1,
+#     1100: 0.5,
+#     1110: 0.5,
+#     1120: 0.5,
+#     1130: 0.5,
+#     1220: 0.5,
+#     2310: 0.45,
+#     3100: 0.45}
+#
+# # Filter by building_types to get only (partly) residential buildings
+# query_str = ""
+# for typ in typelist.keys():
+#     query_str += "building_function == {0} or ".format(typ)
+# buildings = df.query(query_str[:-4])
+#
 # Add schluessel_planungsraum to every building by merging the block table
-buildings = buildings.merge(
+buildings = df.merge(
     bloecke, right_on='schluessel', left_on='spatial_int')
-
-for typ, value in typelist.items():
-    if value < 1:
-        buildings.loc[buildings.building_function == typ, 'living_area'] = (
-            buildings.living_area * 0.496)
-
+#
+# for typ, value in typelist.items():
+#     if value < 1:
+#         buildings.loc[buildings.building_function == typ, 'living_area'] = (
+#             buildings.living_area * 0.496)
+print(len(buildings))
 buildings.to_hdf(os.path.join(basic_path, 'buildings.hdf'), 'oeq')
 
 # Sum up the area within every planungsraum (buildings)
@@ -133,13 +136,10 @@ planungsraum['diff'] = - planungsraum.area_stadtnutz + planungsraum.area_alkis
 sigma = np.std(planungsraum['diff'])
 mu = planungsraum['diff'].mean()
 
-import matplotlib.mlab as mlab
-bins = 50
-
 # the histogram of the data
 n, bins, patches = plt.hist(planungsraum['diff'], 50, facecolor='green',
                             alpha=0.75, normed=1)
-
+print(bins)
 # add a 'best fit' line
 y = mlab.normpdf(bins, mu, sigma)
 l = plt.plot(bins, y, 'r--', linewidth=1)
@@ -157,7 +157,8 @@ plt.title(r'$\mathrm{Histogram\ of\ IQ:}\ \mu=100,\ \sigma=15$')
 plt.show()
 
 # data = (planungsraum['diff'] - 0.5) / 1.5
-
+print(planungsraum['diff'].max())
+print(planungsraum['diff'].min())
 data = (planungsraum['diff'] + 100000) / 200000
 
 plr_def['data'] = data

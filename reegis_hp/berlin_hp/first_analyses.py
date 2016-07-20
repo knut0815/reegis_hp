@@ -49,7 +49,7 @@ wt_demand = pd.read_csv(os.path.join(basic_path, 'waermetool_demand.csv'),
 std_buildings = ['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']
 
 # Load results of Open_eQuarter analyses
-oeq = pd.read_hdf(os.path.join(basic_path, 'eQuarter_0-694_berlin.hdf'), 'oeq')
+oeq = pd.read_hdf(os.path.join(basic_path, 'eQuarter_0-73_berlin.hdf'), 'oeq')
 
 # Load assignment of standardised building types to all area types
 iwu4types = pd.read_csv(os.path.join(basic_path, 'iwu_typen.csv'), index_col=0)
@@ -62,7 +62,7 @@ blocktype = pd.read_csv(os.path.join(basic_path, 'blocktype.csv'), ';',
 bloecke = pd.read_hdf(os.path.join(basic_path, 'bloecke.hdf'), 'bloecke')
 
 # Load geometry of all "planungsraum"
-plr = pickle.load(open('plr.data', 'rb'))
+plr = pickle.load(open(os.path.join(basic_path, 'plr.data'), 'rb'))
 
 # Load "stadtnutzung" from SenStadt extended by residents and population density
 stadtnutzung = pd.read_csv(
