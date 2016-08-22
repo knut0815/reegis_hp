@@ -6,7 +6,7 @@ Created on Mon Apr 18 13:42:14 2016
 """
 import pandas as pd
 import logging
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
 # Default logger of oemof
 from oemof.tools import logger
@@ -51,6 +51,7 @@ for n in range(number_of_district_heating_systems):
     solph.Bus(label='distr' + str(n + 1))
 
 # Create sinks
+# Get absolute demand and normalise it
 demand = data.get_electricity_usage()
 max_demand = demand.max()
 demand = demand.div(max_demand)

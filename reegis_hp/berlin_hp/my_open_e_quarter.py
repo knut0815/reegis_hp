@@ -85,7 +85,6 @@ if not os.path.isfile(dfilename):
 
     data.number.fillna(data.alt_number, inplace=True)
     data.drop('alt_number', 1, inplace=True)
-    print(len(data))
 
     # Convert objects from db to floats:
     data.floors = data.floors.astype(float)
@@ -101,7 +100,6 @@ else:
     logging.info("Retrieving data from file: {0}".format(dfilename))
     data = pd.read_hdf(dfilename, 'data')
 
-print(data)
 # *** Year of construction ***
 # Fill up the nan values in the scan data with the data from the area types
 data['age_scan'].fillna(data['building_age'], inplace=True)
@@ -157,7 +155,6 @@ for typ, value in typelist.items():
     if value < 1:
         data.loc[data.building_function == typ, 'residential_fraction'] = value
 
-print(len(data))
 # Calculate the heat demand of the building
 logging.debug("Data types of the DataFrame: {0}".format(data.dtypes))
 logging.info("Calculate the heat demand of the buildings...")

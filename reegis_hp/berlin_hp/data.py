@@ -76,10 +76,13 @@ def get_electricity_usage(fullpath=None):
         fullpath = os.path.join(helpers.extend_basic_path('reegis_hp'),
                                 'berlin_electricity_2012.csv')
     try:
-        return pd.read_csv(fullpath).berlin
+        tmp_df = pd.read_csv(fullpath, index_col='Unnamed: 0')
     except OSError:
         tmp_df = electricity_by_region().sum(axis=1)
         tmp_df.name = 'berlin'
         tmp_df = pd.DataFrame(tmp_df)
         tmp_df.to_csv(fullpath)
     return tmp_df.berlin
+
+def heat_demand():
+    pass
