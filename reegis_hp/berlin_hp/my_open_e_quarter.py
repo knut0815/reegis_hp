@@ -170,5 +170,10 @@ result.loc[:, str_cols] = result[str_cols].applymap(str)
 
 # Store results to hdf5 file
 logging.info("Store results to {0}".format(filename))
-result.to_hdf(filename, 'oeq')
+store = pd.HDFStore(filename)
+store['oeq'] = result
+store['age_of_construction'] = pd.Series(age_of_construction)
+store['typelist'] = pd.Series(typelist)
+store['parameter'] = pd.Series(parameter)
+store.close()
 logging.info("Elapsed time: {0}".format(time.time() - start))
