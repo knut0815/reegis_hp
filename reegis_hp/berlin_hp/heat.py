@@ -7,4 +7,7 @@
 
 class DemandHeat:
     def __init__(self, datetime_index, datapath=None, filename=None):
-        pass
+        self.datetime_index = datetime_index
+        self.datapath = datapath
+        self.filename = filename
+        self.demand = None
