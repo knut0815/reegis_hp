@@ -57,7 +57,6 @@ def sql_string(spacetype, space_gid=None):
     '''.format(spacetype, where_space)
 
 logger.define_logging()
-conn = db.connection()
 start = time.time()
 
 # Select region
@@ -72,6 +71,7 @@ filename = "/home/uwe/chiba/RLI/data/eQuarter_0-73_{0}_newage.hdf".format(level)
 dfilename = "/home/uwe/chiba/RLI/data/eQuarter_data_{0}.hdf".format(level)
 
 if not os.path.isfile(dfilename):
+    conn = db.connection()
     logging.debug("SQL query: {0}".format(sql))
     logging.info("Retrieving data from db...")
     results = (conn.execute(sql))
