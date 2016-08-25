@@ -14,7 +14,7 @@ import geoplot
 import oemof.db as db
 import numpy as np
 from oemof.tools import logger
-# plt.style.use('ggplot')
+plt.style.use('ggplot')
 
 
 def fetch_geometries(**kwargs):
@@ -56,19 +56,19 @@ plr_def = {
 planungsraum = fetch_geometries(**plr_def)
 planungsraum['geom'] = geoplot.postgis2shapely(planungsraum.geom)
 
-read_path = '/home/uwe/chiba/RLI/data'
+sync_path = '/home/uwe/chiba/RLI/data'
 basic_path = '/home/uwe/.oemof/reegis_hp'
 
 logging.info("Datapath: {0}:".format(basic_path))
 
 # Read tables from csv
-df = pd.read_hdf(os.path.join(read_path, 'eQuarter_0-73_berlin_newage.hdf'),
+df = pd.read_hdf(os.path.join(sync_path, 'eQuarter_0-73_berlin_newage.hdf'),
                  'oeq')
 # df.to_csv(os.path.join(basic_path, 'eQuarter_0-73_berlin_newage.csv'))
 df['spatial_int'] = df.spatial_na.apply(int)
-bloecke = pd.read_hdf(os.path.join(read_path, 'bloecke.hdf'), 'block')
+bloecke = pd.read_hdf(os.path.join(sync_path, 'bloecke.hdf'), 'block')
 stadtnutzung = pd.read_hdf(
-    os.path.join(read_path, 'stadtnutzung_erweitert.hdf'), 'stadtnutzung')
+    os.path.join(sync_path, 'stadtnutzung_erweitert.hdf'), 'stadtnutzung')
 
 # 1100 - Gemischt genutztes Gebäude mit Wohnen
 # 1110 - Wohngebäude mit Gemeinbedarf
@@ -130,6 +130,18 @@ area_plr = area_plr.merge(ew_plr, right_index=True, left_index=True)
 area_plr['area_stadtnutz'] = area_plr['area_stadtnutz'].div(area_plr.ew)
 area_plr['area_alkis'] = area_plr['area_alkis'].div(area_plr.ew)
 
+area_plr = area_plr.merge(ew_plr, right_index=True, left_index=True)
+
+print(area_plr.sum())
+
+# Calibrate to the statistical value
+print(area_plr.area_stadtnutz.sum() / area_plr.area_alkis.sum())
+area_plr['area_alkis'] *= (area_plr.area_stadtnutz.sum() /
+                           area_plr.area_alkis.sum())
+
+# Calculate living area per habitant
+area_plr = area_plr.div(area_plr.ew, axis='index')
+
 # Convert key (schluessel) from string to float
 planungsraum['key'] = planungsraum.schluessel.astype(float)
 
@@ -165,6 +177,8 @@ plt.title(r'$\mathrm{Histogram\ of\ IQ:}\ \mu=100,\ \sigma=15$')
 plt.show()
 print(planungsraum.columns)
 # data = (planungsraum['diff'] - 0.5) / 1.5
+print(planungsraum.area_stadtnutz)
+print(planungsraum.area_alkis)
 print(planungsraum['diff'].max())
 print(planungsraum['diff'].min())
 data = (planungsraum['diff'] + 15) / 30

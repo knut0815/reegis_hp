@@ -40,6 +40,15 @@ start = time.time()
 
 sync_path = '/home/uwe/chiba/RLI/data'
 basic_path = '/home/uwe/.oemof/reegis_hp'
+<<<<<<< Updated upstream:reegis_hp/berlin_hp/side_modules/compare_demand.py
+=======
+
+logging.info("Datapath: {0}:".format(basic_path))
+
+# Load the yearly demand of the standardised buildings
+wt_demand = pd.read_csv(os.path.join(sync_path, 'waermetool_demand.csv'),
+                        index_col=0)
+>>>>>>> Stashed changes:reegis_hp/berlin_hp/heat_demand.py
 
 logging.info("Datapath: {0}:".format(basic_path))
 
@@ -54,6 +63,16 @@ iwu4types = pd.read_csv(os.path.join(sync_path, 'iwu_typen.csv'), index_col=0)
 blocktype = pd.read_csv(os.path.join(sync_path, 'blocktype.csv'), ';',
                         index_col=0)
 
+<<<<<<< Updated upstream:reegis_hp/berlin_hp/side_modules/compare_demand.py
+=======
+# Load geometry of all Blocks
+bloecke = pd.read_hdf(os.path.join(sync_path, 'bloecke.hdf'), 'bloecke')
+
+# Load "stadtnutzung" from SenStadt extended by residents and population density
+stadtnutzung = pd.read_csv(
+    os.path.join(sync_path, 'stadtnutzung_erweitert.csv'), index_col=0)
+
+>>>>>>> Stashed changes:reegis_hp/berlin_hp/heat_demand.py
 # Merge "typklar" as blocktype to fraction of each iwu-type
 iwu4block = iwu4types.merge(blocktype, left_index=True, right_index=True)
 
@@ -63,14 +82,20 @@ print(buildings.columns)
 
 demand_by_type = pd.read_csv("/home/uwe/waermetool.csv")
 
-print(buildings['total_loss_pres'].sum() * 0.2)
-print(buildings['total_loss_contemp'].sum() * 0.8)
-buildings['total_loss_mix'] = (buildings['total_loss_pres'] * 0.2 +
-                               buildings['total_loss_contemp'] * 0.8) * 0.518512
+print(buildings['total_loss_pres'].sum() )#* 0.956128425302)
+print(buildings['total_loss_contemp'].sum())
+
+buildings['total_loss_mix'] = (buildings['total_loss_pres'] * 0.2 * 0.5 +
+                               buildings['total_loss_pres'] * 0.8)
 print(buildings['total_loss_mix'].sum())
 print(buildings.living_area.sum())
+<<<<<<< Updated upstream:reegis_hp/berlin_hp/side_modules/compare_demand.py
 print(buildings['total_loss_pres'].sum() * 0.2 +
       buildings['total_loss_contemp'].sum() * 0.8)
+=======
+print(stadtnutzung_full.living_area.sum())
+print("Alt", total_demand_wt)
+>>>>>>> Stashed changes:reegis_hp/berlin_hp/heat_demand.py
 
 oeq_plr = pd.DataFrame(
     buildings.groupby('schluessel_planungsraum')['total_loss_mix'].sum())
@@ -111,7 +136,6 @@ mu = planungsraum['diff'].mean()
 # the histogram of the data
 n, bins, patches = plt.hist(planungsraum['diff'], 50, facecolor='green',
                             alpha=0.75, normed=1)
-print(bins)
 # add a 'best fit' line
 y = mlab.normpdf(bins, mu, sigma)
 l = plt.plot(bins, y, 'r--', linewidth=1)
