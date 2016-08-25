@@ -131,18 +131,25 @@ data['age_scan'].replace(age_of_construction, inplace=True)
 data['year_of_construction'] = data['age_scan'].fillna(1960)
 
 # *** Type of the building ***
+# 1100 - Gemischt genutztes Gebäude mit Wohnen
+# 1110 - Wohngebäude mit Gemeinbedarf
+# 1120 - Wohngebäude mit Handel und Dienstleistungen
+# 1130 - Wohngebäude mit Gewerbe und Industrie
+# 1220 - Land- und forstwirtschaftliches Wohn- und Betriebsgebäude
+# 2310 - Gebäude für Gewerbe und Industrie mit Wohnen
+# 3100 - Gebäude für öffentliche Zwecke mit Wohnen
 typelist = {
     1000: 1,
     1010: 1,
     1020: 1,
     1024: 1,
-    1100: 0.5,
-    1110: 0.5,
-    1120: 0.5,
-    1130: 0.5,
-    1220: 0.5,
-    2310: 0.45,
-    3100: 0.45}
+    1100: 0.2,
+    1110: 0.2,
+    1120: 0.2,
+    1130: 0.2,
+    1220: 0.2,
+    2310: 0.2,
+    3100: 0.2}
 
 # Filter by building_types to get only (partly) residential buildings
 query_str = ""
@@ -160,7 +167,7 @@ print(len(data))
 logging.debug("Data types of the DataFrame: {0}".format(data.dtypes))
 logging.info("Calculate the heat demand of the buildings...")
 
-parameter = {'fraction_living_area': 0.73}
+parameter = {'fraction_living_area': 0.8}
 
 result = be.evaluate_building(data, **parameter)
 
