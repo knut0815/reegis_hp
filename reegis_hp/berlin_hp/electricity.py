@@ -83,7 +83,6 @@ class DemandElec:
                                  parse_dates=True)
         except OSError:
             tmp_df = self.electricity_by_district_from_db()
-            print(type(tmp_df))
             tmp_df.to_csv(fullpath)
         return tmp_df
 
