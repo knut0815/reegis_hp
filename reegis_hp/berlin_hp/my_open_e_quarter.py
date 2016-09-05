@@ -70,6 +70,8 @@ overwrite = False
 sql = sql_string(level, selection)
 
 basicpath = os.path.join(os.path.expanduser('~'), '.reegis_hp', 'heat_demand')
+if not os.path.isdir(os.path.join(os.path.expanduser('~'), '.reegis_hp')):
+    os.mkdir(os.path.join(os.path.expanduser('~'), '.reegis_hp'))
 if not os.path.isdir(basicpath):
     os.mkdir(basicpath)
 
