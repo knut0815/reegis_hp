@@ -100,11 +100,27 @@ if not os.path.isfile(datafilepath) or overwrite:
 
     sn_data = pd.read_csv("/home/uwe/chiba/RLI/data/data_by_blocktype.csv", ';')
     data = data.merge(sn_data, on='blocktype')
-    data.to_hdf(dfilename, 'data')
+    str_cols = ['spatial_na', 'name_street', 'number', 'blocktype', 'age_scan',
+                'floors_average', 'floor_area_fraction', 'building_age']
+    data.loc[:, str_cols] = data[str_cols].applymap(str)
+    logging.info("Store query results to {0}".format(datafilepath))
+    store = pd.HDFStore(datafilepath)
+    store['data'] = data
+    if isinstance(selection, int):
+        selection = (selection,)
+    if selection is None:
+        selection = (0, )
+    store['selection'] = pd.Series(list(selection), name=level)
+    store.close()
     logging.info("DB time: {0}".format(time.time() - start_db))
 else:
-    logging.info("Retrieving data from file: {0}".format(dfilename))
-    data = pd.read_hdf(dfilename, 'data')
+    logging.info("Retrieving data from file: {0}".format(datafilepath))
+    load = pd.HDFStore(datafilepath)
+    data = load.data
+    level = load.selection.name
+    selection = load.selection
+    load.close()
+    logging.warning("Existing file loaded:\n{0}.".format(selection))
 
 # *** Year of construction ***
 # Fill up the nan values in the scan data with the data from the area types
@@ -182,11 +198,16 @@ str_cols = ['spatial_na', 'name_street', 'number', 'blocktype',
 result.loc[:, str_cols] = result[str_cols].applymap(str)
 
 # Store results to hdf5 file
-logging.info("Store results to {0}".format(filename))
-store = pd.HDFStore(filename)
+logging.info("Store results to {0}".format(filepath))
+store = pd.HDFStore(filepath)
 store['oeq'] = result
-store['age_of_construction'] = pd.Series(age_of_construction)
+store['year_of_construction'] = pd.Series(year_of_construction)
 store['typelist'] = pd.Series(typelist)
 store['parameter'] = pd.Series(parameter)
+if isinstance(selection, int):
+    selection = (selection,)
+if selection is None:
+    selection = (0,)
+store['selection'] = pd.Series(list(selection), name=level)
 store.close()
 logging.info("Elapsed time: {0}".format(time.time() - start))
