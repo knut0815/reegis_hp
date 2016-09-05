@@ -65,6 +65,7 @@ level, selection = ('berlin', None)
 # level, selection = ('bezirk', 6)
 # level, selection = ('planungsraum', 384)
 # level, selection = ('block', (5812, 9335))
+overwrite = False
 
 sql = sql_string(level, selection)
 
@@ -72,6 +73,9 @@ filename = "/home/uwe/chiba/RLI/data/eQuarter_0-73_{0}_newage.hdf".format(level)
 dfilename = "/home/uwe/chiba/RLI/data/eQuarter_data_{0}.hdf".format(level)
 
 if not os.path.isfile(dfilename):
+
+if not os.path.isfile(datafilepath) or overwrite:
+    start_db = time.time()
     conn = db.connection()
     logging.debug("SQL query: {0}".format(sql))
     logging.info("Retrieving data from db...")
@@ -97,6 +101,7 @@ if not os.path.isfile(dfilename):
     sn_data = pd.read_csv("/home/uwe/chiba/RLI/data/data_by_blocktype.csv", ';')
     data = data.merge(sn_data, on='blocktype')
     data.to_hdf(dfilename, 'data')
+    logging.info("DB time: {0}".format(time.time() - start_db))
 else:
     logging.info("Retrieving data from file: {0}".format(dfilename))
     data = pd.read_hdf(dfilename, 'data')
