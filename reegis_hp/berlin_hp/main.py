@@ -14,6 +14,7 @@ from oemof.tools import logger
 # import oemof base classes to create energy system objects
 import oemof.solph as solph
 import reegis_hp.berlin_hp.electricity as electricity
+import reegis_hp.berlin_hp.heat as heat
 
 # Define logger
 logger.define_logging()
@@ -56,5 +57,7 @@ electricity_usage = electricity.DemandElec(time_index)
 normalised_demand, max_demand = electricity_usage.solph_sink(resample='H')
 solph.Sink(label='elec_demand', inputs={bel: solph.Flow(
     actual_value=normalised_demand, fixed=True, nominal_value=max_demand)})
+
+heat_demand = heat.DemandHeat(time_index)
 
 # Create sources
