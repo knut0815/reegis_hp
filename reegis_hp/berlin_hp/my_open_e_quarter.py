@@ -69,10 +69,12 @@ overwrite = False
 
 sql = sql_string(level, selection)
 
-filename = "/home/uwe/chiba/RLI/data/eQuarter_0-73_{0}_newage.hdf".format(level)
-dfilename = "/home/uwe/chiba/RLI/data/eQuarter_data_{0}.hdf".format(level)
+basicpath = os.path.join(os.path.expanduser('~'), '.reegis_hp', 'heat_demand')
+if not os.path.isdir(basicpath):
+    os.mkdir(basicpath)
 
-if not os.path.isfile(dfilename):
+filepath = os.path.join(basicpath, "eQuarter_{0}.hdf".format(level))
+datafilepath = os.path.join(basicpath, "eQuarter_data_{0}.hdf".format(level))
 
 if not os.path.isfile(datafilepath) or overwrite:
     start_db = time.time()
