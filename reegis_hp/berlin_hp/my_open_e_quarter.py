@@ -86,7 +86,7 @@ if not os.path.isfile(datafilepath) or overwrite:
         'number', 'alt_number', 'area', 'perimeter', 'building_function',
         'blocktype', 'frac_off-peak_electricity_heating',
         'frac_district_heating', 'frac_natural_gas_heating',
-        'frac_oil_heating', 'frac_coal_stove', 'age_scan'])
+        'frac_oil_heating', 'frac_coal_stove', 'age_scan', 'plr_key'])
 
     data.number.fillna(data.alt_number, inplace=True)
     data.drop('alt_number', 1, inplace=True)
