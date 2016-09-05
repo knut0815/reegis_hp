@@ -36,6 +36,7 @@ def sql_string(spacetype, space_gid=None):
             st_perimeter(st_transform(ag.geom, 3068)), ag.gebaeudefu,
             sn.typklar, hz."PRZ_NASTRO", hz."PRZ_FERN", hz."PRZ_GAS",
             hz."PRZ_OEL", hz."PRZ_KOHLE", ag.year_of_construction,
+            plr.schluessel
         FROM berlin.{0} as space, berlin.alkis_gebaeude ag
         INNER JOIN berlin.stadtnutzung sn ON st_within(
             st_centroid(ag.geom), sn.geom)
@@ -45,6 +46,8 @@ def sql_string(spacetype, space_gid=None):
             st_centroid(ag.geom), hz.geom)
         INNER JOIN berlin.block block ON st_within(
             st_centroid(ag.geom), block.geom)
+        INNER JOIN berlin.planungsraum  plr ON st_within(
+            st_centroid(ag.geom), plr.geom)
         WHERE
             space.geom && ag.geom AND
             st_contains(space.geom, st_centroid(ag.geom)) AND
