@@ -198,6 +198,8 @@ parameter = {'fraction_living_area': 0.8}
 
 result = be.evaluate_building(data, **parameter)
 
+result['total'] = result.total_loss_present
+
 str_cols = ['spatial_na', 'name_street', 'number', 'blocktype',
             'age_scan', 'floors_average', 'floor_area_fraction',
             'share_non_tilted_roof']
