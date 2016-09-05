@@ -123,11 +123,9 @@ else:
     logging.warning("Existing file loaded:\n{0}.".format(selection))
 
 # *** Year of construction ***
-# Fill up the nan values in the scan data with the data from the area types
-data['age_scan'].fillna(data['building_age'], inplace=True)
 
 # Replace ranges with one year.
-age_of_construction = {
+year_of_construction = {
     '1950-1979': 1964,
     'ab 1945': 1970,
     '1920-1939': 1929,
@@ -145,10 +143,16 @@ age_of_construction = {
     '1962-1974': 1968,
     '1946-1961': 1954,
     '1919-1932': 1926,
-    '1933-1945': 1939
+    '1933-1945': 1939,
+    'None': None,
+    'NaN': None,
+    'nan': None
     }
-data['age_scan'].replace(age_of_construction, inplace=True)
+data['age_scan'].replace(year_of_construction, inplace=True)
+data['building_age'].replace(year_of_construction, inplace=True)
 
+# Fill up the nan values in the scan data with the data from the area types
+data['age_scan'].fillna(data['building_age'], inplace=True)
 # Fill all remaining nan values with a default value of 1960
 data['year_of_construction'] = data['age_scan'].fillna(1960)
 
@@ -194,7 +198,7 @@ result = be.evaluate_building(data, **parameter)
 
 str_cols = ['spatial_na', 'name_street', 'number', 'blocktype',
             'age_scan', 'floors_average', 'floor_area_fraction',
-            'building_age', 'share_non_tilted_roof']
+            'share_non_tilted_roof']
 result.loc[:, str_cols] = result[str_cols].applymap(str)
 
 # Store results to hdf5 file
