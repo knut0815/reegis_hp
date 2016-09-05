@@ -1,6 +1,8 @@
 import logging
 import pandas as pd
 import os
+# import demandlib
+
 #
 # from oemof.tools import helpers
 
@@ -13,7 +15,9 @@ class DemandHeat:
             os.path.expanduser("~"), '.reegis_hp', 'heat_demand'))
         self.filename = kwargs.get('filename')
         self.data = None
-        self.load_data()
+        if self.data is None:
+            self.load_data()
+        self.annual_demand = None
 
     def load_data(self):
         if self.method == 'oeq':
@@ -30,17 +34,26 @@ class DemandHeat:
         if self.data:
             self.data.close()
 
-    def dissolve(self, level, column):
+    def get_data(self, table):
+        self.data.open()
+        tmp = self.data[table]
+        self.data.close()
+        return tmp
+
+    def dissolve(self, level, column='total'):
         """
 
         Parameters
         ----------
         level : integer or string
             1 = district, 2 = prognoseraum, 3 = bezirksregion, 4 = planungsraum
-        column
+        column : string
+            Name of the column of the main DataFrame
 
         Returns
         -------
+        pandas.Series
+            Dissolved Column.
 
         """
         error_level = level
@@ -56,13 +69,28 @@ class DemandHeat:
 
         self.data.open()
         level *= 2
-        results = self.data.oeq.groupby(
-            self.data.oeq.plr_key.str[:level])[column].sum()
+        results = self.data[self.method].groupby(
+            self.data[self.method].plr_key.str[:level])[column].sum()
         self.data.close()
+        self.annual_demand = results
         return results
 
 
-my = DemandHeat(1)
-print(my.dissolve('bezirk', 'total_loss_pres'))
+my = DemandHeat(1, method='oeq')
+my.data.open()
+from matplotlib import pyplot as plt
+cmap = plt.get_cmap('seismic')
+c = ['#000000', '#234000', '#000000', '#000000']
+asd = my.data.oeq.groupby('floors').area.sum()
+c = list()
+for a in asd:
+    c.append(cmap(a / asd.max()))
+print(c)
+asd.plot(kind='bar', color=c)
+plt.show()
+my.data.close()
+exit(0)
+berlin_by_district = my.dissolve('bezirk', 'total')
 
+print(berlin_by_district)
 print(my.data.close())
