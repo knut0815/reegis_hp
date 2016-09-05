@@ -98,8 +98,6 @@ if not os.path.isfile(datafilepath) or overwrite:
     data.population_density = data.population_density.astype(float)
     data.building_function = data.building_function.astype(int)
 
-    # Define default year of construction
-    data['year_of_construction'] = 1960
     sn_data = pd.read_csv("/home/uwe/chiba/RLI/data/data_by_blocktype.csv", ';')
     data = data.merge(sn_data, on='blocktype')
     data.to_hdf(dfilename, 'data')
