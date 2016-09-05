@@ -15,8 +15,15 @@ logger.define_logging()
 
 start = time.time()
 
+
 sync_path = '/home/uwe/chiba/RLI/data'
-basic_path = '/home/uwe/.oemof/reegis_hp'
+
+basic_path = os.path.join(os.path.expanduser('~'), '.reegis_hp', 'heat_demand')
+if not os.path.isdir(os.path.join(os.path.expanduser('~'), '.reegis_hp')):
+    os.mkdir(os.path.join(os.path.expanduser('~'), '.reegis_hp'))
+if not os.path.isdir(basic_path):
+    os.mkdir(basic_path)
+filepath = os.path.join(basic_path, "waermetool_berlin.hdf")
 
 # Define names of standardised buildings
 std_buildings = ['EFHv84', 'EFHn84', 'MFHv84', 'MFHn84', 'Platte']
@@ -73,23 +80,41 @@ total_demand_wt = (demand_by_type_saniert[std_buildings].sum().sum() +
                    demand_by_type_unsaniert[std_buildings].sum().sum())
 
 demand_by_type = demand_by_type_unsaniert.merge(
-    demand_by_type_saniert, left_index=True, right_index=True)
+    demand_by_type_saniert, left_index=True, right_index=True,
+    suffixes=('_unsaniert', '_saniert'))
 
 for typ in std_buildings:
-    demand_by_type[typ] = (demand_by_type[typ + '_y'] +
-                           demand_by_type[typ + '_x'])
+    demand_by_type[typ] = (demand_by_type[typ + '_unsaniert'] +
+                           demand_by_type[typ + '_saniert'])
 
-demand_by_type.rename(columns={'schluessel_planungsraum_x':
-                               'schluessel_planungsraum'}, inplace=True)
+demand_by_type.rename(columns={
+    'schluessel_planungsraum_saniert': 'schluessel_planungsraum',
+    'schluessel_planungsraum_unsaniert': 'plr_key',
+    'spatial_na_saniert': 'spatial_na'}, inplace=True)
+
+demand_by_type.drop('spatial_na_unsaniert', 1, inplace=True)
 
 demand_by_type['total'] = 0
 
+demand_by_type['plr_key'].fillna(0, inplace=True)
+demand_by_type['plr_key'] = demand_by_type['plr_key'].astype(int)
+demand_by_type['plr_key'] = demand_by_type['plr_key'].apply('{:0>8}'.format)
+
 for std_bld in std_buildings:
     demand_by_type['total'] += demand_by_type[std_bld]
+
+# Store results to hdf5 file
+logging.info("Store results to {0}".format(filepath))
+store = pd.HDFStore(filepath)
+store['wt'] = demand_by_type
+store['sanierungsquote'] = pd.DataFrame(
+    sanierungsquote, index=std_buildings, columns=['anteil_saniert'])
+store.close()
 
 demand_by_type.to_csv("/home/uwe/waermetool.csv")
 
 wt_plr = pd.DataFrame(
     demand_by_type.groupby('schluessel_planungsraum')['total'].sum())
 
+print(demand_by_type.columns)
 print(time.time() - start)
