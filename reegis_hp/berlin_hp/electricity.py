@@ -26,7 +26,7 @@ class DemandElec:
         self.datetime_index = datetime_index
         self.datapath = datapath
         self.filename = filename
-        self.usage = self.electricity_usage
+        self.usage = self.electricity_usage()
 
     def electricity_by_district_from_db(self):
         """
