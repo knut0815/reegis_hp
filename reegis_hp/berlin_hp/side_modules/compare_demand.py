@@ -38,61 +38,22 @@ logger.define_logging()
 # conn = db.connection()
 start = time.time()
 
-sync_path = '/home/uwe/chiba/RLI/data'
-basic_path = '/home/uwe/.oemof/reegis_hp'
+result = pd.read_hdf(
+    '/home/uwe/.reegis_hp/heat_demand/eQuarter_berlin.hdf', 'oeq')
 
-logging.info("Datapath: {0}:".format(basic_path))
-
-# Load the yearly demand of the standardised buildings
-wt_demand = pd.read_csv(os.path.join(sync_path, 'waermetool_demand.csv'),
-                        index_col=0)
-
-logging.info("Datapath: {0}:".format(basic_path))
-
-# Load results of Open_eQuarter analyses
-oeq = pd.read_hdf(os.path.join(basic_path, 'buildings.hdf'), 'oeq')
-print(len(oeq))
-
-# Load assignment of standardised building types to all area types
-iwu4types = pd.read_csv(os.path.join(sync_path, 'iwu_typen.csv'), index_col=0)
-
-# Load list of area types with full name and "typklar" name from db
-blocktype = pd.read_csv(os.path.join(sync_path, 'blocktype.csv'), ';',
-                        index_col=0)
-
-# Load geometry of all Blocks
-bloecke = pd.read_hdf(os.path.join(sync_path, 'bloecke.hdf'), 'bloecke')
-
-# Load "stadtnutzung" from SenStadt extended by residents and population density
-stadtnutzung = pd.read_csv(
-    os.path.join(sync_path, 'stadtnutzung_erweitert.csv'), index_col=0)
-
-# Merge "typklar" as blocktype to fraction of each iwu-type
-iwu4block = iwu4types.merge(blocktype, left_index=True, right_index=True)
-
-# Merge fraction of building types to all oeq_buildings
-buildings = oeq.merge(iwu4block, on='blocktype')
-print(buildings.columns)
-
-demand_by_type = pd.read_csv("/home/uwe/waermetool.csv")
-
-print(buildings['total_loss_pres'].sum())  #* 0.956128425302)
-print(buildings['total_loss_contemp'].sum())
-
-buildings['total_loss_mix'] = (buildings['total_loss_pres'] * 0.2 * 0.5 +
-                               buildings['total_loss_pres'] * 0.8)
-print(buildings['total_loss_mix'].sum())
-print(buildings.living_area.sum())
-
-print(buildings['total_loss_pres'].sum() * 0.2 +
-      buildings['total_loss_contemp'].sum() * 0.8)
-
+result['total_loss_mix'] = (result['total_loss_pres'] * 0.2 * 0.5 +
+                            result['total_loss_pres'] * 0.8)
 oeq_plr = pd.DataFrame(
-    buildings.groupby('schluessel_planungsraum')['total_loss_mix'].sum())
-wt_plr = pd.DataFrame(
-    demand_by_type.groupby('schluessel_planungsraum')['total'].sum())
+    result.groupby('plr_key')['total_loss_mix'].sum())
 
+oeq_plr = oeq_plr.set_index(oeq_plr.index.astype('float'))
+
+wt_plr = pd.read_hdf('/home/uwe/demand_plr', 'wt')
+print(wt_plr.sum())
+print(oeq_plr.sum())
+oeq_plr = oeq_plr.div(1.3755072160337949)
 demand_plr = pd.merge(oeq_plr, wt_plr, right_index=True, left_index=True)
+print(demand_plr.sum())
 
 plr_def = {
         'table': 'planungsraum',
@@ -119,7 +80,12 @@ planungsraum = planungsraum.merge(demand_plr, left_on='key',
                                   right_index=True)
 
 planungsraum['diff'] = planungsraum.total_loss_mix - planungsraum.total
-
+oeq_f = planungsraum.total_loss_mix / planungsraum.total -1
+oeq_f[oeq_f < 0] = 0
+wt_f = planungsraum.total / planungsraum.total_loss_mix - 1
+wt_f[wt_f < 0] = 0
+planungsraum['frac'] = oeq_f - wt_f
+print(planungsraum)
 sigma = np.std(planungsraum['diff'])
 mu = planungsraum['diff'].mean()
 
@@ -137,15 +103,37 @@ plt.grid(True)
 
 plt.show()
 # ax = planungsraum['diff'].plot.hist(bins, ax=plt.subplot(111))
+planungsraum = planungsraum.replace(np.inf, 0)
+sigma = np.std(planungsraum['frac'])
+mu = planungsraum['frac'].mean()
+
+planungsraum['frac'].to_csv('/home/uwe/test4.csv')
+
+# the histogram of the data
+n, bins, patches = plt.hist(planungsraum['frac'], 500, facecolor='green',
+                            alpha=0.75)
+# add a 'best fit' line
 y = mlab.normpdf(bins, mu, sigma)
-plt.plot(y, 'r--', linewidth=3)
-plt.title(r'$\mathrm{Histogram\ of\ IQ:}\ \mu=100,\ \sigma=15$')
+l = plt.plot(bins, y, 'r--', linewidth=1)
+
+plt.xlabel('Smarts')
+plt.ylabel('Probability')
+print(mu, sigma)
+plt.title("Histogram: $\mu$={0}, $\sigma$={1}m²".format(int(mu), int(sigma)))
+plt.grid(True)
+
 plt.show()
 
 # data = (planungsraum['diff'] - 0.5) / 1.5
 print(planungsraum['diff'].max())
 print(planungsraum['diff'].min())
-data = (planungsraum['diff'] + 10000000) / 20000000
+
+data = planungsraum.frac
+data = data + 0.5
+
+print(data)
+
+# data = (planungsraum['diff'] + 10000000) / 20000000
 
 plr_def['data'] = data
 plr_def['geom'] = planungsraum.geom

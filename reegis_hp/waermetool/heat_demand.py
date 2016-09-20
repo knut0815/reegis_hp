@@ -89,7 +89,23 @@ for std_bld in std_buildings:
 
 demand_by_type.to_csv("/home/uwe/waermetool.csv")
 
+# # Store results to hdf5 file
+# logging.info("Store results to {0}".format(filepath))
+# store = pd.HDFStore(filepath)
+# store['oeq'] = result
+# store['year_of_construction'] = pd.Series(year_of_construction)
+# store['typelist'] = pd.Series(typelist)
+# store['parameter'] = pd.Series(parameter)
+# if isinstance(selection, int):
+#     selection = (selection,)
+# if selection is None:
+#     selection = (0,)
+# store['selection'] = pd.Series(list(selection), name=level)
+# store.close()
+
 wt_plr = pd.DataFrame(
     demand_by_type.groupby('schluessel_planungsraum')['total'].sum())
+
+wt_plr.to_hdf('/home/uwe/demand_plr', 'wt')
 
 print(time.time() - start)

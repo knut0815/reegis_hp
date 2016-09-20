@@ -214,4 +214,5 @@ if selection is None:
     selection = (0,)
 store['selection'] = pd.Series(list(selection), name=level)
 store.close()
+logging.warning('No date saved! Please add date to hdf5-file.')
 logging.info("Elapsed time: {0}".format(time.time() - start))
