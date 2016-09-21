@@ -14,7 +14,9 @@ class DemandHeat:
             os.path.expanduser("~"), '.reegis_hp', 'heat_demand'))
         self.filename = kwargs.get('filename')
         self.data = None
-        self.load_data()
+        if self.data is None:
+            self.load_data()
+        self.annual_demand = None
 
     def load_data(self):
         if self.method == 'oeq':
@@ -111,6 +113,8 @@ class DemandHeat:
 
         Returns
         -------
+        pandas.Series
+            Dissolved Column.
 
         """
         self.data.open()
@@ -132,6 +136,7 @@ class DemandHeat:
         results = self.data[table].groupby(
             self.data[table].plr_key.str[:level])[column].sum()
         self.data.close()
+        self.annual_demand = results
         return results
 
     def print(self):
@@ -191,3 +196,22 @@ if __name__ == "__main__":
     my.dissolve('bezirk', 'demand_by').plot(kind='bar')
     plt.show()
     print()
+
+	my = DemandHeat(1, method='oeq')
+	my.data.open()
+	from matplotlib import pyplot as plt
+	cmap = plt.get_cmap('seismic')
+	c = ['#000000', '#234000', '#000000', '#000000']
+	asd = my.data.oeq.groupby('floors').area.sum()
+	c = list()
+	for a in asd:
+		c.append(cmap(a / asd.max()))
+	print(c)
+	asd.plot(kind='bar', color=c)
+	plt.show()
+	my.data.close()
+	exit(0)
+	berlin_by_district = my.dissolve('bezirk', 'total')
+
+	print(berlin_by_district)
+	print(my.data.close())

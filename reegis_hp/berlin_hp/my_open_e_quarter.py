@@ -70,6 +70,8 @@ overwrite = False
 sql = sql_string(level, selection)
 
 basicpath = os.path.join(os.path.expanduser('~'), '.reegis_hp', 'heat_demand')
+if not os.path.isdir(os.path.join(os.path.expanduser('~'), '.reegis_hp')):
+    os.mkdir(os.path.join(os.path.expanduser('~'), '.reegis_hp'))
 if not os.path.isdir(basicpath):
     os.mkdir(basicpath)
 
@@ -195,6 +197,8 @@ logging.info("Calculate the heat demand of the buildings...")
 parameter = {'fraction_living_area': 0.8}
 
 result = be.evaluate_building(data, **parameter)
+
+result['total'] = result.total_loss_present
 
 str_cols = ['spatial_na', 'name_street', 'number', 'blocktype',
             'age_scan', 'floors_average', 'floor_area_fraction',
