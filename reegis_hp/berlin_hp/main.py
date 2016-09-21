@@ -122,23 +122,6 @@ for hstype in heating_systems:
                 variable_costs=0)},
             conversion_factors={bel: 0.58})
 
-btb_zentral = db.db_table2pandas(
-    db.connection(), 'berlin', 'kraftwerke_btb_zentral')
-dezentral = db.db_table2pandas(
-    db.connection(), 'berlin', 'kraftwerke_liste_dezentral')
-vattenfall = db.db_table2pandas(
-    db.connection(), 'berlin', 'kraftwerke_vattenfall_zentral')
-btb_zentral['out_th'] = btb_zentral['therm Leistung MW'] * (
-    btb_zentral['JNGth'] / 100)
-btb_zentral['out_el'] = btb_zentral['el Leistung MW'] * (
-    btb_zentral['JNGel'] / 100)
-
-btb_group = btb_zentral.groupby(by='Energietraeger').sum()
-btb_group['JNGth'] = btb_group['out_th'] / btb_group['therm Leistung MW']
-btb_group['JNGel'] = btb_group['out_el'] / btb_group['el Leistung MW']
-print(btb_group)
-# print(btb_zentral, dezentral, vattenfall)
-
 for n in range(number_of_district_heating_systems):
     hstype = 'district_heating_' + str(n)
     hd[hstype] = 0

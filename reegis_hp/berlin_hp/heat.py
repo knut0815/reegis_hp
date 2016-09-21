@@ -193,25 +193,27 @@ if __name__ == "__main__":
 
     my.print()
 
-    my.dissolve('bezirk', 'demand_by').plot(kind='bar')
+    demand_by = my.dissolve('bezirk', 'demand_by')
+    demand_by.plot(kind='bar')
+    demand_by.to_csv('/home/uwe/demand_by.csv')
     plt.show()
     print()
 
-	my = DemandHeat(1, method='oeq')
-	my.data.open()
-	from matplotlib import pyplot as plt
-	cmap = plt.get_cmap('seismic')
-	c = ['#000000', '#234000', '#000000', '#000000']
-	asd = my.data.oeq.groupby('floors').area.sum()
-	c = list()
-	for a in asd:
-		c.append(cmap(a / asd.max()))
-	print(c)
-	asd.plot(kind='bar', color=c)
-	plt.show()
-	my.data.close()
-	exit(0)
-	berlin_by_district = my.dissolve('bezirk', 'total')
+    my = DemandHeat(1, method='oeq')
+    my.data.open()
+    from matplotlib import pyplot as plt
+    cmap = plt.get_cmap('seismic')
+    c = ['#000000', '#234000', '#000000', '#000000']
+    asd = my.data.oeq.groupby('floors').area.sum()
+    c = list()
+    for a in asd:
+        c.append(cmap(a / asd.max()))
+    print(c)
+    asd.plot(kind='bar', color=c)
+    plt.show()
+    my.data.close()
+    exit(0)
+    berlin_by_district = my.dissolve('bezirk', 'total')
 
-	print(berlin_by_district)
-	print(my.data.close())
+    print(berlin_by_district)
+    print(my.data.close())
