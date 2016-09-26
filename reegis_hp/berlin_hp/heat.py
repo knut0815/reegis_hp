@@ -160,6 +160,16 @@ class DemandHeat:
         self.data.close()
         return tmp
 
+    def set(self, series, column, table=None):
+        self.data.open()
+        if table is None:
+            table = self.method
+        tmp_df = self.data[table]
+        tmp_df[column] = series
+        self.data[table] = tmp_df
+        self.data.close()
+
+
 if __name__ == "__main__":
     my = DemandHeat()
 
@@ -197,11 +207,9 @@ if __name__ == "__main__":
     demand_by.plot(kind='bar')
     demand_by.to_csv('/home/uwe/demand_by.csv')
     plt.show()
-    print()
 
     my = DemandHeat(1, method='oeq')
     my.data.open()
-    from matplotlib import pyplot as plt
     cmap = plt.get_cmap('seismic')
     c = ['#000000', '#234000', '#000000', '#000000']
     asd = my.data.oeq.groupby('floors').area.sum()
@@ -212,7 +220,6 @@ if __name__ == "__main__":
     asd.plot(kind='bar', color=c)
     plt.show()
     my.data.close()
-    exit(0)
     berlin_by_district = my.dissolve('bezirk', 'total')
 
     print(berlin_by_district)

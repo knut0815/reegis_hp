@@ -70,6 +70,21 @@ solph.Bus(label='biomass')
 #     nominal_value=max_demand)})
 
 heat_demand = heat.DemandHeat(time_index)
+
+sanierungsanteil = 0.2
+sanierungsreduktion = 0.5
+
+tmp = heat_demand.get(columns=['total_trans_loss_pres',
+                               'air_change_heat_loss'])
+transmission_reduced = (
+    tmp.total_trans_loss_pres * sanierungsanteil * sanierungsreduktion +
+    tmp.total_trans_loss_pres * (1 - sanierungsanteil))
+
+heat_demand.set(transmission_reduced + tmp.air_change_heat_loss, 'total')
+from pyplot import matplotlib as plt
+heat_demand.get(columns='total').plot()
+plt.show()
+exit(0)
 bt_dict = {
         'efh': 'floors < 2',
         'mfh': 'floors > 1',
