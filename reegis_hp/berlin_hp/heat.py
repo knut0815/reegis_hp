@@ -204,6 +204,8 @@ if __name__ == "__main__":
     # print(my.data.oeq.total_loss_pres.sum())
     # print(my.data.demand.columns)
     # print(my.data.demand)
+    print(my.get('demand_by'))
+    exit(0)
     print(my.dissolve('bezirk', 'demand_by').sum())
     print(my.get('building_types'))
 

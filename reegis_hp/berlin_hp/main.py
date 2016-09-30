@@ -71,31 +71,44 @@ solph.Bus(label='biomass')
 
 heat_demand = heat.DemandHeat(time_index)
 
-sanierungsanteil = 0.2
-sanierungsreduktion = 0.5
+types = ['mfh', 'efh']
 
-tmp = heat_demand.get(columns=['total_trans_loss_pres',
-                               'air_change_heat_loss'])
-transmission_reduced = (
-    tmp.total_trans_loss_pres * sanierungsanteil * sanierungsreduktion +
-    tmp.total_trans_loss_pres * (1 - sanierungsanteil))
-
-heat_demand.set(transmission_reduced + tmp.air_change_heat_loss, 'total')
-from pyplot import matplotlib as plt
-heat_demand.get(columns='total').plot()
-plt.show()
-exit(0)
 bt_dict = {
         'efh': 'floors < 2',
         'mfh': 'floors > 1',
     }
+
+sanierungsanteil = {'efh': 0.2,
+                    'mfh': 0.2}
+
+sanierungsreduktion = {'efh': 0.5,
+                       'mfh': 0.5}
+
+# tmp = heat_demand.get(columns=['total_trans_loss_pres',
+#                                'air_change_heat_loss'])
+# transmission_reduced = (
+#     tmp.total_trans_loss_pres * sanierungsanteil * sanierungsreduktion +
+#     tmp.total_trans_loss_pres * (1 - sanierungsanteil))
+#
+# heat_demand.set(transmission_reduced + tmp.air_change_heat_loss, 'total')
+# from matplotlib import pyplot as plt
+# heat_demand.get(columns='total').plot()
+# plt.show()
+# print(heat_demand.get(columns='total'))
+
 heating_systems = [s for s in heat_demand.get().columns if "frac_" in s]
 remove_string = 'frac_'
 heat_demand.demand_by('total_loss_pres', heating_systems, bt_dict,
                       remove_string)
-heat_demand_by = heat_demand.dissolve('bezirk', 'demand_by').sum()
 
-heating_systems = [s for s in heat_demand.get().columns if "frac_" in s]
+dby = heat_demand.dissolve('bezirk', 'demand_by')
+
+for t in types:
+    print('t', t)
+    c = [x for x in dby.columns if t in x]
+    dby[c] = (
+        dby[c].multiply(sanierungsanteil[t] * sanierungsreduktion[t]) +
+        dby[c].multiply(1 - sanierungsanteil[t]))
 
 temperature_path = '/home/uwe/rli-lokal/git_home/demandlib/examples'
 temperature_file = temperature_path + '/example_data.csv'
