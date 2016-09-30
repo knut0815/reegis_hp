@@ -100,7 +100,7 @@ if not os.path.isfile(datafilepath) or overwrite:
     data.population_density = data.population_density.astype(float)
     data.building_function = data.building_function.astype(int)
 
-    sn_data = pd.read_csv("/home/uwe/chiba/RLI/data/data_by_blocktype.csv", ';')
+    sn_data = pd.read_csv(os.path.join(os.path.expanduser('~'), 'chiba/RLI/data/data_by_blocktype.csv'), ';')
     data = data.merge(sn_data, on='blocktype')
     str_cols = ['spatial_na', 'name_street', 'number', 'blocktype', 'age_scan',
                 'floors_average', 'floor_area_fraction', 'building_age']
@@ -198,7 +198,7 @@ parameter = {'fraction_living_area': 0.8}
 
 result = be.evaluate_building(data, **parameter)
 
-result['total'] = result.total_loss_present
+result['total'] = result.total_loss_pres
 
 str_cols = ['spatial_na', 'name_street', 'number', 'blocktype',
             'age_scan', 'floors_average', 'floor_area_fraction',
