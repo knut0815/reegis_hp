@@ -139,9 +139,15 @@ class DemandHeat:
         self.annual_demand = results
         return results
 
-    def print(self):
+    def print(self, table=None, show_columns=True):
         self.data.open()
-        print(self.data)
+        if table is None:
+            print(self.data)
+        else:
+            if show_columns:
+                print(self.data[table].columns)
+            else:
+                print(self.data[table])
         self.data.close()
 
     def delete(self, table):
