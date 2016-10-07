@@ -10,6 +10,7 @@ setup(name='reegis_hp',
       package_dir={'reegis_hp': 'reegis_hp'},
       install_requires=['oemof >= 0.0.6',
                         'pandas >= 0.17.0',
+                        'demandlib',
                         'tables',
                         'matplotlib']
       )

@@ -10,172 +10,173 @@ import logging
 
 # Default logger of oemof
 from oemof.tools import logger
-
-# Demandlib
-import demandlib.bdew as bdew
+from oemof.tools import helpers
 
 # import oemof base classes to create energy system objects
 import oemof.solph as solph
 import reegis_hp.berlin_hp.electricity as electricity
 import reegis_hp.berlin_hp.heat as heat
+import reegis_hp.berlin_hp.preferences as preferences
+import reegis_hp.berlin_hp.create_objects as create_objects
+import reegis_hp.berlin_hp.plot as plot
 
-import oemof.db as db
+import os
 
 # Define logger
 logger.define_logging()
 
-# Dictionaries
-heating2resource = {
-    'natural_gas_heating': 'natural_gas',
-    'off-peak_electricity_heating': 'bel',
-    'district_heating': '',
-    'oil_heating': 'oil',
-    'coal_stove': 'lignite',
-    }
 
-# parameter
-number_of_district_heating_systems = 2
+def initialise_energy_system():
+    logging.info("Creating energy system object.")
+    time_index = pd.date_range('1/1/2012', periods=8784, freq='H')
 
-# Define energy system
-logging.info("Creating energy system object.")
-time_index = pd.date_range('1/1/2012', periods=8784, freq='H')
-berlin_e_system = solph.EnergySystem(time_idx=time_index)
+    return solph.EnergySystem(time_idx=time_index, groupings=solph.GROUPINGS)
 
-logging.info("Adding objects to the energy system...")
 
-# Electricity
-bel = solph.Bus(label='bel')
+def berlin_model(berlin_e_system):
+    time_index = berlin_e_system.time_idx
+    p = preferences.Basic()
+    d = preferences.Data()
 
-# Natural gas
-solph.Bus(label='natural_gas')
+    logging.info("Adding objects to the energy system...")
 
-# Oil
-solph.Bus(label='oil')
+    # Electricity
+    bel = solph.Bus(label='bus_el')
 
-# Coal
-solph.Bus(label='coal')
+    # Create sinks
+    # Get normalise demand and maximum value of electricity usage
+    electricity_usage = electricity.DemandElec(time_index)
+    normalised_demand, max_demand = electricity_usage.solph_sink(resample='H')
 
-# Lignite
-solph.Bus(label='lignite')
+    solph.Sink(label='elec_demand', inputs={bel: solph.Flow(
+        actual_value=normalised_demand, fixed=True,
+        nominal_value=max_demand * 10e+6)})
 
-# Biomass
-solph.Bus(label='biomass')
+    heat_demand = heat.DemandHeat(time_index)
 
-# Create sinks
-# # Get normalise demand and maximum value of electricity usage
-# electricity_usage = electricity.DemandElec(time_index)
-# normalised_demand, max_demand = electricity_usage.solph_sink(resample='H')
-# solph.Sink(label='elec_demand', inputs={bel: solph.Flow(
-#     actual_value=normalised_demand, fixed=True,
-#     nominal_value=max_demand)})
+    heating_systems = [s for s in heat_demand.get().columns if "frac_" in s]
+    remove_string = 'frac_'
+    heat_demand.demand_by('total_loss_pres', heating_systems, d.bt_dict,
+                          remove_string)
 
-heat_demand = heat.DemandHeat(time_index)
+    heat_demand.df = heat_demand.dissolve('bezirk', 'demand_by', index=True)
 
-types = ['mfh', 'efh']
+    heat_demand.df = heat_demand.df.rename(
+        columns={k: k.replace('frac_', '')
+                 for k in heat_demand.df.columns.get_level_values(1)})
 
-bt_dict = {
-        'efh': 'floors < 2',
-        'mfh': 'floors > 1',
-    }
+    for t in p.types:
+        heat_demand.df[t] = (
+            heat_demand.df[t].multiply(
+                d.sanierungsanteil[t] * d.sanierungsreduktion[t]) +
+            heat_demand.df[t].multiply(1 - d.sanierungsanteil[t]))
 
-sanierungsanteil = {'efh': 0.2,
-                    'mfh': 0.2}
+    # Add heating systems
+    sum_wp = 25e+9
+    sum_bhkw = 30e+9
+    sum_existing = heat_demand.df.sum().sum()
+    reduction = (sum_existing - (sum_wp + sum_bhkw)) / sum_existing
+    frac_mfh = heat_demand.df.mfh.sum().sum() / heat_demand.df.sum().sum()
+    new = {'efh': {'wp': sum_wp * (1 - frac_mfh),
+                   'bhkw': sum_bhkw * (1 - frac_mfh)},
+           'mfh': {'wp': sum_wp * frac_mfh,
+                   'bhkw': sum_bhkw * frac_mfh}}
+    heat_demand.df *= reduction
 
-sanierungsreduktion = {'efh': 0.5,
-                       'mfh': 0.5}
+    # Join some categories
+    ol = d.other_demand.pop('oil_light')
+    oh = d.other_demand.pop('oil_heavy')
+    oo = d.other_demand.pop('oil_other')
+    for c in ['ghd', 'i']:
+        d.other_demand['oil_heating'][c] = ol[c] + oh[c] + oo[c]
+        d.other_demand['natural_gas_heating'][c] += d.other_demand[
+            'liquid_gas'][c]
+    d.other_demand.pop('liquid_gas')
 
-# tmp = heat_demand.get(columns=['total_trans_loss_pres',
-#                                'air_change_heat_loss'])
-# transmission_reduced = (
-#     tmp.total_trans_loss_pres * sanierungsanteil * sanierungsreduktion +
-#     tmp.total_trans_loss_pres * (1 - sanierungsanteil))
-#
-# heat_demand.set(transmission_reduced + tmp.air_change_heat_loss, 'total')
-# from matplotlib import pyplot as plt
-# heat_demand.get(columns='total').plot()
-# plt.show()
-# print(heat_demand.get(columns='total'))
+    heat_demand.df.sortlevel(axis='columns', inplace=True)
+    district_z = heat_demand.df.loc[:, (
+        slice(None), 'district_heating')].multiply(d.fw_verteilung, axis=0).sum()
+    district_dz = heat_demand.df.loc[:, (
+        slice(None), 'district_heating')].multiply(d.fw_verteilung, axis=0).sum()
 
-heating_systems = [s for s in heat_demand.get().columns if "frac_" in s]
-remove_string = 'frac_'
-heat_demand.demand_by('total_loss_pres', heating_systems, bt_dict,
-                      remove_string)
+    dsum = heat_demand.df.sum()
 
-dby = heat_demand.dissolve('bezirk', 'demand_by')
+    for b in ['efh', 'mfh']:
+        dsum[b, 'district_dz'] = district_dz[b]['district_heating']
+        dsum[b, 'district_z'] = district_z[b]['district_heating']
+        dsum[b, 'bhkw'] = new[b]['bhkw']
+        dsum[b, 'wp'] = new[b]['wp']
 
-for t in types:
-    print('t', t)
-    c = [x for x in dby.columns if t in x]
-    dby[c] = (
-        dby[c].multiply(sanierungsanteil[t] * sanierungsreduktion[t]) +
-        dby[c].multiply(1 - sanierungsanteil[t]))
+    dsum.drop('district_heating', 0, 'second', True)
+    dsum.sort_index(inplace=True)
 
-temperature_path = '/home/uwe/rli-lokal/git_home/demandlib/examples'
-temperature_file = temperature_path + '/example_data.csv'
-temperature = pd.read_csv(temperature_file)['temperature']
-sli = pd.Series(list(temperature.loc[:23]), index=list(range(8760, 8784)))
-temperature = temperature.append(sli)
+    dfull = d.other_demand
 
-heating_systems.remove('frac_district_heating')
-heatbus = dict()
-hd = dict()
-for hstype in heating_systems:
-    hstype = hstype.replace('frac_', '')
-    hd[hstype] = 0
+    for b in dsum.keys().levels[0]:
+        for h in dsum[b].keys():
+            split_h = '_'.join(h.split('_')[:-1])
+            if h in dfull.keys():
+                dfull[h][b] = dsum[b][h]
+            elif split_h in dfull.keys():
+                dfull[split_h][b] = dsum[b][h]
+            else:
+                dfull[h] = dict()
+                dfull[h][b] = dsum[b][h]
 
-    for key in bt_dict.keys():
-        column = '_'.join(['demand', key, hstype])
-        hd[hstype] += bdew.HeatBuilding(
-            time_index, temperature=temperature, shlp_type=key,
-            building_class=1, wind_class=1,
-            annual_heat_demand=heat_demand_by[column], name=key
-        ).get_bdew_profile()
+    create_objects.heating_systems(berlin_e_system, dfull, p)
 
-    # print(hd[hstype].max())
-    # from matplotlib import pyplot as plt
-    # hd[hstype].div(hd[hstype].max()).plot()
-    # plt.show()
-    heatbus[hstype] = solph.Bus(label='bus_' + hstype)
+    mylist = list(berlin_e_system.groups.items())
+    # Add excess and slack for every BUS
 
-    solph.Sink(label='sink_' + hstype, inputs={heatbus[hstype]: solph.Flow(
-        actual_value=hd[hstype].div(hd[hstype].max()), fixed=True,
-        nominal_value=hd[hstype].max())})
+    for k, g in mylist:
+        if isinstance(g, solph.Bus):
+            solph.Sink(label='excess_{0}'.format(k),
+                       inputs={g: solph.Flow(variable_costs=9000)})
+            solph.Source(label='slack_{0}'.format(k),
+                         outputs={g: solph.Flow(variable_costs=9000)})
 
-    solph.LinearTransformer(
-            label=hstype,
-            inputs={berlin_e_system.groups[heating2resource[hstype]]:
-                    solph.Flow()},
-            outputs={heatbus[hstype]: solph.Flow(
-                nominal_value=10e10,
-                variable_costs=0)},
-            conversion_factors={bel: 0.58})
+    # sources
+    source_costs = {'lignite': 90,
+                    'natural_gas': 120,
+                    'fuel_bio': 150,
+                    'solar_thermal': 0,
+                    'biomass': 140,
+                    'oil': 130,
+                    'coal': 100}
 
-for n in range(number_of_district_heating_systems):
-    hstype = 'district_heating_' + str(n)
-    hd[hstype] = 0
+    for src in source_costs:
+        if 'bus_' + src in berlin_e_system.groups:
+            solph.Source(label=src, outputs={
+                berlin_e_system.groups['bus_' + src]: solph.Flow(
+                    variable_costs=source_costs[src])})
+        else:
+            logging.warning("No need for a {0} source.".format(src))
 
-    heatbus[hstype] = solph.Bus(label='bus_' + hstype)
+    # import pprint as pp
+    # pp.pprint(berlin_e_system.groups)
 
-    for key in bt_dict.keys():
-        column = '_'.join(['demand', key, 'district_heating'])
-        hd[hstype] += bdew.HeatBuilding(
-            time_index, temperature=temperature, shlp_type=key,
-            building_class=1, wind_class=1,
-            annual_heat_demand=(heat_demand_by[column]
-                                / number_of_district_heating_systems),
-            name=key
-        ).get_bdew_profile()
+    logging.info('Optimise the energy system')
 
-    solph.Sink(label='sink_' + hstype, inputs={heatbus[hstype]: solph.Flow(
-        actual_value=hd[hstype].div(hd[hstype].max()), fixed=True,
-        nominal_value=hd[hstype].max())})
+    om = solph.OperationalModel(berlin_e_system)
 
-    solph.LinearTransformer(
-        label='pp_chp',
-        inputs={berlin_e_system.groups['natural_gas']: solph.Flow()},
-        outputs={bel: solph.Flow(nominal_value=30, variable_costs=42),
-                 heatbus[hstype]: solph.Flow(nominal_value=40)},
-        conversion_factors={bel: 0.3,
-                            heatbus[hstype]: 0.4})
+    filename = os.path.join(
+        helpers.extend_basic_path('lp_files'), 'storage_invest.lp')
+    logging.info('Store lp-file in {0}.'.format(filename))
+    om.write(filename, io_options={'symbolic_solver_labels': True})
 
-# Create sources
+    logging.info('Solve the optimization problem')
+    om.solve(solver='gurobi', solve_kwargs={'tee': True})
+
+    berlin_e_system.dump('/home/uwe/')
+    return berlin_e_system
+
+# **********************************
+restore = True
+
+if not restore:
+    berlin_e_sys = berlin_model(initialise_energy_system())
+else:
+    berlin_e_sys = initialise_energy_system()
+    berlin_e_sys.restore('/home/uwe/')
+
+plot.test_plots(berlin_e_sys)

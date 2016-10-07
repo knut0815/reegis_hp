@@ -1,9 +1,8 @@
 import logging
 import pandas as pd
 import os
-import numpy as np
+
 from matplotlib import pyplot as plt
-# from oemof.tools import helpers
 
 
 class DemandHeat:
@@ -17,6 +16,7 @@ class DemandHeat:
         if self.data is None:
             self.load_data()
         self.annual_demand = None
+        self.df = None
 
     def load_data(self):
         if self.method == 'oeq':
@@ -54,7 +54,7 @@ class DemandHeat:
         remove_string : string
             Part of the column names of the heating systems that
              should be removed to name the results. If the column is
-             name "fraction_of_distirct_heating" the string could be
+             name "fraction_of_district_heating" the string could be
              "fraction_of_" to use just "district_heating" for the name
              of the result column.
         percentage : boolean
@@ -84,6 +84,8 @@ class DemandHeat:
         loop_list = demand_by_building.keys()
         if heating_systems is None:
             loop_list = []
+            heating_systems = []
+        blist = list()
         for btype in loop_list:
             rename_dict = {
                 col: 'demand_' + btype + '_' + col.replace(
@@ -93,17 +95,26 @@ class DemandHeat:
                 self.data[self.method][heating_systems].multiply(
                     demand_by_building[btype], axis='index').div(prz))
             demand = demand.rename(columns=rename_dict)
-
-        demand['plr_key'] = self.data[self.method].plr_key
-        self.data['demand_by'] = demand
+            blist.extend(list((btype, )) * len(heating_systems))
+        hlist = heating_systems * len(set(blist))
+        multindex = pd.MultiIndex.from_tuples(list(zip(blist, hlist)),
+                                              names=['first', 'second'])
+        self.data['demand_by'] = pd.DataFrame(
+            data=demand.as_matrix(), columns=multindex,
+            index=self.data[self.method].plr_key)
         self.data['building_types'] = pd.Series(building_types)
         self.data.close()
 
-    def dissolve(self, level, table, column=None):
+    def dissolve(self, level, table, column=None,
+                 grouping_column='plr_key', index=False):
         """
 
         Parameters
         ----------
+        index : boolean
+            Use the index column for grouping if True
+        grouping_column :
+            Name of the grouping column. Will be ignored if index is True.
         level : integer or string
             1 = district, 2 = prognoseraum, 3 = bezirksregion, 4 = planungsraum
         table : string
@@ -133,8 +144,15 @@ class DemandHeat:
             logging.error("Wrong level: {0}".format(error_level))
 
         level *= 2
-        results = self.data[table].groupby(
-            self.data[table].plr_key.str[:level])[column].sum()
+        if index:
+            results = self.data[table].groupby(
+                self.data[table].index.str[:level])[
+                column].sum()
+        else:
+            results = self.data[table].groupby(
+                self.data[table][grouping_column].str[:level])[
+                column].sum()
+
         self.data.close()
         self.annual_demand = results
         return results
@@ -174,6 +192,9 @@ class DemandHeat:
         tmp_df[column] = series
         self.data[table] = tmp_df
         self.data.close()
+
+    def sanierung(self):
+        pass
 
 
 if __name__ == "__main__":
