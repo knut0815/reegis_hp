@@ -4,6 +4,7 @@
 import logging
 
 import oemof.solph as solph
+import reegis_hp.berlin_hp.electricity as electricity
 
 import pandas as pd
 
@@ -12,7 +13,7 @@ import demandlib.particular_profiles as pprofiles
 import reegis_hp.berlin_hp.prepare_data as prepare_data
 
 
-def heating_systems(esystem, dfull, p):
+def heating_systems(esystem, dfull, add_elec, p):
     power_plants = prepare_data.chp_berlin(p)
 
     time_index = esystem.time_idx
@@ -25,7 +26,8 @@ def heating_systems(esystem, dfull, p):
     temperature = temperature.iloc[0:len(time_index)]
     heatbus = dict()
     hd = dict()
-
+    auxiliary_energy = 0
+    print(dfull)
     for h in dfull.keys():
         hd.setdefault(h, 0)
         lsink = 'demand_{0}'.format(h)
@@ -43,6 +45,13 @@ def heating_systems(esystem, dfull, p):
                     building_class=bc, wind_class=1,
                     annual_heat_demand=dfull[h][b], name=h
                 ).get_bdew_profile()
+                if b.upper() in ['EFH', 'MFH']:
+                    print(h, 'in')
+                    auxiliary_energy += bdew.HeatBuilding(
+                        time_index, temperature=temperature, shlp_type=b,
+                        building_class=bc, wind_class=1,
+                        annual_heat_demand=add_elec[h][b], name=h
+                    ).get_bdew_profile()
             elif b in ['i', ]:
                 hd[h] += pprofiles.IndustrialLoadProfile(
                     time_index).simple_profile(annual_demand=dfull[h][b])
@@ -79,3 +88,31 @@ def heating_systems(esystem, dfull, p):
                             nominal_value=power_plants[h]['power_th'][pp])},
                     conversion_factors={esystem.groups['bus_el']: 0.3,
                                         heatbus[h]: 0.4})
+    from matplotlib import pyplot as plt
+    hd_df = pd. DataFrame(hd)
+    print(hd_df.sum().sum())
+    print('z_max:', hd_df['district_z'].max())
+    print('dz_max:', hd_df['district_dz'].max())
+    print('z_sum:', hd_df['district_z'].sum())
+    print('dz_sum:', hd_df['district_dz'].sum())
+    hd_df.plot(colormap='Spectral')
+    hd_df.to_csv('/home/uwe/hd.csv')
+    plt.show()
+
+    solph.Sink(label='auxiliary_energy',
+               inputs={esystem.groups['bus_el']: solph.Flow(
+                   actual_value=auxiliary_energy.div(auxiliary_energy.max()),
+                   fixed=True, nominal_value=auxiliary_energy.max())})
+
+    # Create sinks
+    # Get normalise demand and maximum value of electricity usage
+    electricity_usage = electricity.DemandElec(time_index)
+    normalised_demand, max_demand = electricity_usage.solph_sink(
+        resample='H', reduce=auxiliary_energy)
+    sum_demand = normalised_demand.sum() * max_demand
+    print("delec:", "{:.2E}".format(sum_demand))
+
+    solph.Sink(label='elec_demand',
+               inputs={esystem.groups['bus_el']: solph.Flow(
+                   actual_value=normalised_demand, fixed=True,
+                   nominal_value=max_demand)})

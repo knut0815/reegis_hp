@@ -36,7 +36,7 @@ def chp_berlin(p):
         [power_plants['btb'], power_plants['dezentral']], axis=0)
 
     power_plants['district_dz'] = power_plants['district_dz'].groupby(
-        power_plants['district_dz'].index).sum() * 10e+6
+        power_plants['district_dz'].index).sum() * 10e+5
     power_plants['district_z'] = power_plants['district_z'].groupby(
-        power_plants['district_z'].index).sum() * 10e+6
+        power_plants['district_z'].index).sum() * 10e+5
     return power_plants

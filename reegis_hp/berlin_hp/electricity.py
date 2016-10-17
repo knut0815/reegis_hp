@@ -86,15 +86,20 @@ class DemandElec:
             tmp_df.to_csv(fullpath)
         return tmp_df
 
-    def solph_sink(self, total=True, resample=None):
+    def solph_sink(self, total=True, resample=None, reduce=None):
         if total:
             tmp_df = self.usage.sum(axis=1)
         else:
             tmp_df = self.usage
 
+        tmp_df *= 10e+5
+
         if resample is not None:
             tmp_df = tmp_df.resample(resample).mean()
-
+        if reduce is not None:
+            tmp_df -= reduce
+        print('to_csv')
+        tmp_df.to_csv('/home/uwe/elec.csv')
         max_value = tmp_df.max()
         normalised_values = tmp_df.div(max_value)
         return normalised_values, max_value

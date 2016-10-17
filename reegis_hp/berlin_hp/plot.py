@@ -1,6 +1,8 @@
 import logging
 from oemof import outputlib
 from matplotlib import pyplot as plt
+import oemof.solph as solph
+import pandas as pd
 
 
 def test_plots(berlin_e_system):
@@ -20,7 +22,7 @@ def test_plots(berlin_e_system):
     # Plotting the input flows of the electricity bus for January
     myplot = outputlib.DataFramePlot(energy_system=berlin_e_system)
     myplot.slice_unstacked(bus_label="bus_el", type="to_bus")
-    colorlist = myplot.color_from_dict(cdict)
+    # colorlist = myplot.color_from_dict(cdict)
     myplot.plot(linewidth=2, title="January 2012")
     myplot.ax.legend(loc='upper right')
     myplot.ax.set_ylabel('Power in MW')
@@ -60,3 +62,29 @@ def test_plots(berlin_e_system):
     myplot.outside_legend(handles=handles, labels=labels)
 
     plt.show()
+
+
+def get_result_dict(energysystem):
+    logging.info('Check the results')
+    myresults = outputlib.DataFramePlot(energy_system=energysystem)
+
+    pp_gas = myresults.slice_by(bus_label='bus_district_z', type='to_bus')
+    pp_gas.unstack(level='obj_label').plot()
+    plt.show()
+
+    return pp_gas
+
+
+def initialise_energy_system():
+    logging.info("Creating energy system object.")
+    time_index = pd.date_range('1/1/2012', periods=8784, freq='H')
+
+    return solph.EnergySystem(time_idx=time_index, groupings=solph.GROUPINGS)
+
+
+if __name__ == "__main__":
+    berlin_e_sys = initialise_energy_system()
+    berlin_e_sys.restore('/home/uwe/')
+    get_result_dict(berlin_e_sys)
+    # test_plots(berlin_e_sys)
+
