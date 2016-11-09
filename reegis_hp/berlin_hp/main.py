@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Apr 18 13:42:14 2016
-
-@author: uwe
+Reegis hp main app.
 """
 import pandas as pd
 import logging
@@ -102,8 +100,8 @@ def berlin_model(berlin_e_system):
                         qu += ' and heating_system=="{0}"'.format(hs)
                         # Mix internal DHW and electrical DHW
                         ep[e].ix[(ep[e].gtype == b.upper()) &
-                              (ep[e].building == bs) &
-                              (ep[e].heating_system == hs), h] = (
+                                 (ep[e].building == bs) &
+                                 (ep[e].heating_system == hs), h] = (
                             ep[e].query(qu)[h + '_int_DHW'] *
                             (1 - fraction_electrical_dhw[h]) +
                             ep[e].query(qu)[h + '_el_DHW'] *
@@ -159,9 +157,11 @@ def berlin_model(berlin_e_system):
     d.other_demand.pop('liquid_gas')
 
     heat_demand.df.sortlevel(axis='columns', inplace=True)
+    # noinspection PyTypeChecker
     district_z = heat_demand.df.loc[:, (
         slice(None), 'district_heating')].multiply(
         d.fw_verteilung, axis=0).sum()
+    # noinspection PyTypeChecker
     district_dz = heat_demand.df.loc[:, (
         slice(None), 'district_heating')].multiply(
         (1 - d.fw_verteilung), axis=0).sum()
