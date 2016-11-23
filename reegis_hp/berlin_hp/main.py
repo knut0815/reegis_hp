@@ -31,6 +31,16 @@ def initialise_energy_system():
 
 
 def berlin_model(berlin_e_system):
+    """
+
+    Parameters
+    ----------
+    berlin_e_system : solph.EnergySystem
+
+    Returns
+    -------
+
+    """
     time_index = berlin_e_system.time_idx
     p = preferences.Basic()
     d = preferences.Data()
