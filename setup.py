@@ -12,5 +12,6 @@ setup(name='reegis_hp',
                         'pandas >= 0.17.0',
                         'demandlib',
                         'tables',
-                        'matplotlib']
+                        'matplotlib',
+                        'shapely']
       )

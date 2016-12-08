@@ -26,11 +26,12 @@ import geopandas as gpd
 
 def read_original_file():
     """Read file if exists."""
-    orig_csv_file = os.path.join('original_data',
+    orig_csv_file = os.path.join('data_original',
                                  'renewable_power_plants_DE.csv')
+    info_file = os.path.join('data_basic', 'renewable_power_plants_DE.info.csv')
 
     if not os.path.isfile(orig_csv_file):
-        csv = pd.read_csv(orig_csv_file, squeeze=True, index_col=[0])
+        csv = pd.read_csv(info_file, squeeze=True, index_col=[0])
         print("Download file from {0} and copy it to '{1}'.".format(
             csv.download, orig_csv_file))
         print("This script is tested with the file of {0}.".format(csv.date))
@@ -44,7 +45,7 @@ def complete_geometries(df, time=None):
     """Use centroid of federal state if geometries does not exist."""
     if time is None:
         time = datetime.datetime.now()
-    f2c = pd.read_csv('original_data/centroid_federal_state', index_col='name')
+    f2c = pd.read_csv('data_basic/centroid_federal_state', index_col='name')
     f2c = f2c.applymap(wkt_loads).centroid
 
     for l in df.loc[df.lon.isnull()].index:
@@ -121,7 +122,7 @@ def fill_region_with_coastdat(df, time=None):
     """If region name is None use location of coastdat point."""
     if time is None:
         time = datetime.datetime.now()
-    t = pd.read_csv('original_data/coastdat2region.csv', index_col='id',
+    t = pd.read_csv('data_basic/coastdat2region.csv', index_col='id',
                     squeeze=True)
     for i, v in df.region.iteritems():
         if v == 'None':

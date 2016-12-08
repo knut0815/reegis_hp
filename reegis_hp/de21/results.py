@@ -146,7 +146,7 @@ def unit_round(values, min_value=False):
 
 def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
                  filename=None):
-    geometry = '~/git_local/renpass_gis/geometries/polygons_de21.csv'
+    geometry = 'geometries/polygons_de21.csv'
     sets = {
         'load': {
             'obj': 'load',
@@ -198,11 +198,11 @@ def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
 def powerline_plot(l_min=None, l_max=None):
     s_data = SpatialData()
     reg = {
-        'geometry_file': '~/git_local/renpass_gis/geometries/polygons_de21.csv'}
+        'geometry_file': 'geometries/polygons_de21.csv'}
     poly = geoplot.postgis2shapely(load_geometry(**reg).geom)
     plotter = geoplot.GeoPlotter(poly, (3, 16, 47, 56))
     method = s_data.add_power_lines(
-        geometry_file='~/git_local/renpass_gis/geometries/lines_de21.csv')
+        geometry_file='geometries/lines_de21.csv')
     plotter.plot(facecolor='grey', edgecolor='white')
 
     if method == 'sum':
@@ -235,10 +235,10 @@ def combined_plot():
     s_data = SpatialData()
     obj = s_data.add_polygon_column(
         obj='load', direction='from_bus', bus='bus_el', method='sum',
-        geometry_file='~/git_local/renpass_gis/geometries/polygons_de21.csv')
+        geometry_file='geometries/polygons_de21.csv')
 
     s_data.add_power_lines(
-        geometry_file='~/git_local/renpass_gis/geometries/lines_de21.csv')
+        geometry_file='geometries/lines_de21.csv')
 
     unit = s_data.polygons[obj].prefix_long
 
