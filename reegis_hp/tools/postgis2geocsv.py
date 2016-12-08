@@ -20,7 +20,7 @@ def fetch_geometries(**kwargs):
     """
     sql_str = '''
         SELECT {id_col}, ST_AsText(
-            ST_SIMPLIFY({geo_col},{simp_tolerance})) geom
+            ST_SIMPLIFY({geo_col},{simp_tolerance})) geom, name
         FROM {schema}.{table}
         WHERE "{where_col}" {where_cond}
         ORDER BY {id_col} DESC;'''
@@ -42,7 +42,7 @@ map_def = {
         'schema': 'world',
         'simp_tolerance': '0',
         'where_col': 'grid_level',
-        'where_cond': "= 'entsoe_eu_31'",
+        'where_cond': "= 'deu_21'",
         }
 logging.info("Retrieving data from database...")
 df = fetch_geometries(**map_def)
