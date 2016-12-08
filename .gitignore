@@ -60,3 +60,9 @@ target/
 # IDEs
 .idea/
 .spyderproject
+
+# reegis
+results/
+weather/
+data_original/
+data/
