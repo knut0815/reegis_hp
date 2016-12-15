@@ -97,19 +97,19 @@ def normalised_feedin():
         1: {'h_hub': 135,
             'd_rotor': 127,
             'wind_conv_type': 'ENERCON E 126 7500',
-            'nominal_power': 7500},
+            'nominal_power': 7500000},
         2: {'h_hub': 78,
             'd_rotor': 82,
             'wind_conv_type': 'ENERCON E 82 3000',
-            'nominal_power': 3000},
+            'nominal_power': 3000000},
         3: {'h_hub': 98,
             'd_rotor': 82,
             'wind_conv_type': 'ENERCON E 82 2300',
-            'nominal_power': 2300},
+            'nominal_power': 2300000},
         4: {'h_hub': 138,
             'd_rotor': 82,
             'wind_conv_type': 'ENERCON E 82 2300',
-            'nominal_power': 2300},
+            'nominal_power': 2300000},
     }
 
     avg_wind2type = pd.Series({
