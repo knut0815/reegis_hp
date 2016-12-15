@@ -154,6 +154,6 @@ def normalised_feedin():
 
 
 # get_average_wind_speed()
-plot_pickle('data/full_load_hours_2007.pkl', 'full_load_hours', lmax=9000, n=5)
-plot_pickle('data/average_wind_speed_coastdat.pkl', 'v_wind_avg', lmax=7, n=7)
+plot_pickle('data/full_load_hours_2007.pkl', 'full_load_hours', lmax=5000, n=5)
+# plot_pickle('data/average_wind_speed_coastdat.pkl', 'v_wind_avg', lmax=7, n=7)
 # normalised_feedin()
