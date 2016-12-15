@@ -112,6 +112,13 @@ def normalised_feedin():
             'nominal_power': 2300000},
     }
 
+    pv_power_plantsite = {
+        'module_name': 'Yingli_YL210__2008__E__',
+        'azimuth': 0,
+        'tilt': 30,
+        'albedo': 0.2,
+    }
+
     avg_wind2type = pd.Series({
         1.5: 4,
         2.5: 3,
