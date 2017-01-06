@@ -22,26 +22,46 @@ from shapely.geometry import Point
 import datetime
 from shapely.wkt import loads as wkt_loads
 import geopandas as gpd
+import requests
+import logging
+from oemof.tools import logger
 
 
-def read_original_file():
+logger.define_logging()
+FIXED = False
+
+
+def read_original_file(p_type):
     """Read file if exists."""
-    orig_csv_file = os.path.join('data_original',
-                                 'renewable_power_plants_DE.csv')
-    info_file = os.path.join('data_basic', 'renewable_power_plants_DE.info.csv')
+    global FIXED
+
+    orig_csv_file = os.path.join(
+        'data_original', '{0}_power_plants_DE.csv').format(p_type)
+    fixed_csv_file = os.path.join(
+        'data_original', '{0}_power_plants_DE_fixed.csv').format(p_type)
+    info_file = os.path.join(
+        'data_basic', '{0}_power_plants_DE.info.csv').format(p_type)
+
+    if os.path.isfile(fixed_csv_file):
+        orig_csv_file = fixed_csv_file
+        FIXED = True
 
     if not os.path.isfile(orig_csv_file):
         csv = pd.read_csv(info_file, squeeze=True, index_col=[0])
-        print("Download file from {0} and copy it to '{1}'.".format(
+        req = requests.get(csv.download)
+        logging.warning("File not found. Try to download it from server.")
+        logging.warning("Check URL if download does not work.")
+        with open(orig_csv_file, 'wb') as fout:
+            fout.write(req.content)
+        logging.warning("Downloaded from {0} and copied to '{1}'.".format(
             csv.download, orig_csv_file))
-        print("This script is tested with the file of {0}.".format(csv.date))
-        print("Run this script again if the file exists.")
-        exit(0)
+        logging.warning("This script is tested with the file of {0}.".format(
+            csv.date))
 
     return pd.read_csv(orig_csv_file)
 
 
-def complete_geometries(df, time=None):
+def complete_geometries(df, time=None, fs_column='federal_state'):
     """Use centroid of federal state if geometries does not exist."""
     if time is None:
         time = datetime.datetime.now()
@@ -49,11 +69,11 @@ def complete_geometries(df, time=None):
     f2c = f2c.applymap(wkt_loads).centroid
 
     for l in df.loc[df.lon.isnull()].index:
-        df.loc[l, 'lon'] = f2c[df.loc[l, 'federal_state']].x
-        df.loc[l, 'lat'] = f2c[df.loc[l, 'federal_state']].y
-
-    print('Geometry check:', not ee.lon.isnull().any())
-    print('Geometry complete:', datetime.datetime.now() - time)
+        df.loc[l, 'lon'] = f2c[df.loc[l, fs_column]].x
+        df.loc[l, 'lat'] = f2c[df.loc[l, fs_column]].y
+    logging.info('Geometry check: {0}'.format(str(not df.lon.isnull().any())))
+    logging.info("Geometry complete: {0}".format(
+        str(datetime.datetime.now() - time)))
     return df
 
 
@@ -67,24 +87,20 @@ def remove_cols(df, cols):
     return df
 
 
-def clean_df(df, time=None):
+def clean_df(df, rmv_ls=None, str_columns=None, float_columns=None, time=None):
     """Remove obsolete columns and set consistent type to columns."""
     if time is None:
         time = datetime.datetime.now()
 
-    remove_list = ['tso', 'dso', 'dso_id', 'eeg_id', 'bnetza_id',
-                   'federal_state', 'postcode', 'municipality_code',
-                   'municipality', 'address', 'address_number', 'utm_zone',
-                   'utm_east', 'utm_north', 'data_source', 'comment']
+    if rmv_ls is not None:
+        df = remove_cols(df, rmv_ls)
 
-    df = remove_cols(df, remove_list)
-    str_cols = ['commissioning_date', 'decommissioning_date',
-                'energy_source_level_1', 'energy_source_level_2',
-                'energy_source_level_3', 'technology', 'voltage_level']
-    df.loc[:, str_cols] = df[str_cols].applymap(str)
-    float_cols = ['electrical_capacity', 'thermal_capacity']
-    df.loc[:, float_cols] = df[float_cols].applymap(float)
-    print('Cleaned:', datetime.datetime.now() - time)
+    if str_columns is not None:
+        df.loc[:, str_columns] = df[str_columns].applymap(str)
+
+    if float_columns is not None:
+        df.loc[:, float_columns] = df[float_columns].applymap(float)
+    logging.info("Cleaned: {0}".format(str(datetime.datetime.now() - time)))
     return df
 
 
@@ -98,9 +114,9 @@ def create_geo_df(df, time=None):
     if time is None:
         time = datetime.datetime.now()
     df['geom'] = df.apply(lat_lon2point, axis=1)
-    print('Geom:', datetime.datetime.now() - time)
+    logging.info("Geom: {0}".format(str(datetime.datetime.now() - time)))
 
-    return gpd.GeoDataFrame(ee, crs='epsg:4326', geometry='geom')
+    return gpd.GeoDataFrame(df, crs='epsg:4326', geometry='geom')
 
 
 def add_spatial_name(gdf, path_spatial_file, name, icol='gid', time=None):
@@ -109,13 +125,25 @@ def add_spatial_name(gdf, path_spatial_file, name, icol='gid', time=None):
         time = datetime.datetime.now()
     spatial_df = pd.read_csv(path_spatial_file, index_col=icol)
     length = len(spatial_df.index)
+    gdf_invalid = gdf.loc[~gdf.is_valid].copy()
+    if len(gdf_invalid) > 0 and not FIXED:
+        gdf_invalid.to_csv('invalid.csv')
+        logging.warning("Power plants with invalid geometries present.")
+        logging.warning("See 'invalid.csv' file for more information")
+        logging.warning("You have to fix the original file manually.")
+        logging.warning("Rename original file from '...something.csv' to " +
+                        "'something_fixed.csv' to skip this error and continue")
+        exit(0)
+    if len(gdf_invalid) > 0:
+        logging.warning("Power plants with invalid geometries will be ignored")
+    gdf_valid = gdf.loc[gdf.is_valid].copy()
     for i, v in spatial_df.geom.iteritems():
         length -= 1
-        print("Remains:", length)
-        gdf.loc[gdf.intersects(wkt_loads(v)), name] = i
-    print("Spatial name added to {0}:".format(name),
-          datetime.datetime.now() - time)
-    return gdf
+        logging.info("Remains: {0}".format(str(length)))
+        gdf_valid.loc[gdf_valid.intersects(wkt_loads(v)), name] = i
+    logging.info("Spatial name added to {0}: {1}".format(name,
+                 str(datetime.datetime.now() - time)))
+    return gdf_valid
 
 
 def fill_region_with_coastdat(df, time=None):
@@ -127,16 +155,74 @@ def fill_region_with_coastdat(df, time=None):
     for i, v in df.region.iteritems():
         if v == 'None':
             df.loc[i, 'region'] = t[df.loc[i, 'coastdat_id']]
-    print("Filled region with coastdat:", datetime.datetime.now() - time)
+    logging.info("Filled region with coastdat: {0}".format(
+        str(datetime.datetime.now() - time)))
     return df
 
 
-if __name__ == "__main__":
+def find_intersection_with_buffer(gdf):
+    """Find intersection of points outside the regions by buffering the point
+    until the buffered point intersects with a region.
+    """
+    spatial_df = pd.read_csv('geometries/polygons_de21.csv', index_col='gid')
+
+    for row in gdf.loc[gdf.region.isnull()].iterrows():
+        point = row[1].geom
+        intersec = False
+        for n in range(500):
+            if not intersec:
+                for i, v in spatial_df.iterrows():
+                    if not intersec:
+                        my_poly = wkt_loads(v.geom)
+                        if my_poly.intersects(point.buffer(n / 100)):
+                            intersec = True
+                            reg = i
+                            gdf.loc[gdf.id == row[1].id, 'region'] = reg
+    return gdf
+
+
+def prepare_conventional_power_plants():
+    str_cols = ['id', 'country_code', 'company', 'name_bnetza', 'block_bnetza',
+                'name_uba', 'postcode', 'city', 'street', 'state',
+                'commissioned_original', 'status', 'fuel',
+                'energy_source_level_1', 'energy_source_level_2',
+                'energy_source_level_3', 'technology', 'type', 'eeg', 'chp',
+                'merge_comment', 'efficiency_source', 'network_node', 'voltage',
+                'network_operator', 'geom', 'region']
+
     start = datetime.datetime.now()
-    ee = read_original_file()
-    print('File read:', datetime.datetime.now() - start)
+    cpp = read_original_file('conventional')
+    logging.info("File read: {0}".format(str(datetime.datetime.now() - start)))
+    gcpp = create_geo_df(cpp, start)
+    gcpp = add_spatial_name(gcpp, 'geometries/polygons_de21.csv', 'region',
+                            time=start)
+    gcpp = find_intersection_with_buffer(gcpp)
+    gcpp['region'] = gcpp['region'].apply(str)
+    gcpp.to_file('data/conv_powerplants.shp')
+    cpp['region'] = gcpp['region']
+    cpp.to_csv('data/conv_power_plants_DE.edited.csv')
+    cpp = clean_df(cpp, str_columns=str_cols)
+    cpp.to_hdf('data/conv_power_plants_DE.edited.hdf', 'data', mode='w')
+
+
+def prepare_re_power_plants():
+    remove_list = ['tso', 'dso', 'dso_id', 'eeg_id', 'bnetza_id',
+                   'federal_state', 'postcode', 'municipality_code',
+                   'municipality', 'address', 'address_number', 'utm_zone',
+                   'utm_east', 'utm_north', 'data_source', 'comment']
+
+    str_cols = ['commissioning_date', 'decommissioning_date',
+                'energy_source_level_1', 'energy_source_level_2',
+                'energy_source_level_3', 'technology', 'voltage_level']
+
+    float_cols = ['electrical_capacity', 'thermal_capacity']
+
+    start = datetime.datetime.now()
+    ee = read_original_file('renewable')
+    logging.info("File read: {0}".format(str(datetime.datetime.now() - start)))
     ee = complete_geometries(ee, start)
-    ee = clean_df(ee)
+    ee = clean_df(ee, rmv_ls=remove_list, str_columns=str_cols,
+                  float_columns=float_cols)
     gee = create_geo_df(ee, start)
     gee = add_spatial_name(gee, 'geometries/polygons_de21.csv', 'region',
                            time=start)
@@ -145,9 +231,15 @@ if __name__ == "__main__":
     gee['region'] = gee['region'].apply(str)
     gee['coastdat_id'] = gee['coastdat_id'].apply(int)
     gee = fill_region_with_coastdat(gee)
+
     gee.to_file('data/ee_powerplants.shp')
     ee = remove_cols(ee, ['geom', 'lat', 'lon'])
     ee['region'] = gee['region']
     ee['coastdat_id'] = gee['coastdat_id']
     ee.to_csv('data/renewable_power_plants_DE.edited.csv')
     ee.to_hdf('data/renewable_power_plants_DE.edited.hdf', 'data', mode='w')
+
+
+if __name__ == "__main__":
+    prepare_conventional_power_plants()
+    prepare_re_power_plants()
