@@ -42,6 +42,9 @@ def read_original_file(p_type):
     info_file = os.path.join(
         'data_basic', '{0}_power_plants_DE.info.csv').format(p_type)
 
+    if not os.path.isdir('data_original'):
+        os.makedirs('data_original')
+
     if os.path.isfile(fixed_csv_file):
         orig_csv_file = fixed_csv_file
         FIXED = True
