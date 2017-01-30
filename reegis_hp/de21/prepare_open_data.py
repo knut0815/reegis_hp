@@ -24,6 +24,7 @@ from shapely.wkt import loads as wkt_loads
 import geopandas as gpd
 import requests
 import logging
+import warnings
 from oemof.tools import logger
 
 
@@ -68,7 +69,8 @@ def complete_geometries(df, time=None, fs_column='federal_state'):
     """Use centroid of federal state if geometries does not exist."""
     if time is None:
         time = datetime.datetime.now()
-    f2c = pd.read_csv('data_basic/centroid_federal_state', index_col='name')
+    f2c = pd.read_csv(os.path.join('data_basic', 'centroid_federal_state'),
+                      index_col='name')
     f2c = f2c.applymap(wkt_loads).centroid
 
     for l in df.loc[df.lon.isnull()].index:
@@ -163,15 +165,20 @@ def fill_region_with_coastdat(df, time=None):
     return df
 
 
-def find_intersection_with_buffer(gdf):
+def find_intersection_with_buffer(gdf, filepath, column):
     """Find intersection of points outside the regions by buffering the point
     until the buffered point intersects with a region.
     """
-    spatial_df = pd.read_csv('geometries/polygons_de21.csv', index_col='gid')
-
-    for row in gdf.loc[gdf.region.isnull()].iterrows():
+    spatial_df = pd.read_csv(filepath, index_col='gid')
+    logging.info("Some regions do not intersect. Buffering...")
+    for row in gdf.loc[gdf[column].isnull()].iterrows():
         point = row[1].geom
         intersec = False
+        reg = 0
+        buffer = 0
+        logging.debug(
+            "{0} does not intersect with any region. Buffering...".format(
+                row[1].id))
         for n in range(500):
             if not intersec:
                 for i, v in spatial_df.iterrows():
@@ -180,7 +187,16 @@ def find_intersection_with_buffer(gdf):
                         if my_poly.intersects(point.buffer(n / 100)):
                             intersec = True
                             reg = i
-                            gdf.loc[gdf.id == row[1].id, 'region'] = reg
+                            buffer = n
+                            gdf.loc[gdf.id == row[1].id, column] = reg
+        if intersec:
+            logging.debug("Region found: {0}, Buffer: {1}".format(reg, buffer))
+        else:
+            warnings.warn(
+                "{0} does not intersect with any region. Please check".format(
+                    row[1].id))
+    logging.warning("Some points needed buffering to fit. " +
+                    "See debug file for more information.")
     return gdf
 
 
@@ -197,15 +213,23 @@ def prepare_conventional_power_plants():
     cpp = read_original_file('conventional')
     logging.info("File read: {0}".format(str(datetime.datetime.now() - start)))
     gcpp = create_geo_df(cpp, start)
-    gcpp = add_spatial_name(gcpp, 'geometries/polygons_de21.csv', 'region',
-                            time=start)
-    gcpp = find_intersection_with_buffer(gcpp)
+    gcpp = add_spatial_name(
+        gcpp, os.path.join('geometries', 'polygons_de21.csv'), 'region',
+        time=start)
+    gcpp = add_spatial_name(
+        gcpp, os.path.join('geometries', 'federal_states.csv'), 'federal_state',
+        time=start)
+    gcpp = find_intersection_with_buffer(
+        gcpp, os.path.join('geometries', 'polygons_de21.csv'), 'region')
+    gcpp = find_intersection_with_buffer(
+        gcpp, os.path.join('geometries', 'federal_states.csv'), 'federal_state')
     gcpp['region'] = gcpp['region'].apply(str)
-    gcpp.to_file('data/conv_powerplants.shp')
+    gcpp.to_file(os.path.join('data', 'conv_powerplants.shp'))
     cpp['region'] = gcpp['region']
-    cpp.to_csv('data/conv_power_plants_DE.edited.csv')
+    cpp.to_csv(os.path.join('data', 'conv_power_plants_DE.edited.csv'))
     cpp = clean_df(cpp, str_columns=str_cols)
-    cpp.to_hdf('data/conv_power_plants_DE.edited.hdf', 'data', mode='w')
+    cpp.to_hdf(os.path.join('data', 'conv_power_plants_DE.edited.hdf'),
+               'data', mode='w')
 
 
 def prepare_re_power_plants():
@@ -227,22 +251,23 @@ def prepare_re_power_plants():
     ee = clean_df(ee, rmv_ls=remove_list, str_columns=str_cols,
                   float_columns=float_cols)
     gee = create_geo_df(ee, start)
-    gee = add_spatial_name(gee, 'geometries/polygons_de21.csv', 'region',
-                           time=start)
-    gee = add_spatial_name(gee, 'geometries/coastdat_grid.csv', 'coastdat_id',
-                           time=start)
+    gee = add_spatial_name(gee, os.path.join('geometries', 'polygons_de21.csv'),
+                           'region', time=start)
+    gee = add_spatial_name(gee, os.path.join('geometries', 'coastdat_grid.csv'),
+                           'coastdat_id', time=start)
     gee['region'] = gee['region'].apply(str)
     gee['coastdat_id'] = gee['coastdat_id'].apply(int)
     gee = fill_region_with_coastdat(gee)
 
-    gee.to_file('data/ee_powerplants.shp')
+    gee.to_file(os.path.join('data', 'ee_powerplants.shp'))
     ee = remove_cols(ee, ['geom', 'lat', 'lon'])
     ee['region'] = gee['region']
     ee['coastdat_id'] = gee['coastdat_id']
-    ee.to_csv('data/renewable_power_plants_DE.edited.csv')
-    ee.to_hdf('data/renewable_power_plants_DE.edited.hdf', 'data', mode='w')
+    ee.to_csv(os.path.join('data', 'renewable_power_plants_DE.edited.csv'))
+    ee.to_hdf(os.path.join('data', 'renewable_power_plants_DE.edited.hdf'),
+              'data', mode='w')
 
 
 if __name__ == "__main__":
     prepare_conventional_power_plants()
-    prepare_re_power_plants()
+    # prepare_re_power_plants()
