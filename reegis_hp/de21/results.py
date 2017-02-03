@@ -177,7 +177,7 @@ def add_labels(data, plotter, label=None,
 
 def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
                  filename=None):
-    geometry = 'geometries/polygons_de21.csv'
+    geometry = 'geometries/polygons_de21_simple.csv'
     sets = {
         'load': {
             'obj': 'load',
@@ -234,7 +234,7 @@ def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
 def powerline_plot(l_min=None, l_max=None):
     s_data = SpatialData()
     reg = {
-        'geometry_file': 'geometries/polygons_de21.csv'}
+        'geometry_file': 'geometries/polygons_de21_simple.csv'}
     poly = geoplot.postgis2shapely(load_geometry(**reg).geom)
     plotter = geoplot.GeoPlotter(poly, (3, 16, 47, 56))
     method = s_data.add_power_lines(
@@ -271,7 +271,7 @@ def combined_plot():
     s_data = SpatialData()
     obj = s_data.add_polygon_column(
         obj='load', direction='from_bus', bus='bus_el', method='sum',
-        geometry_file='geometries/polygons_de21.csv')
+        geometry_file='geometries/polygons_de21_simple.csv')
 
     s_data.add_power_lines(
         geometry_file='geometries/lines_de21.csv')
