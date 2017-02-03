@@ -67,4 +67,10 @@ weather/
 data_original/
 data/
 /reegis_hp/de21/invalid.csv
-shp-files/
+
+# shape files
+*.shp
+*.cpg
+*.dbf
+*.prj
+*.shx
