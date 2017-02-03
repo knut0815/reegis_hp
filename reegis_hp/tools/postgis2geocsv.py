@@ -36,13 +36,13 @@ logger.define_logging()
 start = time.time()
 
 map_def = {
-        'table': 'power_grids',
+        'table': 'deu21_simple',
         'geo_col': 'geom',
         'id_col': 'gid',
-        'schema': 'world',
+        'schema': 'deutschland',
         'simp_tolerance': '0',
-        'where_col': 'grid_level',
-        'where_cond': "= 'deu_21'",
+        'where_col': 'gid',
+        'where_cond': "!= 'deu_21'",
         }
 logging.info("Retrieving data from database...")
 df = fetch_geometries(**map_def)
