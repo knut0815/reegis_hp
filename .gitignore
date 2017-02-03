@@ -66,3 +66,5 @@ results/
 weather/
 data_original/
 data/
+/reegis_hp/de21/invalid.csv
+shp-files/
