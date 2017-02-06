@@ -69,11 +69,15 @@ if not os.path.isfile(FILEPATH):
 start = datetime.datetime(2014, 1, 1, 0, 0)
 end = datetime.datetime(2014, 12, 31, 23, 0)
 
-load_profile_15 = get_time_period('DE15', start, end)
-load_profile_de = get_time_period('DE', start, end)
+load_profile = pd.DataFrame(get_time_period('DE', start, end))
 
-load_profile_15.plot()
-load_profile_de.plot()
+for i in range(21):
+    region = 'DE{:02.0f}'.format(i + 1)
+    load_profile[region] = get_time_period(region, start, end)
+
+print(load_profile.sum())
+
+del load_profile['load_DE_load']
+
+load_profile.plot()
 plt.show()
-print("Germany:", load_profile_de.sum())
-print("Region DE15:", load_profile_15.sum())
