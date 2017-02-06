@@ -66,8 +66,10 @@ def get_time_period(region_code, start_cet, end_cet):
 if not os.path.isfile(FILEPATH):
     prepare_demand_file()
 
-start = datetime.datetime(2014, 1, 1, 0, 0)
-end = datetime.datetime(2014, 12, 31, 23, 0)
+year = 2014
+
+start = datetime.datetime(year, 1, 1, 0, 0)
+end = datetime.datetime(year, 12, 31, 23, 0)
 
 load_profile = pd.DataFrame(get_time_period('DE', start, end))
 
