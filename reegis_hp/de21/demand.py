@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 FIXED = False
 FILEPATH = os.path.join('data', 'entsoe_DE_load.csv')
 
+
 def read_original_file():
     """Read file if exists."""
 
@@ -49,10 +50,10 @@ def prepare_demand_file():
          ].to_csv(FILEPATH)
 
 
-def get_time_period(start, end):
+def get_time_period(start_cet, end_cet):
     load = pd.read_csv(FILEPATH, index_col='cet',
-                  parse_dates=True)
-    return load.ix[start:end]
+                       parse_dates=True)
+    return load.ix[start_cet:end_cet]
 
 
 if not os.path.isfile(FILEPATH):
@@ -62,6 +63,7 @@ start = datetime.datetime(2014, 1, 1, 0, 0)
 end = datetime.datetime(2014, 12, 31, 23, 0)
 
 load_profile = get_time_period(start, end)
+
 load_profile.plot()
 plt.show()
 print(load_profile.sum())
