@@ -50,10 +50,17 @@ def prepare_demand_file():
          ].to_csv(FILEPATH)
 
 
-def get_time_period(start_cet, end_cet):
+def get_time_period(region_code, start_cet, end_cet):
     load = pd.read_csv(FILEPATH, index_col='cet',
                        parse_dates=True)
-    return load.ix[start_cet:end_cet]
+
+    if region_code == 'DE':
+        share = 1
+    else:
+        share = pd.read_csv(os.path.join('data_basic', 'de21_demand_share.csv'),
+                            index_col='region_code', squeeze=True)[region_code]
+
+    return load.ix[start_cet:end_cet].load_DE_load.multiply(float(share))
 
 
 if not os.path.isfile(FILEPATH):
@@ -62,8 +69,11 @@ if not os.path.isfile(FILEPATH):
 start = datetime.datetime(2014, 1, 1, 0, 0)
 end = datetime.datetime(2014, 12, 31, 23, 0)
 
-load_profile = get_time_period(start, end)
+load_profile_15 = get_time_period('DE15', start, end)
+load_profile_de = get_time_period('DE', start, end)
 
-load_profile.plot()
+load_profile_15.plot()
+load_profile_de.plot()
 plt.show()
-print(load_profile.sum())
+print("Germany:", load_profile_de.sum())
+print("Region DE15:", load_profile_15.sum())
