@@ -146,7 +146,7 @@ def unit_round(values, min_value=False):
 
 
 def add_labels(data, plotter, label=None,
-               coord_file='data_basic/coord_region.csv'):
+               coord_file='geometries/coord_region.csv'):
     p = pd.read_csv(coord_file, index_col='name')
     data.polygons['point'] = p.point
 
