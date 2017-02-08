@@ -4,6 +4,7 @@ import math
 import geoplot
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+import scenario_writer as sw
 
 
 grid = pd.read_csv(os.path.join('data_basic', 'de21_grid_data.csv'))
@@ -109,11 +110,19 @@ plotter_lines.plot(edgecolor='data', linewidth=2, cmap=my_cmap)
 add_labels(lines, plotter_lines, 'capacity')
 plt.tight_layout()
 plt.box(on=None)
-plt.show()
+# plt.show()
 
-lines.to_csv(os.path.join('data', 'de_grid.csv'))
-for l in lines.index:
-    print(l)
+tmp = lines.capacity
+tmp.index = (tmp.index.str.replace('-', '_'))
+
+values = tmp.copy()
 
 
+def id_inverter(name):
+    return '_'.join([name.split('_')[1], name.split('_')[0]])
 
+tmp.index = tmp.index.map(id_inverter)
+values = pd.concat([values, tmp])
+
+sw.update_parameter('reegis_de_21_writer', '{0}_powerline', 'source',
+                    'nominal_value', values, 'grid')
