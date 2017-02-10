@@ -57,14 +57,46 @@ def add_labels(data, plotter, label=None,
                         rotation=row[1].rotation)
 
 
+def plot_grid(lines):
+    # fig = plt.figure(figsize=(10, 14))
+    # plt.rc('legend', **{'fontsize': 19})
+    # plt.rcParams.update({'font.size': 19})
+    # plt.style.use('grayscale')
+
+    background = pd.read_csv('geometries/polygons_de21_simple.csv',
+                             index_col='gid')
+
+    onshore = geoplot.postgis2shapely(
+        background[background['Unnamed: 0'] > 2].geom)
+    plotter_poly = geoplot.GeoPlotter(onshore, (3, 16, 47, 56))
+    plotter_poly.plot(facecolor='#aab9aa', edgecolor='#7b987b')
+
+    onshore = geoplot.postgis2shapely(
+        background[background['Unnamed: 0'] < 3].geom)
+    plotter_poly = geoplot.GeoPlotter(onshore, (3, 16, 47, 56))
+    plotter_poly.plot(facecolor='#d8e4ef', edgecolor='#98a7b5')
+
+    plotter_lines = geoplot.GeoPlotter(geoplot.postgis2shapely(lines.geom),
+                                       (3, 16, 47, 56))
+    plotter_lines.cmapname = 'RdBu'
+    my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#860808'),
+                                                           (1, '#3a3a48')])
+    plotter_lines.data = lines.capacity
+    plotter_lines.plot(edgecolor='data', linewidth=2, cmap=my_cmap)
+    add_labels(lines, plotter_lines, 'capacity')
+    plt.tight_layout()
+    plt.box(on=None)
+    plt.show()
+
+
 # renpass F.Wiese (page 49)
 grid['capacity_calc'] = (grid.circuits * current_max * grid.voltage *
                          f_security * math.sqrt(3) / 1000)
 
-lines = pd.read_csv(os.path.join('geometries', 'lines_de21.csv'),
-                    index_col='name')
+pwr_lines = pd.read_csv(os.path.join('geometries', 'lines_de21.csv'),
+                        index_col='name')
 
-for l in lines.index:
+for l in pwr_lines.index:
     split = l.split('-')
     a = ('110{0}'.format(split[0][2:]))
     b = ('110{0}'.format(split[1][2:]))
@@ -73,56 +105,27 @@ for l in lines.index:
     cap2, dist2 = get_grid_capacity(int(b), int(a))
 
     if cap1 == 0 and cap2 == 0:
-        lines.loc[l, 'capacity'] = 0
-        lines.loc[l, 'distance'] = 0
+        pwr_lines.loc[l, 'capacity'] = 0
+        pwr_lines.loc[l, 'distance'] = 0
     elif cap1 == 0 and cap2 != 0:
-        lines.loc[l, 'capacity'] = cap2
-        lines.loc[l, 'distance'] = dist2
+        pwr_lines.loc[l, 'capacity'] = cap2
+        pwr_lines.loc[l, 'distance'] = dist2
     elif cap1 != 0 and cap2 == 0:
-        lines.loc[l, 'capacity'] = cap1
-        lines.loc[l, 'distance'] = dist1
+        pwr_lines.loc[l, 'capacity'] = cap1
+        pwr_lines.loc[l, 'distance'] = dist1
     else:
         print("Error in {0}".format(l))
 
-# fig = plt.figure(figsize=(10, 14))
-# plt.rc('legend', **{'fontsize': 19})
-# plt.rcParams.update({'font.size': 19})
-# plt.style.use('grayscale')
-
-
-background = pd.read_csv('geometries/polygons_de21_simple.csv', index_col='gid')
-
-onshore = geoplot.postgis2shapely(background[background['Unnamed: 0'] > 2].geom)
-plotter_poly = geoplot.GeoPlotter(onshore, (3, 16, 47, 56))
-plotter_poly.plot(facecolor='#aab9aa', edgecolor='#7b987b')
-
-onshore = geoplot.postgis2shapely(background[background['Unnamed: 0'] < 3].geom)
-plotter_poly = geoplot.GeoPlotter(onshore, (3, 16, 47, 56))
-plotter_poly.plot(facecolor='#d8e4ef', edgecolor='#98a7b5')
-
-plotter_lines = geoplot.GeoPlotter(geoplot.postgis2shapely(lines.geom),
-                                   (3, 16, 47, 56))
-plotter_lines.cmapname = 'RdBu'
-my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#860808'),
-                                                       (1, '#3a3a48')])
-plotter_lines.data = lines.capacity
-plotter_lines.plot(edgecolor='data', linewidth=2, cmap=my_cmap)
-add_labels(lines, plotter_lines, 'capacity')
-plt.tight_layout()
-plt.box(on=None)
-# plt.show()
-
-tmp = lines.capacity
-tmp.index = (tmp.index.str.replace('-', '_'))
-
+# plot_grid(pwr_lines)
+tmp = pwr_lines.capacity
 values = tmp.copy()
 
-
 def id_inverter(name):
-    return '_'.join([name.split('_')[1], name.split('_')[0]])
+    return '-'.join([name.split('-')[1], name.split('-')[0]])
 
 tmp.index = tmp.index.map(id_inverter)
 values = pd.concat([values, tmp])
 
+obj_path = os.path.join('data_basic', 'grid_id.csv')
 sw.update_parameter('reegis_de_21_writer', '{0}_powerline', 'source',
-                    'nominal_value', values, 'grid')
+                    'nominal_value', values, obj_path)
