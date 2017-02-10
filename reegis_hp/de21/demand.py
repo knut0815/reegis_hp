@@ -7,8 +7,13 @@ import pandas as pd
 import datetime
 from matplotlib import pyplot as plt
 
+from oemof.solph import csv_tools as csv
+
+
 FIXED = False
 FILEPATH = os.path.join('data', 'entsoe_DE_load.csv')
+
+spath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'scenarios')
 
 
 def read_original_file():
@@ -83,3 +88,9 @@ del load_profile['load_DE_load']
 
 load_profile.plot()
 plt.show()
+
+objects = pd.read_csv(os.path.join('data_basic', 'region_id.csv'),
+                      index_col=0)
+
+csv.update_sequence('reegis_de_21_writer', '{0}_load', load_profile,
+                    objects.index, spath)
