@@ -1,0 +1,591 @@
+RE,chp,state,city,fuel,technology,capacity_n,capacity_g,chp_capaci
+DE01,no,Berlin,Berlin,Oil,Gas turbine,51.0,0.0,0.0
+DE01,no,Brandenburg,Ahrensfelde,Natural gas,Gas turbine,150.0,152.0,0.0
+DE01,no,Brandenburg,Bertikow,Biomass and biogas,Steam turbine,20.0,0.0,0.0
+DE01,no,Brandenburg,Brandenburg,Natural gas,Combined cycle,160.0,207.0,0.0
+DE01,no,Brandenburg,Heiligengrabe,Biomass and biogas,Steam turbine,18.6,0.0,0.0
+DE01,no,Brandenburg,K?nigs Wusterhausen,Biomass and biogas,Steam turbine,17.1,0.0,0.0
+DE01,no,Brandenburg,Nunsdorf,Natural gas,Gas turbine,296.0,300.0,0.0
+DE01,no,Brandenburg,PCK Schwedt,Oil,Steam turbine,93.5,105.27000000000001,0.0
+DE01,no,Brandenburg,Premnitz,Waste,Steam turbine,2.5,0.0,0.0
+DE01,no,Brandenburg,R?dersdorf bei Berlin,Waste,Steam turbine,30.0,0.0,0.0
+DE01,yes,Berlin,Berlin,Biomass and biogas,Steam turbine,16.5,0.0,0.0
+DE01,yes,Berlin,Berlin,Hard coal,Steam turbine,777.0,832.0,1106.0
+DE01,yes,Berlin,Berlin,Lignite,Steam turbine,164.0,188.0,1010.0
+DE01,yes,Berlin,Berlin,Natural gas,Combined cycle,444.0,468.0,1210.0
+DE01,yes,Berlin,Berlin,Natural gas,Gas turbine,211.0,214.0,300.0
+DE01,yes,Berlin,Berlin,Natural gas,Steam turbine,432.0,450.0,720.0
+DE01,yes,Berlin,Berlin,Oil,Steam turbine,276.0,280.0,330.0
+DE01,yes,Berlin,Berlin,Waste,Steam turbine,36.0,0.0,0.0
+DE01,yes,Brandenburg,Baruth/Mark,Biomass and biogas,Steam turbine,16.0,0.0,0.0
+DE01,yes,Brandenburg,Eisenh?ttenstadt,Other fossil fuels,Steam turbine,124.5,116.0,0.0
+DE01,yes,Brandenburg,Frankfurt Oder,Lignite,Steam turbine,45.0,0.0,0.0
+DE01,yes,Brandenburg,PCK Schwedt,Oil,Steam turbine,240.0,270.23,0.0
+DE01,yes,Brandenburg,Potsdam,Natural gas,Steam turbine,81.8,0.0,0.0
+DE01,yes,Brandenburg,Premnitz,Waste,Steam turbine,14.5,0.0,0.0
+DE01,yes,Brandenburg,Schwedt,Biomass and biogas,Steam turbine,13.3,0.0,0.0
+DE01,yes,Brandenburg,Schwedt,Waste,Steam turbine,28.9,0.0,0.0
+DE01,yes,Mecklenburg-Vorpommern,Anklam,Natural gas,Steam turbine,15.1,0.0,0.0
+DE01,yes,Mecklenburg-Vorpommern,Greifswald,Natural gas,Gas turbine,14.7,0.0,0.0
+DE01,yes,Mecklenburg-Vorpommern,Krackow,Biomass and biogas,Steam turbine,17.8,0.0,0.0
+DE01,yes,Mecklenburg-Vorpommern,Lubmin,Natural gas,Steam turbine,37.7,0.0,0.0
+DE01,yes,Mecklenburg-Vorpommern,Malchin,Biomass and biogas,Steam turbine,9.8,0.0,0.0
+DE01,yes,Mecklenburg-Vorpommern,Neubrandenburg,Natural gas,Combined cycle,75.0,0.0,0.0
+DE01,yes,Mecklenburg-Vorpommern,Rostock,Hard coal,Steam turbine,514.0,553.0,150.0
+DE01,yes,Mecklenburg-Vorpommern,Rostock,Natural gas,Combined cycle,108.0,111.0,120.0
+DE01,yes,Mecklenburg-Vorpommern,Rostock,Waste,Steam turbine,17.0,0.0,0.0
+DE01,yes,Mecklenburg-Vorpommern,Schwerin,Natural gas,Steam turbine,67.9,0.0,0.0
+DE01,yes,Sachsen-Anhalt,Arneburg,Biomass and biogas,Steam turbine,138.9,147.0,600.0
+DE01,yes,Sachsen-Anhalt,Klein Wanzleben,Natural gas,Steam turbine,23.4,0.0,0.0
+DE01,yes,Sachsen-Anhalt,Magdeburg,Waste,Steam turbine,58.4,0.0,0.0
+DE01,yes,Sachsen-Anhalt,Steinitz,Natural gas,Steam turbine,11.4,0.0,0.0
+DE01,yes,Sachsen-Anhalt,Stendal,Natural gas,Steam turbine,22.0,0.0,0.0
+DE01,yes,Sachsen-Anhalt,Zielitz,Natural gas,Steam turbine,52.0,0.0,0.0
+DE02,no,Hamburg,Hamburg,Hard coal,Steam turbine,766.0,827.0,120.0
+DE02,yes,Hamburg,Hamburg,Biomass and biogas,Steam turbine,20.0,0.0,0.0
+DE02,yes,Hamburg,Hamburg,Hard coal,Steam turbine,194.0,205.0,785.0
+DE02,yes,Hamburg,Hamburg,Natural gas,Combined cycle,127.0,142.0,170.0
+DE02,yes,Hamburg,Hamburg,Natural gas,Steam turbine,22.5,0.0,0.0
+DE02,yes,Hamburg,Hamburg,Oil,Steam turbine,38.0,0.0,0.0
+DE02,yes,Hamburg,Hamburg,Waste,Steam turbine,24.0,0.0,0.0
+DE03,no,Hessen,Philippsthal,Natural gas,Steam turbine,35.0,0.0,0.0
+DE03,no,Sachsen-Anhalt,Gro?kayna,Oil,Gas turbine,120.0,129.0,0.0
+DE03,no,Sachsen-Anhalt,Leuna,Other fossil fuels,Combined cycle,20.0,0.0,0.0
+DE03,no,Sachsen-Anhalt,Leuna,Other fossil fuels,Steam turbine,14.0,0.0,0.0
+DE03,no,Sachsen-Anhalt,Leuna,Waste,Steam turbine,32.6,0.0,0.0
+DE03,no,Sachsen-Anhalt,Wendefurth,Hydro,Run-of-river,79.7,0.0,0.0
+DE03,no,Sachsen-Anhalt,Wolfen,Natural gas,Steam turbine,40.0,0.0,0.0
+DE03,no,Th?ringen,Bischofferode,Biomass and biogas,Steam turbine,18.1,0.0,0.0
+DE03,no,Th?ringen,Goldisthal,Hydro,Pumped storage,1052.0,1060.0,0.0
+DE03,no,Th?ringen,Hohenwarte,Hydro,Pumped storage,317.8,320.0,0.0
+DE03,no,Th?ringen,Hohenwarte,Hydro,Run-of-river,59.8,0.0,0.0
+DE03,no,Th?ringen,Schleiz,Hydro,Run-of-river,79.8,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Barby,Natural gas,Steam turbine,18.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Bernburg,Natural gas,Combined cycle,66.0,101.29,0.0
+DE03,yes,Sachsen-Anhalt,Bernburg,Waste,Combined cycle,35.0,53.71,0.0
+DE03,yes,Sachsen-Anhalt,Bitterfeld,Natural gas,Combined cycle,106.0,114.0,110.0
+DE03,yes,Sachsen-Anhalt,Bitterfeld - Wolfen,Waste,Steam turbine,9.9,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Dessau-Ro?lau,Lignite,Steam turbine,49.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Halle,Natural gas,Combined cycle,54.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Halle,Natural gas,Steam turbine,97.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,K?nnern,Lignite,Steam turbine,20.3,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Leuna,Natural gas,Combined cycle,159.0,177.99,0.0
+DE03,yes,Sachsen-Anhalt,Leuna,Oil,Combined cycle,92.5,162.0,208.0
+DE03,yes,Sachsen-Anhalt,Leuna,Other fossil fuels,Combined cycle,8.7,0.0,0.0
+DE03,yes,Sachsen-Anhalt,L?tzen OT Zorbau,Waste,Steam turbine,25.4,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Mumsdorf,Lignite,Steam turbine,60.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Schkopau,Lignite,Steam turbine,900.0,980.0,200.0
+DE03,yes,Sachsen-Anhalt,Seegebiet Mansfelder Land,Lignite,Steam turbine,49.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Sta?furt,Natural gas,Combined cycle,132.0,134.0,160.0
+DE03,yes,Sachsen-Anhalt,Sta?furt,Waste,Steam turbine,24.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Teuchern,Lignite,Steam turbine,67.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,W?hlitz,Lignite,Steam turbine,31.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Zeitz,Lignite,Steam turbine,36.0,0.0,0.0
+DE03,yes,Sachsen-Anhalt,Zeitz,Oil,Steam turbine,18.5,0.0,0.0
+DE03,yes,Th?ringen,Bad Salzungen,Natural gas,Steam turbine,9.7,0.0,0.0
+DE03,yes,Th?ringen,Blankenstein,Biomass and biogas,Steam turbine,53.5,0.0,0.0
+DE03,yes,Th?ringen,Eisenach,Natural gas,Steam turbine,22.1,0.0,0.0
+DE03,yes,Th?ringen,Erfurt,Natural gas,Combined cycle,109.1,118.6,0.0
+DE03,yes,Th?ringen,Erfurt,Natural gas,Steam turbine,11.0,0.0,0.0
+DE03,yes,Th?ringen,Gera,Natural gas,Steam turbine,74.0,0.0,0.0
+DE03,yes,Th?ringen,Jena,Natural gas,Combined cycle,182.0,203.97,225.0
+DE03,yes,Th?ringen,Rudolstadt,Natural gas,Steam turbine,26.5,0.0,0.0
+DE03,yes,Th?ringen,Suhl,Natural gas,Steam turbine,13.5,0.0,0.0
+DE03,yes,Th?ringen,Unterbreizbach,Natural gas,Steam turbine,33.6,0.0,0.0
+DE03,yes,Th?ringen,Zella-Mehlis,Waste,Steam turbine,11.2,0.0,0.0
+DE04,no,Bayern,Essenbach,Hydro,Run-of-river,17.8,0.0,0.0
+DE04,no,Sachsen,Boxberg,Lignite,Steam turbine,640.0,675.0,0.0
+DE04,no,Sachsen,Gro?bothen,Oil,Steam turbine,17.0,0.0,0.0
+DE04,no,Sachsen,Markersbach,Hydro,Pumped storage,1045.2,1050.0,0.0
+DE04,no,Sachsen,Niederwartha,Hydro,Run-of-river,39.8,0.0,0.0
+DE04,no,Sachsen,Spreetal,Natural gas,Combined cycle,50.0,0.0,0.0
+DE04,yes,Brandenburg,Brandenburg,Natural gas,Steam turbine,36.0,0.0,0.0
+DE04,yes,Brandenburg,Cottbus,Lignite,Steam turbine,74.0,0.0,0.0
+DE04,yes,Brandenburg,Gro?r?schen,Waste,Steam turbine,23.3,0.0,0.0
+DE04,yes,Brandenburg,Peitz,Lignite,Steam turbine,2790.0,3210.0,457.8
+DE04,yes,Brandenburg,Schwarzheide,Natural gas,Combined cycle,122.0,124.0,209.0
+DE04,yes,Brandenburg,Spremberg,Lignite,Steam turbine,1500.0,1600.0,120.0
+DE04,yes,Brandenburg,Spremberg,Waste,Steam turbine,18.7,0.0,0.0
+DE04,yes,Sachsen,Boxberg,Lignite,Steam turbine,1787.0,1907.0,125.0
+DE04,yes,Sachsen,B?hlen,Lignite,Steam turbine,1750.0,1867.2,460.0
+DE04,yes,Sachsen,Chemnitz,Lignite,Steam turbine,147.6,100.0,0.0
+DE04,yes,Sachsen,Chemnitz,Natural gas,Steam turbine,57.2,0.0,0.0
+DE04,yes,Sachsen,Dresden,Natural gas,Combined cycle,263.0,270.0,455.0
+DE04,yes,Sachsen,Eilenburg,Natural gas,Steam turbine,46.6,0.0,0.0
+DE04,yes,Sachsen,Freiberg,Natural gas,Steam turbine,13.4,0.0,0.0
+DE04,yes,Sachsen,Kriebstein,Natural gas,Combined cycle,12.8,0.0,0.0
+DE04,yes,Sachsen,Lauta,Waste,Steam turbine,15.7,0.0,0.0
+DE04,yes,Sachsen,Leipzig,Natural gas,Combined cycle,167.0,174.0,200.0
+DE04,yes,Sachsen,Leppersdorf,Natural gas,Steam turbine,36.0,0.0,0.0
+DE04,yes,Sachsen,Moritzburg,Natural gas,Steam turbine,34.3,0.0,0.0
+DE04,yes,Sachsen,Wei?enborn,Natural gas,Steam turbine,13.5,0.0,0.0
+DE04,yes,Sachsen,Zwickau,Natural gas,Steam turbine,12.9,0.0,0.0
+DE04,yes,Sachsen-Anhalt,Wittenberg/ Piesteritz,Biomass and biogas,Steam turbine,18.1,0.0,0.0
+DE05,no,Niedersachsen,Lingen,Nuclear,Steam turbine,1336.0,1400.0,0.0
+DE05,yes,Niedersachsen,Emlichheim,Biomass and biogas,Steam turbine,30.6,0.0,0.0
+DE05,yes,Niedersachsen,Lingen,Natural gas,Combined cycle,1837.0,1864.0,124.0
+DE05,yes,Niedersachsen,Lingen,Natural gas,Steam turbine,66.0,0.0,0.0
+DE05,yes,Niedersachsen,Nortrup,Natural gas,Steam turbine,18.1,0.0,0.0
+DE05,yes,Nordrhein-Westfalen,Ibbenb?ren,Hard coal,Steam turbine,794.0,838.0,20.0
+DE05,yes,Nordrhein-Westfalen,Ibbenb?ren,Other fossil fuels,Steam turbine,33.4,0.0,0.0
+DE06,no,Nordrhein-Westfalen,Datteln,Hard coal,Steam turbine,113.0,0.0,0.0
+DE06,no,Nordrhein-Westfalen,Duisburg,Hard coal,Steam turbine,129.0,0.0,0.0
+DE06,no,Nordrhein-Westfalen,D?sseldorf,Natural gas,Gas turbine,131.4,134.0,0.0
+DE06,no,Nordrhein-Westfalen,D?sseldorf,Oil,Gas turbine,86.2,0.0,0.0
+DE06,no,Nordrhein-Westfalen,D?sseldorf,Waste,Steam turbine,48.9,0.0,0.0
+DE06,no,Nordrhein-Westfalen,Frimmersdorf,Lignite,Steam turbine,647.0,0.0,0.0
+DE06,no,Nordrhein-Westfalen,Gelsenkirchen,Hard coal,Steam turbine,676.0,0.0,0.0
+DE06,no,Nordrhein-Westfalen,Grevenbroich,Lignite,Steam turbine,2100.0,2200.0,0.0
+DE06,no,Nordrhein-Westfalen,Grevenbroich-Frimmersdorf,Lignite,Steam turbine,1077.0,310.0,0.0
+DE06,no,Nordrhein-Westfalen,Grevenbroich-Neurath,Lignite,Steam turbine,857.0,936.0,0.0
+DE06,no,Nordrhein-Westfalen,Herdecke,Hydro,Pumped storage,153.0,153.0,0.0
+DE06,no,Nordrhein-Westfalen,Herdecke,Natural gas,Combined cycle,417.0,424.0,0.0
+DE06,no,Nordrhein-Westfalen,Herne,Hard coal,Steam turbine,133.0,0.0,0.0
+DE06,no,Nordrhein-Westfalen,Herten,Waste,Steam turbine,17.1,0.0,0.0
+DE06,no,Nordrhein-Westfalen,Kamp-Lintfort,Oil,Steam turbine,4.8,0.0,0.0
+DE06,no,Nordrhein-Westfalen,Krefeld,Waste,Steam turbine,13.8,0.0,0.0
+DE06,no,Nordrhein-Westfalen,Voerde,Hard coal,Steam turbine,2030.0,2234.0,0.0
+DE06,no,Nordrhein-Westfalen,Wuppertal,Oil,Combined cycle,60.0,61.27,0.0
+DE06,yes,Nordrhein-Westfalen,Bochum,Natural gas,Steam turbine,64.7,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Castrop-Rauxel,Natural gas,Gas turbine,10.2,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Castrop-Rauxel,Natural gas,Steam turbine,0.9,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Datteln,Hard coal,Steam turbine,190.0,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Dormagen,Natural gas,Combined cycle,586.3,597.1,480.0
+DE06,yes,Nordrhein-Westfalen,Duisburg,Hard coal,Steam turbine,1323.0,1306.0,434.0
+DE06,yes,Nordrhein-Westfalen,Duisburg,Lignite,Steam turbine,27.5,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Duisburg,Natural gas,Combined cycle,234.0,245.0,167.0
+DE06,yes,Nordrhein-Westfalen,Duisburg,Natural gas,Steam turbine,40.0,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Duisburg,Other fossil fuels,Steam turbine,21.0,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Duisburg - Ruhrort,Other fossil fuels,Steam turbine,315.0,280.0,0.0
+DE06,yes,Nordrhein-Westfalen,Duisburg-Huckingen,Other fossil fuels,Combined cycle,606.0,640.0,68.0
+DE06,yes,Nordrhein-Westfalen,D?sseldorf,Natural gas,Combined cycle,100.0,114.0,75.0
+DE06,yes,Nordrhein-Westfalen,D?sseldorf,Natural gas,Steam turbine,393.9,324.0,140.0
+DE06,yes,Nordrhein-Westfalen,D?sseldorf,Waste,Steam turbine,53.7,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Erkrath,Natural gas,Steam turbine,10.2,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Essen,Waste,Steam turbine,38.0,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Gelsenkirchen,Hard coal,Steam turbine,1450.0,740.0,0.0
+DE06,yes,Nordrhein-Westfalen,Grevenbroich-Frimmersdorf,Lignite,Steam turbine,284.0,325.0,30.0
+DE06,yes,Nordrhein-Westfalen,Grevenbroich-Neurath,Lignite,Steam turbine,1211.0,1288.0,9.0
+DE06,yes,Nordrhein-Westfalen,Hamborn,Other fossil fuels,Combined cycle,225.0,240.7,150.0
+DE06,yes,Nordrhein-Westfalen,Hamborn,Other fossil fuels,Steam turbine,160.0,108.0,0.0
+DE06,yes,Nordrhein-Westfalen,Herne,Hard coal,Steam turbine,861.0,810.0,550.0
+DE06,yes,Nordrhein-Westfalen,Herten,Waste,Steam turbine,12.5,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Kalkar,Natural gas,Steam turbine,11.4,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Kamp-Lintfort,Waste,Steam turbine,16.0,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Kempen,Natural gas,Steam turbine,13.2,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Krefeld,Natural gas,Combustion Engine,14.0,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Krefeld,Natural gas,Steam turbine,38.4,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Krefeld,Waste,Steam turbine,19.3,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Krefeld-Uerdingen,Hard coal,Steam turbine,136.0,116.0,460.0
+DE06,yes,Nordrhein-Westfalen,Leverkusen,Hard coal,Steam turbine,103.0,108.55,0.0
+DE06,yes,Nordrhein-Westfalen,Leverkusen,Natural gas,Steam turbine,27.0,28.45,0.0
+DE06,yes,Nordrhein-Westfalen,Leverkusen,Waste,Steam turbine,11.6,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Marl,Hard coal,Steam turbine,295.9,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Marl,Natural gas,Combined cycle,138.7,186.0,0.0
+DE06,yes,Nordrhein-Westfalen,Marl,Natural gas,Steam turbine,60.6,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Moers,Natural gas,Steam turbine,24.0,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Neuss,Natural gas,Steam turbine,18.9,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Oberhausen,Natural gas,Steam turbine,47.6,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Oberhausen,Other fossil fuels,Steam turbine,38.0,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Oberhausen,Waste,Steam turbine,61.5,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Recklinghausen,Biomass and biogas,Steam turbine,14.0,0.0,0.0
+DE06,yes,Nordrhein-Westfalen,Rheinberg,Natural gas,Gas turbine,79.0,147.1,0.0
+DE06,yes,Nordrhein-Westfalen,Wuppertal,Hard coal,Steam turbine,85.0,100.0,201.0
+DE06,yes,Nordrhein-Westfalen,Wuppertal,Natural gas,Combined cycle,82.0,83.73,0.0
+DE06,yes,Nordrhein-Westfalen,Wuppertal,Waste,Steam turbine,30.0,0.0,0.0
+DE07,no,Nordrhein-Westfalen,Attendorn,Hydro,Run-of-river,15.0,0.0,0.0
+DE07,no,Nordrhein-Westfalen,Bergkamen,Biomass and biogas,Steam turbine,17.7,0.0,0.0
+DE07,no,Nordrhein-Westfalen,Hamm,Natural gas,Combined cycle,838.0,850.0,0.0
+DE07,no,Nordrhein-Westfalen,Hamm-Uentrop,Hard coal,Steam turbine,2118.0,820.0,0.0
+DE07,no,Nordrhein-Westfalen,L?nen,Biomass and biogas,Steam turbine,20.0,0.0,0.0
+DE07,no,Nordrhein-Westfalen,L?nen,Hard coal,Steam turbine,149.0,170.0,0.0
+DE07,no,Nordrhein-Westfalen,Werne,Hard coal,Steam turbine,607.5,665.5,0.0
+DE07,no,Nordrhein-Westfalen,Werne,Natural gas,Combined cycle,820.0,854.0,0.0
+DE07,no,Nordrhein-Westfalen,Werne,Natural gas,Gas turbine,222.0,222.0,0.0
+DE07,no,Nordrhein-Westfalen,Werne,Natural gas,Steam turbine,355.0,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,Arnsberg,Hard coal,Steam turbine,19.0,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,Bergkamen,Hard coal,Steam turbine,717.0,780.0,20.0
+DE07,yes,Nordrhein-Westfalen,Brilon,Biomass and biogas,Steam turbine,18.0,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,Brilon,Natural gas,Gas turbine,13.5,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,Dortmund,Hard coal,Steam turbine,345.0,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,Dortmund,Natural gas,Steam turbine,26.0,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,Dortmund,Other fossil fuels,Steam turbine,16.0,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,G?tersloh,Biomass and biogas,Steam turbine,12.1,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,G?tersloh,Natural gas,Steam turbine,22.0,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,Hagen,Biomass and biogas,Steam turbine,20.0,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,Hagen,Natural gas,Combined cycle,230.0,251.0,108.0
+DE07,yes,Nordrhein-Westfalen,Hamm,Waste,Steam turbine,14.6,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,Iserlohn,Waste,Steam turbine,12.6,0.0,0.0
+DE07,yes,Nordrhein-Westfalen,L?nen,Hard coal,Steam turbine,1070.0,1170.0,35.0
+DE07,yes,Nordrhein-Westfalen,M?nster,Natural gas,Combined cycle,100.2,104.0,120.0
+DE07,yes,Rheinland-Pfalz,Liebenscheid,Biomass and biogas,Steam turbine,14.0,0.0,0.0
+DE08,no,Nordrhein-Westfalen,Bergheim,Lignite,Steam turbine,3027.0,2989.0,0.0
+DE08,no,Nordrhein-Westfalen,Bergheim,Oil,Steam turbine,0.8,0.0,0.0
+DE08,no,Nordrhein-Westfalen,D?ren,Natural gas,Steam turbine,14.0,0.0,0.0
+DE08,no,Nordrhein-Westfalen,Eschweiler-Weisweiler,Lignite,Steam turbine,751.0,703.0,0.0
+DE08,no,Nordrhein-Westfalen,Eschweiler-Weisweiler,Natural gas,Gas turbine,544.0,0.0,0.0
+DE08,no,Nordrhein-Westfalen,Heimbach,Hydro,Run-of-river,30.0,0.0,0.0
+DE08,no,Nordrhein-Westfalen,H?rth-Knapsack,Natural gas,Combined cycle,1230.0,1262.0,0.0
+DE08,no,Nordrhein-Westfalen,K?ln,Other fossil fuels,Gas turbine,10.4,11.76,0.0
+DE08,no,Rheinland-Pfalz,Koblenz,Hydro,Run-of-river,16.0,0.0,0.0
+DE08,no,Rheinland-Pfalz,Lehmen,Hydro,Run-of-river,20.0,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,Bergheim,Lignite,Steam turbine,688.0,687.0,245.0
+DE08,yes,Nordrhein-Westfalen,Bergheim,Natural gas,Steam turbine,3.0,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,Bonn,Natural gas,Steam turbine,109.4,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,Bonn,Waste,Steam turbine,12.0,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,D?ren,Lignite,Steam turbine,9.3,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,D?ren,Natural gas,Steam turbine,2.9,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,Eschweiler-Weisweiler,Lignite,Steam turbine,1307.0,1255.0,183.0
+DE08,yes,Nordrhein-Westfalen,Euskirchen,Lignite,Steam turbine,14.5,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,Frechen,Lignite,Steam turbine,118.0,201.0,251.0
+DE08,yes,Nordrhein-Westfalen,H?rth,Lignite,Steam turbine,203.0,107.0,0.0
+DE08,yes,Nordrhein-Westfalen,H?rth,Waste,Steam turbine,33.4,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,J?lich,Lignite,Steam turbine,24.6,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,K?ln,Lignite,Steam turbine,75.3,85.42,0.0
+DE08,yes,Nordrhein-Westfalen,K?ln,Natural gas,Combined cycle,571.8,531.0,450.0
+DE08,yes,Nordrhein-Westfalen,K?ln,Natural gas,Steam turbine,15.5,17.58,0.0
+DE08,yes,Nordrhein-Westfalen,K?ln,Oil,Combined cycle,80.0,215.0,235.0
+DE08,yes,Nordrhein-Westfalen,K?ln,Other fossil fuels,Gas turbine,83.80000000000001,94.74000000000001,0.0
+DE08,yes,Nordrhein-Westfalen,K?ln,Waste,Steam turbine,45.1,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,Weisweiler,Waste,Steam turbine,24.0,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,Wesseling,Natural gas,Combined cycle,51.9,73.77,0.0
+DE08,yes,Nordrhein-Westfalen,Wesseling,Oil,Combined cycle,66.3,94.23,0.0
+DE08,yes,Nordrhein-Westfalen,Z?lpich,Lignite,Steam turbine,14.4,0.0,0.0
+DE08,yes,Nordrhein-Westfalen,Z?lpich,Natural gas,Steam turbine,15.1,0.0,0.0
+DE08,yes,Rheinland-Pfalz,Andernach,Waste,Steam turbine,12.5,0.0,0.0
+DE08,yes,Rheinland-Pfalz,Mayen,Natural gas,Combined cycle,42.0,0.0,0.0
+DE08,yes,Rheinland-Pfalz,Mayen,Natural gas,Steam turbine,0.0,0.0,0.0
+DE08,yes,Rheinland-Pfalz,Mayen,Other fossil fuels,Steam turbine,0.0,0.0,0.0
+DE09,no,Hessen,Darmstadt,Natural gas,Combined cycle,94.6,100.0,0.0
+DE09,no,Hessen,Fl?rsheim Wicker,Biomass and biogas,Steam turbine,12.6,0.0,0.0
+DE09,no,Luxemburg,Vianden,Hydro,Run-of-river,195.0,0.0,0.0
+DE09,no,Rheinland-Pfalz,Ellenz-Poltersdorf,Hydro,Run-of-river,16.4,0.0,0.0
+DE09,no,Rheinland-Pfalz,Enkirch,Hydro,Run-of-river,18.4,0.0,0.0
+DE09,no,Rheinland-Pfalz,Freudenburg,Hydro,Run-of-river,12.1,0.0,0.0
+DE09,no,Rheinland-Pfalz,Neef,Hydro,Run-of-river,16.4,0.0,0.0
+DE09,no,Rheinland-Pfalz,Schleich,Hydro,Run-of-river,24.0,0.0,0.0
+DE09,no,Rheinland-Pfalz,Trier,Hydro,Run-of-river,18.8,0.0,0.0
+DE09,no,Rheinland-Pfalz,Wintrich,Hydro,Run-of-river,20.0,0.0,0.0
+DE09,no,Rheinland-Pfalz,Worms,Waste,Steam turbine,6.9,0.0,0.0
+DE09,no,Rheinland-Pfalz,Zeltingen,Hydro,Run-of-river,13.6,0.0,0.0
+DE09,no,Saarland,Bexbach,Hard coal,Steam turbine,721.0,780.0,0.0
+DE09,no,Saarland,Ensdorf,Hard coal,Steam turbine,283.0,310.0,60.0
+DE09,yes,Hessen,Breuberg,Natural gas,Steam turbine,11.4,0.0,0.0
+DE09,yes,Hessen,Darmstadt,Natural gas,Gas turbine,10.0,0.0,0.0
+DE09,yes,Hessen,R?sselheim,Natural gas,Combined cycle,112.1,113.9,88.0
+DE09,yes,Hessen,Wiesbaden,Biomass and biogas,Steam turbine,6.7,0.0,0.0
+DE09,yes,Hessen,Wiesbaden,Natural gas,Steam turbine,25.0,0.0,0.0
+DE09,yes,Hessen,Wiesbaden,Waste,Steam turbine,10.5,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Annweiler,Natural gas,Steam turbine,28.0,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Bad Kreuznach,Natural gas,Steam turbine,10.7,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Kaiserslautern,Hard coal,Steam turbine,13.4,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Kaiserslautern,Natural gas,Steam turbine,11.6,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Ludwigshafen,Natural gas,Combined cycle,892.0,892.0,960.0
+DE09,yes,Rheinland-Pfalz,Ludwigshafen,Natural gas,Gas turbine,43.0,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Ludwigshafen,Natural gas,Steam turbine,12.5,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Ludwigshafen,Waste,Steam turbine,28.0,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Mainz,Natural gas,Combined cycle,769.2,767.0,160.0
+DE09,yes,Rheinland-Pfalz,Mainz,Waste,Steam turbine,15.6,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Obrigheim,Natural gas,Steam turbine,30.0,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Pirmasens,Waste,Steam turbine,15.0,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Woerth,Natural gas,Steam turbine,13.0,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Worms,Natural gas,Steam turbine,11.5,0.0,0.0
+DE09,yes,Rheinland-Pfalz,Worms,Waste,Steam turbine,11.9,0.0,0.0
+DE09,yes,Rheinland-Pfalz,W?rth,Natural gas,Steam turbine,59.0,0.0,0.0
+DE09,yes,Saarland,Dillingen/Saar,Other fossil fuels,Steam turbine,85.0,0.0,0.0
+DE09,yes,Saarland,Ensdorf,Hard coal,Steam turbine,106.0,120.0,66.0
+DE09,yes,Saarland,Neunkirchen,Waste,Steam turbine,11.6,0.0,0.0
+DE09,yes,Saarland,Quierschied,Hard coal,Steam turbine,655.6,724.0,30.0
+DE09,yes,Saarland,Saarbr?cken,Hard coal,Steam turbine,50.0,52.8,0.0
+DE09,yes,Saarland,Saarbr?cken,Natural gas,Combined cycle,75.0,79.2,0.0
+DE09,yes,Saarland,Saarbr?cken,Natural gas,Steam turbine,38.6,0.0,0.0
+DE09,yes,Saarland,Saarbr?cken-Velsen,Waste,Steam turbine,15.8,0.0,0.0
+DE09,yes,Saarland,V?lklingen-Fenne,Hard coal,Steam turbine,390.0,466.0,395.0
+DE09,yes,Saarland,V?lklingen-Fenne,Other fossil fuels,Combustion Engine,42.0,0.0,0.0
+DE10,no,Bayern,Bergheim,Hydro,Run-of-river,23.7,0.0,0.0
+DE10,no,Bayern,Ellgau,Hydro,Run-of-river,9.7,0.0,0.0
+DE10,no,Bayern,Gundremmingen,Nuclear,Steam turbine,2572.0,2688.0,0.0
+DE10,no,Bayern,H?chst?dt,Hydro,Run-of-river,10.0,0.0,0.0
+DE10,no,Bayern,Meitingen,Hydro,Run-of-river,11.3,0.0,0.0
+DE10,no,Bayern,Merching,Hydro,Run-of-river,12.0,0.0,0.0
+DE10,no,Bayern,Mindelheim,Oil,Steam turbine,11.4,0.0,0.0
+DE10,no,Bayern,Neuburg an der Donau,Hydro,Run-of-river,20.2,0.0,0.0
+DE10,no,Bayern,Oberndorf,Hydro,Run-of-river,11.9,0.0,0.0
+DE10,no,Bayern,Pforzen,Oil,Steam turbine,11.4,0.0,0.0
+DE10,no,Bayern,Rain,Hydro,Run-of-river,10.9,0.0,0.0
+DE10,no,Bayern,Rennertshofen,Hydro,Run-of-river,18.9,0.0,0.0
+DE10,no,Bayern,Ro?haupten,Hydro,Run-of-river,45.5,0.0,0.0
+DE10,no,Bayern,Scheuring,Hydro,Run-of-river,12.2,0.0,0.0
+DE10,no,Bayern,Schmiechen-Unterbergen,Hydro,Run-of-river,12.4,0.0,0.0
+DE10,no,Bayern,Waltenhofen-Veits,Oil,Gas turbine,24.0,0.0,0.0
+DE10,no,Bayern,Waltenhofen-Veits,Oil,Steam turbine,10.5,0.0,0.0
+DE10,yes,Bayern,Augsburg,Natural gas,Gas turbine,28.8,0.0,0.0
+DE10,yes,Bayern,Augsburg,Natural gas,Steam turbine,47.0,0.0,0.0
+DE10,yes,Bayern,Augsburg,Waste,Steam turbine,10.0,0.0,0.0
+DE11,no,Baden-W?rttemberg,Karlsruhe,Natural gas,Combined cycle,353.0,363.0,0.0
+DE11,no,Baden-W?rttemberg,Mannheim,Biomass and biogas,Steam turbine,17.9,0.0,0.0
+DE11,no,Baden-W?rttemberg,Mannheim,Waste,Steam turbine,11.5,0.0,0.0
+DE11,no,Baden-W?rttemberg,Marbach,Oil,Combined cycle,347.0,360.0,0.0
+DE11,no,Baden-W?rttemberg,Marbach,Oil,Gas turbine,77.4,0.0,0.0
+DE11,no,Baden-W?rttemberg,Neckarwestheim,Nuclear,Steam turbine,1310.0,1400.0,0.0
+DE11,no,Baden-W?rttemberg,Philippsburg,Nuclear,Steam turbine,1402.0,1468.0,0.0
+DE11,no,Baden-W?rttemberg,Walheim,Hard coal,Steam turbine,244.0,267.0,0.0
+DE11,no,Baden-W?rttemberg,Walheim,Oil,Gas turbine,136.0,143.0,0.0
+DE11,yes,Baden-W?rttemberg,Heidelberg,Natural gas,Steam turbine,13.5,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Heilbronn,Hard coal,Steam turbine,1028.0,1066.0,606.0
+DE11,yes,Baden-W?rttemberg,Karlsruhe,Biomass and biogas,Steam turbine,78.0,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Karlsruhe,Hard coal,Steam turbine,1347.0,1462.0,440.0
+DE11,yes,Baden-W?rttemberg,Karlsruhe,Natural gas,Steam turbine,37.0,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Karlsruhe,Oil,Steam turbine,70.0,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Mannheim,Biomass and biogas,Steam turbine,59.2,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Mannheim,Hard coal,Steam turbine,2363.0,2146.0,1000.0
+DE11,yes,Baden-W?rttemberg,Mannheim,Natural gas,Combined cycle,17.2,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Mannheim,Waste,Steam turbine,41.6,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Pforzheim,Biomass and biogas,Steam turbine,12.3,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Pforzheim,Hard coal,Steam turbine,26.9,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Pforzheim,Natural gas,Combined cycle,41.2,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Pforzheim,Natural gas,Steam turbine,11.3,0.0,0.0
+DE11,yes,Baden-W?rttemberg,Weinheim,Natural gas,Steam turbine,42.0,0.0,0.0
+DE12,no,Baden-W?rttemberg,Altbach,Natural gas,Gas turbine,188.0,226.65,0.0
+DE12,no,Baden-W?rttemberg,Bad S?ckingen,Hydro,Pumped storage,360.0,370.0,0.0
+DE12,no,Baden-W?rttemberg,Dettingen,Hydro,Run-of-river,11.0,0.0,0.0
+DE12,no,Baden-W?rttemberg,Forbach,Hydro,Run-of-river,65.0,0.0,0.0
+DE12,no,Baden-W?rttemberg,Grenzach-Wyhlen,Hydro,Run-of-river,37.9,0.0,0.0
+DE12,no,Baden-W?rttemberg,H?usern,Hydro,Pumped storage,100.0,145.0,0.0
+DE12,no,Baden-W?rttemberg,Iffezheim,Hydro,Run-of-river,146.0,152.0,0.0
+DE12,no,Baden-W?rttemberg,Kirchdorf,Hydro,Run-of-river,14.2,0.0,0.0
+DE12,no,Baden-W?rttemberg,Metzingen-Glems,Hydro,Run-of-river,90.0,0.0,0.0
+DE12,no,Baden-W?rttemberg,Stuttgart,Natural gas,Gas turbine,55.0,0.0,0.0
+DE12,no,Baden-W?rttemberg,Stuttgart,Oil,Gas turbine,69.9,74.19,0.0
+DE12,no,Baden-W?rttemberg,Tannheim,Hydro,Run-of-river,12.3,0.0,0.0
+DE12,no,Baden-W?rttemberg,Wehr,Hydro,Pumped storage,910.0,992.0,0.0
+DE12,no,Baden-W?rttemberg,Witznau,Hydro,Pumped storage,220.0,240.0,0.0
+DE12,no,Bayern,Kirchdorf,Hydro,Run-of-river,50.0,101.3,0.0
+DE12,yes,Baden-W?rttemberg,Albbruck,Hard coal,Steam turbine,28.0,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Altbach,Hard coal,Steam turbine,769.0,855.0,560.0
+DE12,yes,Baden-W?rttemberg,Altbach,Natural gas,Gas turbine,65.0,78.36,0.0
+DE12,yes,Baden-W?rttemberg,B?blingen,Waste,Steam turbine,9.5,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Ehingen,Biomass and biogas,Steam turbine,21.2,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Ehingen,Natural gas,Steam turbine,4.0,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Eschbach,Waste,Steam turbine,13.6,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Freiburg,Natural gas,Combined cycle,60.1,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Freiburg,Natural gas,Steam turbine,27.0,0.0,0.0
+DE12,yes,Baden-W?rttemberg,G?ppingen,Waste,Steam turbine,11.0,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Heidenheim,Natural gas,Steam turbine,26.5,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Herbrechtingen,Biomass and biogas,Steam turbine,14.0,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Oberkirch,Hard coal,Steam turbine,18.5,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Reutlingen,Natural gas,Combustion Engine,9.8,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Sindelfingen,Natural gas,Steam turbine,95.0,102.0,102.0
+DE12,yes,Baden-W?rttemberg,Stuttgart,Hard coal,Steam turbine,112.6,95.52,0.0
+DE12,yes,Baden-W?rttemberg,Stuttgart,Natural gas,Steam turbine,35.1,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Stuttgart,Waste,Steam turbine,19.5,20.7,0.0
+DE12,yes,Baden-W?rttemberg,T?bingen,Natural gas,Steam turbine,13.4,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Ulm,Biomass and biogas,Steam turbine,13.2,0.0,0.0
+DE12,yes,Baden-W?rttemberg,Ulm,Hard coal,Steam turbine,20.7,0.0,0.0
+DE12,yes,Rheinland-Pfalz,Ludwigshafen,Other fossil fuels,Combined cycle,56.0,127.0,280.0
+DE12,yes,Rheinland-Pfalz,Ludwigshafen,Waste,Steam turbine,12.0,0.0,0.0
+DE13,no,Schleswig-Holstein,Brokdorf,Nuclear,Steam turbine,1410.0,1480.0,0.0
+DE13,no,Schleswig-Holstein,Brunsb?ttel,Oil,Gas turbine,254.0,256.0,0.0
+DE13,no,Schleswig-Holstein,Oldendorf,Oil,Steam turbine,88.0,0.0,0.0
+DE13,no,Schleswig-Holstein,Osterr?nfeld,Oil,Steam turbine,87.0,0.0,0.0
+DE13,yes,Schleswig-Holstein,Flensburg,Hard coal,Steam turbine,147.0,0.0,0.0
+DE13,yes,Schleswig-Holstein,Flensburg,Oil,Steam turbine,30.0,0.0,0.0
+DE13,yes,Schleswig-Holstein,Gl?ckstadt,Waste,Steam turbine,17.0,0.0,0.0
+DE13,yes,Schleswig-Holstein,Hemminstedt,Oil,Steam turbine,44.5,0.0,0.0
+DE13,yes,Schleswig-Holstein,Kiel,Hard coal,Steam turbine,323.0,354.0,295.0
+DE13,yes,Schleswig-Holstein,Kiel,Natural gas,Steam turbine,31.0,0.0,0.0
+DE13,yes,Schleswig-Holstein,Neum?nster,Other fossil fuels,Steam turbine,53.6,0.0,0.0
+DE13,yes,Schleswig-Holstein,Stapelfeld,Waste,Steam turbine,16.4,0.0,0.0
+DE14,no,Bremen,Bremen,Hard coal,Steam turbine,350.0,397.0,26.0
+DE14,no,Bremen,Bremen,Oil,Gas turbine,88.0,0.0,0.0
+DE14,no,Bremen,Bremen,Other fossil fuels,Steam turbine,270.0,160.0,0.0
+DE14,no,Bremen,Bremen,Waste,Steam turbine,33.0,0.0,0.0
+DE14,no,Niedersachsen,Elsfleth,Natural gas,Gas turbine,321.0,321.0,0.0
+DE14,no,Niedersachsen,Emden,Natural gas,Steam turbine,430.0,0.0,0.0
+DE14,no,Niedersachsen,Papenburg,Biomass and biogas,Steam turbine,20.0,0.0,0.0
+DE14,no,Niedersachsen,Wilhelmshaven,Hard coal,Steam turbine,757.0,788.1,0.0
+DE14,no,Niedersachsen,Wilhelmshaven,Oil,Gas turbine,56.0,0.0,0.0
+DE14,no,Schleswig-Holstein,Geesthacht,Hydro,Pumped storage,119.1,120.0,0.0
+DE14,no,Schleswig-Holstein,Wedel,Oil,Gas turbine,101.0,102.0,0.0
+DE14,yes,Bremen,Bremen,Hard coal,Steam turbine,546.0,445.0,194.0
+DE14,yes,Bremen,Bremen,Natural gas,Combined cycle,14.8,0.0,0.0
+DE14,yes,Bremen,Bremen,Natural gas,Steam turbine,155.0,0.0,0.0
+DE14,yes,Bremen,Bremen,Waste,Steam turbine,44.0,0.0,0.0
+DE14,yes,Bremen,Bremerhaven,Waste,Steam turbine,14.0,0.0,0.0
+DE14,yes,Niedersachsen,Emden,Biomass and biogas,Steam turbine,20.0,0.0,0.0
+DE14,yes,Niedersachsen,Stade,Natural gas,Combined cycle,173.0,173.0,0.0
+DE14,yes,Niedersachsen,Stade,Natural gas,Steam turbine,190.0,0.0,0.0
+DE14,yes,Niedersachsen,Varel,Biomass and biogas,Combustion Engine,1.9,0.0,0.0
+DE14,yes,Niedersachsen,Varel,Natural gas,Steam turbine,58.6,0.0,0.0
+DE14,yes,Schleswig-Holstein,Wedel,Hard coal,Steam turbine,260.0,289.7,423.0
+DE15,no,Niedersachsen,Alfeld,Hydro,Run-of-river,0.1,0.0,0.0
+DE15,no,Niedersachsen,Alfeld,Oil,Steam turbine,2.8,0.0,0.0
+DE15,no,Niedersachsen,Emmerthal,Nuclear,Steam turbine,1360.0,1430.0,0.0
+DE15,no,Niedersachsen,Hameln,Biomass and biogas,Steam turbine,16.8,0.0,0.0
+DE15,no,Niedersachsen,Hannover,Waste,Steam turbine,22.5,0.0,0.0
+DE15,no,Niedersachsen,Helmstedt,Lignite,Steam turbine,352.0,405.0,0.0
+DE15,no,Niedersachsen,Helmstedt,Waste,Steam turbine,37.5,0.0,0.0
+DE15,no,Niedersachsen,Hohenhameln OT Mehrum,Hard coal,Steam turbine,690.0,750.0,0.0
+DE15,no,Niedersachsen,Kreiensen,Hydro,Pumped storage,220.0,222.86,0.0
+DE15,no,Niedersachsen,Landesbergen,Biomass and biogas,Steam turbine,20.0,0.0,0.0
+DE15,no,Niedersachsen,Landesbergen,Natural gas,Steam turbine,500.0,0.0,0.0
+DE15,no,Nordrhein-Westfalen,Bielefeld,Natural gas,Gas turbine,55.0,0.0,0.0
+DE15,no,Nordrhein-Westfalen,Kirchlengern,Natural gas,Combined cycle,201.5,184.5,0.0
+DE15,no,Nordrhein-Westfalen,Petershagen,Hard coal,Steam turbine,875.0,923.0,0.0
+DE15,no,Nordrhein-Westfalen,Porta Westfalica,Hard coal,Steam turbine,396.0,0.0,0.0
+DE15,no,Nordrhein-Westfalen,Porta Westfalica,Natural gas,Gas turbine,65.0,0.0,0.0
+DE15,no,Nordrhein-Westfalen,Porta Westfalica,Natural gas,Steam turbine,335.0,0.0,0.0
+DE15,no,Rheinland-Pfalz,M?den,Hydro,Run-of-river,16.4,0.0,0.0
+DE15,yes,Niedersachsen,Alfeld,Biomass and biogas,Steam turbine,16.8,0.0,0.0
+DE15,yes,Niedersachsen,Alfeld,Natural gas,Steam turbine,20.0,0.0,0.0
+DE15,yes,Niedersachsen,Bomlitz,Natural gas,Steam turbine,22.1,0.0,0.0
+DE15,yes,Niedersachsen,Braunschweig,Hard coal,Combined cycle,43.3,57.78,0.0
+DE15,yes,Niedersachsen,Braunschweig,Natural gas,Combined cycle,94.0,125.42999999999999,0.0
+DE15,yes,Niedersachsen,Braunschweig,Natural gas,Gas turbine,25.0,0.0,0.0
+DE15,yes,Niedersachsen,Hameln,Waste,Steam turbine,14.7,0.0,0.0
+DE15,yes,Niedersachsen,Hannover,Hard coal,Steam turbine,272.0,300.0,0.0
+DE15,yes,Niedersachsen,Hannover,Natural gas,Combined cycle,230.0,255.0,185.0
+DE15,yes,Niedersachsen,Hannover,Natural gas,Steam turbine,102.0,120.0,280.0
+DE15,yes,Niedersachsen,Herzberg,Natural gas,Steam turbine,19.5,0.0,0.0
+DE15,yes,Niedersachsen,Hohenhameln,Natural gas,Steam turbine,15.8,0.0,0.0
+DE15,yes,Niedersachsen,Lachendorf,Natural gas,Combined cycle,13.0,0.0,0.0
+DE15,yes,Niedersachsen,Nordstemmen,Natural gas,Steam turbine,30.6,0.0,0.0
+DE15,yes,Niedersachsen,Salzgitter,Other fossil fuels,Steam turbine,288.5,325.0,0.0
+DE15,yes,Niedersachsen,Uelzen,Hard coal,Steam turbine,40.0,0.0,0.0
+DE15,yes,Niedersachsen,Wolfsburg,Hard coal,Steam turbine,200.0,223.0,140.0
+DE15,yes,Niedersachsen,Wolfsburg,Natural gas,Steam turbine,10.4,0.0,0.0
+DE15,yes,Niedersachsen,Wunstorf,Natural gas,Steam turbine,19.0,0.0,0.0
+DE15,yes,Nordrhein-Westfalen,Bielefeld,Natural gas,Combined cycle,37.5,0.0,0.0
+DE15,yes,Nordrhein-Westfalen,Bielefeld,Natural gas,Steam turbine,64.0,0.0,0.0
+DE15,yes,Nordrhein-Westfalen,Bielefeld,Waste,Steam turbine,34.0,0.0,0.0
+DE15,yes,Nordrhein-Westfalen,Lage,Natural gas,Steam turbine,10.2,0.0,0.0
+DE15,yes,Nordrhein-Westfalen,Lemgo,Natural gas,Steam turbine,24.1,0.0,0.0
+DE16,no,Hessen,Edertal Hemfurth-Edersee,Hydro,Pumped storage,623.0,627.3,0.0
+DE16,no,Hessen,Edertal Hemfurth-Edersee,Hydro,Run-of-river,20.0,0.0,0.0
+DE16,no,Hessen,Frankfurt am Main,Other fossil fuels,Steam turbine,19.7,19.88,0.0
+DE16,no,Hessen,Fulda,Oil,Steam turbine,24.8,0.0,0.0
+DE16,no,Hessen,Gro?krotzenburg,Hard coal,Steam turbine,293.0,0.0,0.0
+DE16,no,Hessen,Gro?krotzenburg,Natural gas,Steam turbine,622.0,637.6,0.0
+DE16,yes,Hessen,Baunatal,Natural gas,Combined cycle,78.0,0.0,0.0
+DE16,yes,Hessen,Baunatal,Natural gas,Steam turbine,12.2,0.0,0.0
+DE16,yes,Hessen,Frankfurt am Main,Biomass and biogas,Steam turbine,12.4,0.0,0.0
+DE16,yes,Hessen,Frankfurt am Main,Hard coal,Steam turbine,123.0,124.12,0.0
+DE16,yes,Hessen,Frankfurt am Main,Natural gas,Combined cycle,126.0,136.0,0.0
+DE16,yes,Hessen,Frankfurt am Main,Natural gas,Gas turbine,99.0,100.0,150.0
+DE16,yes,Hessen,Frankfurt am Main,Waste,Steam turbine,72.5,0.0,0.0
+DE16,yes,Hessen,Fulda,Natural gas,Steam turbine,34.2,0.0,0.0
+DE16,yes,Hessen,Gro?krotzenburg,Hard coal,Steam turbine,759.0,553.0,300.0
+DE16,yes,Hessen,Heringen,Natural gas,Combined cycle,109.5,110.0,299.0
+DE16,yes,Hessen,Industriepark H?chst,Hard coal,Combined cycle,66.0,70.43,0.0
+DE16,yes,Hessen,Industriepark H?chst,Natural gas,Combined cycle,86.0,91.77,0.0
+DE16,yes,Hessen,Industriepark H?chst,Natural gas,Gas turbine,96.5,105.7,126.0
+DE16,yes,Hessen,Kassel,Lignite,Steam turbine,33.5,0.0,0.0
+DE16,yes,Hessen,Kassel,Natural gas,Steam turbine,50.0,0.0,0.0
+DE16,yes,Hessen,Kassel,Waste,Steam turbine,14.7,0.0,0.0
+DE16,yes,Hessen,Offenbach,Hard coal,Steam turbine,54.0,0.0,0.0
+DE16,yes,Hessen,Offenbach,Waste,Steam turbine,10.4,0.0,0.0
+DE16,yes,Hessen,Philippsthal,Natural gas,Steam turbine,17.3,0.0,0.0
+DE16,yes,Hessen,Witzenhausen,Natural gas,Steam turbine,13.2,0.0,0.0
+DE16,yes,Hessen,Witzenhausen,Other fossil fuels,Steam turbine,28.0,0.0,0.0
+DE16,yes,Niedersachsen,G?ttingen,Natural gas,Steam turbine,18.8,0.0,0.0
+DE16,yes,Niedersachsen,Wolfsburg,Hard coal,Steam turbine,200.0,223.0,140.0
+DE17,no,Bayern,Gem?nden,Hydro,Pumped storage,164.0,168.4,0.0
+DE17,no,Bayern,Grafenrheinfeld,Nuclear,Steam turbine,1275.0,0.0,0.0
+DE17,no,Bayern,Happurg,Hydro,Pumped storage,160.0,162.1,0.0
+DE17,no,Bayern,Ingolstadt,Hydro,Run-of-river,19.8,0.0,0.0
+DE17,no,Bayern,N?rnberg,Natural gas,Combined cycle,823.0,843.0,0.0
+DE17,no,Bayern,Pfatter,Hydro,Run-of-river,25.0,0.0,0.0
+DE17,no,Bayern,Plattling,Hydro,Run-of-river,12.6,0.0,0.0
+DE17,no,Bayern,Trausnitz,Hydro,Pumped storage,99.0,106.37,0.0
+DE17,no,Bayern,Trausnitz,Hydro,Run-of-river,33.1,0.0,0.0
+DE17,yes,Bayern,Aschaffenburg,Biomass and biogas,Steam turbine,1.9000000000000001,0.0,0.0
+DE17,yes,Bayern,Aschaffenburg,Natural gas,Combined cycle,47.0,0.0,0.0
+DE17,yes,Bayern,Aschaffenburg,Natural gas,Steam turbine,27.0,0.0,0.0
+DE17,yes,Bayern,Eltmann,Natural gas,Steam turbine,57.0,0.0,0.0
+DE17,yes,Bayern,Erlangen,Hard coal,Steam turbine,17.4,0.0,0.0
+DE17,yes,Bayern,Erlangen,Natural gas,Combined cycle,28.3,0.0,0.0
+DE17,yes,Bayern,Gro?mehring,Oil,Steam turbine,772.0,840.0,0.0
+DE17,yes,Bayern,Ingolstadt,Waste,Steam turbine,25.5,0.0,0.0
+DE17,yes,Bayern,K?sching,Biomass and biogas,Steam turbine,15.1,0.0,0.0
+DE17,yes,Bayern,K?sching,Other fossil fuels,Steam turbine,23.3,0.0,0.0
+DE17,yes,Bayern,Neumarkt i.d. Oberpfalz,Biomass and biogas,Steam turbine,15.6,0.0,0.0
+DE17,yes,Bayern,N?rnberg,Natural gas,Combined cycle,150.0,200.9,0.0
+DE17,yes,Bayern,N?rnberg,Natural gas,Gas turbine,18.6,0.0,0.0
+DE17,yes,Bayern,N?rnberg,Waste,Combined cycle,18.0,24.11,0.0
+DE17,yes,Bayern,Obernburg,Natural gas,Combined cycle,100.0,110.0,0.0
+DE17,yes,Bayern,Schwandorf,Waste,Steam turbine,54.0,0.0,0.0
+DE17,yes,Bayern,Schweinfurt,Waste,Steam turbine,24.4,0.0,0.0
+DE17,yes,Bayern,Stockstadt,Biomass and biogas,Steam turbine,14.0,0.0,0.0
+DE17,yes,Bayern,Stockstadt,Hard coal,Steam turbine,24.8,0.0,0.0
+DE17,yes,Bayern,W?rzburg,Natural gas,Combined cycle,122.0,126.99000000000001,0.0
+DE17,yes,Bayern,W?rzburg,Waste,Steam turbine,20.7,0.0,0.0
+DE18,no,Bayern,Altenstadt,Biomass and biogas,Steam turbine,9.8,0.0,0.0
+DE18,no,Bayern,Bad F?ssing,Hydro,Run-of-river,40.4,0.0,0.0
+DE18,no,Bayern,Burggen,Hydro,Run-of-river,10.3,0.0,0.0
+DE18,no,Bayern,Burghausen,Hydro,Run-of-river,45.0,0.0,0.0
+DE18,no,Bayern,Burgkirchen,Waste,Steam turbine,12.5,0.0,0.0
+DE18,no,Bayern,Dingolfing,Hydro,Run-of-river,15.0,0.0,0.0
+DE18,no,Bayern,Eitting,Hydro,Run-of-river,26.0,0.0,0.0
+DE18,no,Bayern,Ering,Hydro,Run-of-river,36.5,0.0,0.0
+DE18,no,Bayern,Essenbach,Nuclear,Steam turbine,1410.0,1485.0,0.0
+DE18,no,Bayern,Gars,Hydro,Run-of-river,25.0,0.0,0.0
+DE18,no,Bayern,Hausham,Oil,Gas turbine,92.8,107.0,0.0
+DE18,no,Bayern,Kaufering,Hydro,Run-of-river,16.7,0.0,0.0
+DE18,no,Bayern,Kochel am See,Hydro,Reservoir,124.0,125.6,0.0
+DE18,no,Bayern,Lechbruck,Hydro,Run-of-river,29.299999999999997,0.0,0.0
+DE18,no,Bayern,Moosburg-Pfrombach,Hydro,Run-of-river,22.3,0.0,0.0
+DE18,no,Bayern,M?nchen,Natural gas,Gas turbine,78.6,0.0,0.0
+DE18,no,Bayern,Neu?tting,Hydro,Run-of-river,26.1,0.0,0.0
+DE18,no,Bayern,Niederaichbach,Hydro,Run-of-river,16.2,0.0,0.0
+DE18,no,Bayern,Niederviehbach,Hydro,Run-of-river,14.8,0.0,0.0
+DE18,no,Bayern,Nu?dorf,Hydro,Run-of-river,36.6,0.0,0.0
+DE18,no,Bayern,Oberaudorf,Hydro,Run-of-river,30.0,0.0,0.0
+DE18,no,Bayern,Oberding,Hydro,Run-of-river,27.0,0.0,0.0
+DE18,no,Bayern,Passau,Hydro,Run-of-river,96.9,0.0,0.0
+DE18,no,Bayern,Perach,Hydro,Run-of-river,19.4,0.0,0.0
+DE18,no,Bayern,Pilsting-Harburg,Hydro,Run-of-river,12.6,0.0,0.0
+DE18,no,Bayern,Prittriching,Hydro,Run-of-river,12.1,0.0,0.0
+DE18,no,Bayern,Rohrdorf,Hydro,Run-of-river,35.1,0.0,0.0
+DE18,no,Bayern,Rott,Hydro,Run-of-river,38.2,0.0,0.0
+DE18,no,Bayern,Scheuring,Hydro,Run-of-river,12.0,0.0,0.0
+DE18,no,Bayern,Schongau,Hydro,Run-of-river,27.1,0.0,0.0
+DE18,no,Bayern,Soyen,Hydro,Run-of-river,25.0,0.0,0.0
+DE18,no,Bayern,Stammham,Hydro,Run-of-river,23.2,0.0,0.0
+DE18,no,Bayern,Straubing,Hydro,Run-of-river,21.5,0.0,0.0
+DE18,no,Bayern,Stra?lach,Hydro,Run-of-river,11.2,0.0,0.0
+DE18,no,Bayern,Tiefenbach,Hydro,Run-of-river,18.0,0.0,0.0
+DE18,no,Bayern,T?ging,Hydro,Run-of-river,85.3,0.0,0.0
+DE18,no,Bayern,Unterneukirchen,Hydro,Run-of-river,18.5,0.0,0.0
+DE18,no,Bayern,Vagen,Hydro,Run-of-river,92.0,0.0,0.0
+DE18,no,Bayern,Vohburg,Hydro,Run-of-river,23.3,0.0,0.0
+DE18,no,Bayern,Vohburg,Natural gas,Combined cycle,1391.0,1454.0,0.0
+DE18,no,Bayern,Vohburg,Natural gas,Steam turbine,415.0,440.0,25.0
+DE18,no,Bayern,Walchensee,Hydro,Run-of-river,12.8,0.0,0.0
+DE18,no,Bayern,Wallersorf/Ettling,Hydro,Run-of-river,12.6,0.0,0.0
+DE18,no,Bayern,Wang,Hydro,Run-of-river,25.0,0.0,0.0
+DE18,no,Bayern,Wasserburg,Hydro,Run-of-river,24.1,0.0,0.0
+DE18,no,Bayern,Zolling,Oil,Gas turbine,46.0,0.0,0.0
+DE18,yes,Bayern,Burghausen,Natural gas,Combined cycle,120.0,178.0,350.0
+DE18,yes,Bayern,Burghausen,Natural gas,Steam turbine,50.0,0.0,0.0
+DE18,yes,Bayern,Burgkirchen,Natural gas,Steam turbine,49.0,0.0,0.0
+DE18,yes,Bayern,Deggendorf,Oil,Steam turbine,19.0,0.0,0.0
+DE18,yes,Bayern,Dingolfing,Natural gas,Gas turbine,13.4,0.0,0.0
+DE18,yes,Bayern,M?nchen,Natural gas,Combined cycle,651.9,696.99,0.0
+DE18,yes,Bayern,M?nchen,Natural gas,Gas turbine,78.6,0.0,0.0
+DE18,yes,Bayern,M?nchen,Natural gas,Steam turbine,35.7,0.0,0.0
+DE18,yes,Bayern,Neustadt,Natural gas,Steam turbine,25.4,0.0,0.0
+DE18,yes,Bayern,Pei?enberg,Natural gas,Steam turbine,10.6,0.0,0.0
+DE18,yes,Bayern,Plattling,Natural gas,Combined cycle,97.9,125.0,150.0
+DE18,yes,Bayern,Raubling,Natural gas,Steam turbine,24.0,0.0,0.0
+DE18,yes,Bayern,Reitmehring,Natural gas,Steam turbine,12.6,0.0,0.0
+DE18,yes,Bayern,Rosenheim,Natural gas,Combustion Engine,23.3,0.0,0.0
+DE18,yes,Bayern,Rosenheim,Waste,Steam turbine,9.0,0.0,0.0
+DE18,yes,Bayern,Schongau,Natural gas,Steam turbine,147.0,0.0,0.0
+DE18,yes,Bayern,Schongau,Other fossil fuels,Steam turbine,6.0,0.0,0.0
+DE18,yes,Bayern,Unterf?hring,Hard coal,Steam turbine,332.7,365.0,550.0
+DE18,yes,Bayern,Unterf?hring,Waste,Steam turbine,40.0,0.0,0.0
+DE18,yes,Bayern,Zolling,Biomass and biogas,Steam turbine,10.0,0.0,0.0
+DE18,yes,Bayern,Zolling,Hard coal,Steam turbine,472.0,474.0,150.0
+DE20,yes,Niedersachsen,Stade- B?tzfleth,Natural gas,Gas turbine,30.7,0.0,0.0
+DE21,no,Niedersachsen,Wilhelmshaven,Hard coal,Steam turbine,731.0,830.0,0.0
+DE21,yes,Niedersachsen,Bremerhaven,Natural gas,Steam turbine,17.1,0.0,0.0

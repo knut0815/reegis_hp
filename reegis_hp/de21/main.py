@@ -4,6 +4,7 @@ import os
 import logging
 import pandas as pd
 
+import datetime
 from datetime import datetime
 from oemof.tools import logger
 from oemof.solph import OperationalModel, EnergySystem
@@ -29,7 +30,6 @@ def main(date_from, date_to, scenario_path, nodes_flows, nodes_flows_sequences):
     NodesFromCSV(file_nodes_flows=os.path.join(scenario_path, nodes_flows),
                  file_nodes_flows_sequences=os.path.join(
                      scenario_path, nodes_flows_sequences), delimiter=',')
-
     stopwatch()
 
     om = OperationalModel(es)
@@ -38,7 +38,7 @@ def main(date_from, date_to, scenario_path, nodes_flows, nodes_flows_sequences):
 
     om.receive_duals()
 
-    om.solve(solver='gurobi', solve_kwargs={'tee': True})
+    om.solve(solver='cbc', solve_kwargs={'tee': True})
 
     logging.info('Optimisation done.')
 
@@ -49,22 +49,22 @@ def main(date_from, date_to, scenario_path, nodes_flows, nodes_flows_sequences):
     if not os.path.isdir('results'):
         os.mkdir('results')
 
-    date = str(datetime.now())
-    file_name = ('scenario_' + nodes_flows.replace('.csv', '_') + date + '_' +
-                 'results_complete.csv')
+    date = str(datetime.now().strftime("%Y_%m_%d %H_%M"))
+    file_name = (date + '_' +
+                'reegis.csv')
 
     results_path = 'results'
-
-    results.to_csv(os.path.join(results_path, file_name))
     logging.info("Results stored to {0}".format(
         os.path.join(results_path, file_name)))
+    results.to_csv(os.path.join(results_path, file_name))
+
 
 
 if __name__ == "__main__":
     config = {'scenario_path': 'scenarios/',
-              'date_from': '2015-01-01 00:00:00',
-              'date_to': '2015-12-31 23:00:00',
-              'nodes_flows': 'reegis_de_21_test.csv',
-              'nodes_flows_sequences': 'reegis_de_21_test_seq.csv'}
+              'date_from': '2013-01-01 00:00:00',
+              'date_to': '2013-12-31 23:00:00',
+              'nodes_flows': 'RE15_test1.csv',
+              'nodes_flows_sequences': 'RE15_test1_seq.csv'}
 
     main(**config)

@@ -76,6 +76,7 @@ data/
 *.ods
 *.odt
 *.odp
+*.csv#
 
 # shape files
 *.shp

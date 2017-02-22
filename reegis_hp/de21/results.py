@@ -13,7 +13,6 @@ class SpatialData:
     def __init__(self, result_file=None):
         if result_file is None:
             result_file = easy.get_file_names(title="Select result file.")[0]
-        print(result_file)
         self.results = pd.read_csv(result_file, index_col=[0, 1, 2])
         self.polygons = None
         self.lines = None
@@ -145,39 +144,9 @@ def unit_round(values, min_value=False):
                 'prefix_long': longprefix[factor]}
 
 
-def add_labels(data, plotter, label=None,
-               coord_file='geometries/coord_region.csv'):
-    p = pd.read_csv(coord_file, index_col='name')
-    data.polygons['point'] = p.point
-
-    for row in data.polygons.iterrows():
-        if 'point' not in row[1]:
-            point = geoplot.postgis2shapely([row[1].geom, ])[0].centroid
-        else:
-            point = geoplot.postgis2shapely([row[1].point, ])[0]
-        (x, y) = plotter.basemap(point.x, point.y)
-
-        if label is None:
-            text = row[0][2:]
-        else:
-            text = str(round(row[1][label], 1))
-        if row[1].normalised < 0.3 or row[1].normalised > 0.95:
-            textcolour = 'white'
-        else:
-            textcolour = 'black'
-
-        plotter.ax.text(x, y, text, color=textcolour, fontsize=12)
-
-    start_line = plotter.basemap(9.7, 53.4)
-    end_line = plotter.basemap(10.0, 53.55)
-
-    plt.plot([start_line[0], end_line[0]], [start_line[1], end_line[1]], '-',
-             color='white')
-
-
 def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
                  filename=None):
-    geometry = 'geometries/polygons_de21_simple.csv'
+    geometry = 'geometries/polygons_de21.csv'
     sets = {
         'load': {
             'obj': 'load',
@@ -198,9 +167,7 @@ def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
             "Chose you method!", choices=['sum', 'max', 'min', 'mean'])
     else:
         myset['method'] = method
-
     s_data = SpatialData(filename)
-
     myset = s_data.add_polygon_column(geometry_file=geometry, **myset)
 
     if myset['method'] == 'sum':
@@ -218,9 +185,6 @@ def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
                                      (v_max - v_min))
     plotter.data = s_data.polygons['normalised']
     plotter.plot(facecolor='data', edgecolor='white')
-
-    add_labels(s_data, plotter, myset['obj'])
-
     if l_min is None:
         l_min = v_min
     if l_max is None:
@@ -234,7 +198,7 @@ def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
 def powerline_plot(l_min=None, l_max=None):
     s_data = SpatialData()
     reg = {
-        'geometry_file': 'geometries/polygons_de21_simple.csv'}
+        'geometry_file': 'geometries/polygons_de21.csv'}
     poly = geoplot.postgis2shapely(load_geometry(**reg).geom)
     plotter = geoplot.GeoPlotter(poly, (3, 16, 47, 56))
     method = s_data.add_power_lines(
@@ -271,7 +235,7 @@ def combined_plot():
     s_data = SpatialData()
     obj = s_data.add_polygon_column(
         obj='load', direction='from_bus', bus='bus_el', method='sum',
-        geometry_file='geometries/polygons_de21_simple.csv')
+        geometry_file='geometries/polygons_de21.csv')
 
     s_data.add_power_lines(
         geometry_file='geometries/lines_de21.csv')
@@ -308,14 +272,10 @@ def combined_plot():
     show()
 
 if __name__ == "__main__":
-    resf = ('/home/uwe/git_local/reegis-hp/reegis_hp/de21/results' +
-            '/scenario_reegis_de_21_test_2017-01-03 11:31:10.600830_' +
-            'results_complete.csv')
-    choice = 'polygons'
-    # choice = easy.get_choice(
-    #         "What geometry do you want to plot?", choices=['lines', 'polygons'])
+    choice = easy.get_choice(
+            "What geometry do you want to plot?", choices=['lines', 'polygons'])
     if choice == 'polygons':
-        polygon_plot(l_min=0, setname='pv', method='sum', filename=resf)
+        polygon_plot(l_min=0)
     elif choice == 'lines':
         powerline_plot()
     else:
