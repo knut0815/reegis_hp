@@ -68,6 +68,15 @@ data_original/
 data/
 /reegis_hp/de21/invalid.csv
 
+# hdf files
+*.h5
+*.hdf
+
+# office files
+*.ods
+*.odt
+*.odp
+
 # shape files
 *.shp
 *.cpg
