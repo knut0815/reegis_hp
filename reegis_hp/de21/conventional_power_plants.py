@@ -3,6 +3,8 @@ import pandas as pd
 cpp = pd.read_csv('data/conv_power_plants_DE.edited.csv', index_col='id')
 del cpp['Unnamed: 0']
 
+print(cpp.columns)
+
 cpp['max_in'] = cpp['capacity_net_bnetza'] / cpp['efficiency_estimate']
 
 cpp_by_region_fuel = cpp.groupby(['region', 'state', 'fuel'])
