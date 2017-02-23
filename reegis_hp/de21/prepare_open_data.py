@@ -165,11 +165,11 @@ def fill_region_with_coastdat(df, time=None):
     return df
 
 
-def find_intersection_with_buffer(gdf, filepath, column):
+def find_intersection_with_buffer(gdf, filepath, column, icol='gid'):
     """Find intersection of points outside the regions by buffering the point
     until the buffered point intersects with a region.
     """
-    spatial_df = pd.read_csv(filepath, index_col='gid')
+    spatial_df = pd.read_csv(filepath, index_col=icol)
     logging.info("Some regions do not intersect. Buffering...")
     for row in gdf.loc[gdf[column].isnull()].iterrows():
         point = row[1].geom
@@ -218,14 +218,16 @@ def prepare_conventional_power_plants():
         time=start)
     gcpp = add_spatial_name(
         gcpp, os.path.join('geometries', 'federal_states.csv'), 'federal_state',
-        time=start)
+        time=start, icol='iso')
     gcpp = find_intersection_with_buffer(
         gcpp, os.path.join('geometries', 'polygons_de21.csv'), 'region')
     gcpp = find_intersection_with_buffer(
-        gcpp, os.path.join('geometries', 'federal_states.csv'), 'federal_state')
+        gcpp, os.path.join('geometries', 'federal_states.csv'), 'federal_state',
+        icol='iso')
     gcpp['region'] = gcpp['region'].apply(str)
     gcpp.to_file(os.path.join('data', 'conv_powerplants.shp'))
     cpp['region'] = gcpp['region']
+    cpp['federal_state'] = gcpp['federal_state']
     cpp.to_csv(os.path.join('data', 'conv_power_plants_DE.edited.csv'))
     cpp = clean_df(cpp, str_columns=str_cols)
     cpp.to_hdf(os.path.join('data', 'conv_power_plants_DE.edited.hdf'),
