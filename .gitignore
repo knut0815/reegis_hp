@@ -67,6 +67,7 @@ weather/
 data_original/
 data/
 /reegis_hp/de21/invalid.csv
+my_scenarios/
 
 # shape files
 *.shp

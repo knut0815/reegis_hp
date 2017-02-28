@@ -61,10 +61,10 @@ def main(date_from, date_to, scenario_path, nodes_flows, nodes_flows_sequences):
 
 
 if __name__ == "__main__":
-    config = {'scenario_path': 'scenarios/',
+    config = {'scenario_path': 'my_scenarios/',
               'date_from': '2015-01-01 00:00:00',
-              'date_to': '2015-12-31 23:00:00',
-              'nodes_flows': 'reegis_de_21_test.csv',
-              'nodes_flows_sequences': 'reegis_de_21_test_seq.csv'}
+              'date_to': '2015-01-01 23:00:00',
+              'nodes_flows': 'reegis_de_3_short.csv',
+              'nodes_flows_sequences': 'reegis_de_3_short_seq.csv'}
 
     main(**config)
