@@ -54,9 +54,6 @@ def plot_geocsv(filepath, idx_col, facecolor=None, edgecolor='#aaaaaa',
     plt.box(on=None)
     plt.show()
 
-plot_geocsv(os.path.join('geometries', 'federal_states3.csv'),
-            idx_col='iso', coord_file='data_basic/label_federal_state.csv')
-
 
 def read_seq_file():
     seq_file = 'scenarios/reegis_de_21_test_neu_seq.csv'
@@ -70,5 +67,8 @@ def read_seq_file():
     
 
 if __name__ == "__main__":
-    plot_geocsv(os.path.join('geometries', 'federal_states3.csv'),
-                idx_col='iso', coord_file='data_basic/label_federal_state.csv')
+    # plot_geocsv(os.path.join('geometries', 'federal_states.csv'),
+    #             idx_col='iso',
+    #             coord_file='data_basic/label_federal_state.csv')
+    plot_geocsv(os.path.join('geometries', 'polygons_de21.csv'), idx_col='gid',
+                coord_file=os.path.join('data_basic', 'centroid_region.csv'))
