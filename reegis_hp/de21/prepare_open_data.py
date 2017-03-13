@@ -25,6 +25,7 @@ import geopandas as gpd
 import requests
 import logging
 import warnings
+import pyproj
 from oemof.tools import logger
 
 
@@ -67,17 +68,75 @@ def read_original_file(p_type):
 
 def complete_geometries(df, time=None, fs_column='federal_state'):
     """Use centroid of federal state if geometries does not exist."""
+
     if time is None:
         time = datetime.datetime.now()
+
+    # Store table of undefined sets to csv-file
+    df.loc[df.lon.isnull()].to_csv(os.path.join('data_warnings',
+                                                'complete_geometries.csv'))
+    logging.debug("Gaps stored to: {0}".format(os.path.join(
+        'data_warnings', 'complete_geometries.csv')))
+
+    # Calculate weight of changes
+    logging.debug("IDs without coordinates found. Trying to fill the gaps.")
+
+    total_capacity = df.electrical_capacity.sum()
+    undefined_cap = df.loc[df.lon.isnull()].electrical_capacity.sum()
+    logging.debug("{0} percent of capacity is undefined.".format(
+        undefined_cap / total_capacity * 100))
+
+    # *** Convert utm if present ***
+    df_utm = df.loc[(df.lon.isnull()) & (df.utm_zone.notnull())]
+
+    utm_zones = df_utm.utm_zone.unique()
+    for zone in utm_zones:
+        my_utm = pyproj.Proj(
+            "+proj=utm +zone={0},+north,+ellps=WGS84,".format(str(int(zone))) +
+            "+datum=WGS84,+units=m,+no_defs")
+        utm_df = df_utm.loc[df_utm.utm_zone == int(zone),
+                            ('utm_east', 'utm_north')]
+        coord = my_utm(utm_df.utm_east.values, utm_df.utm_north.values,
+                       inverse=True)
+        df.loc[(df.lon.isnull()) & (df.utm_zone == int(zone)), 'lat'] = coord[1]
+        df.loc[(df.lon.isnull()) & (df.utm_zone == int(zone)), 'lon'] = coord[0]
+
+    logging.debug("Reduced undefined plants by utm conversion.")
+    undefined_cap = df.loc[df.lon.isnull()].electrical_capacity.sum()
+    logging.debug("{0} percent of capacity is undefined.".format(
+        undefined_cap / total_capacity * 100))
+
+    # *** Use postcode
+    # As 98% of the undefined plant are offshore plants it may not help
+
+    # *** Use municipal_code and federal_state to define coordinates ***
+    if 'municipality_code' in df:
+        df.loc[df.municipality_code == 'AWZ', 'federal_state'] = 'AWZ_NS'
+    if 'municipality_code' in df:
+        df.loc[(df.postcode == '000XX'), 'federal_state'] = 'AWZ'
+    states = df.loc[df.lon.isnull()].groupby(
+        'federal_state').sum().electrical_capacity
+    logging.debug("Fraction of undefined capacity by federal state (percent):")
+    for (state, capacity) in states.iteritems():
+        logging.debug("{0}: {1:.4f}".format(
+            state, capacity / total_capacity * 100))
     f2c = pd.read_csv(os.path.join('data_basic', 'centroid_federal_state'),
                       index_col='name')
     f2c = f2c.applymap(wkt_loads).centroid
-
     for l in df.loc[df.lon.isnull()].index:
         df.loc[l, 'lon'] = f2c[df.loc[l, fs_column]].x
         df.loc[l, 'lat'] = f2c[df.loc[l, fs_column]].y
-    logging.info('Geometry check: {0}'.format(str(not df.lon.isnull().any())))
-    logging.info("Geometry complete: {0}".format(
+
+    logging.debug("Reduced undefined plants by federal_state centroid.")
+    undefined_cap = df.loc[df.lon.isnull()].electrical_capacity.sum()
+    logging.debug("{0} percent of capacity is undefined.".format(
+        undefined_cap / total_capacity * 100))
+
+    geo_check = not df.lon.isnull().any()
+    if not geo_check:
+        logging.warning("Plants with unknown geometry.")
+    logging.info('Geometry check: {0}'.format(str(geo_check)))
+    logging.info("Geometry supplemented: {0}".format(
         str(datetime.datetime.now() - time)))
     return df
 
@@ -126,6 +185,7 @@ def create_geo_df(df, time=None):
 
 def add_spatial_name(gdf, path_spatial_file, name, icol='gid', time=None):
     """Add name of containing region to new column for all points."""
+    logging.info("Add spatial name for column: {0}".format(name))
     if time is None:
         time = datetime.datetime.now()
     spatial_df = pd.read_csv(path_spatial_file, index_col=icol)
@@ -148,6 +208,14 @@ def add_spatial_name(gdf, path_spatial_file, name, icol='gid', time=None):
         gdf_valid.loc[gdf_valid.intersects(wkt_loads(v)), name] = i
     logging.info("Spatial name added to {0}: {1}".format(name,
                  str(datetime.datetime.now() - time)))
+
+    if len(gdf_valid.loc[gdf_valid[name].isnull()]) > 0:
+        logging.info("Some plants do not intersect. Buffering {0}...".format(
+            name
+        ))
+        gdf_valid = find_intersection_with_buffer(gdf_valid, spatial_df, name)
+    else:
+        logging.info("All plants intersect. No buffering necessary.")
     return gdf_valid
 
 
@@ -165,20 +233,17 @@ def fill_region_with_coastdat(df, time=None):
     return df
 
 
-def find_intersection_with_buffer(gdf, filepath, column, icol='gid'):
+def find_intersection_with_buffer(gdf, spatial_df, column):
     """Find intersection of points outside the regions by buffering the point
     until the buffered point intersects with a region.
     """
-    spatial_df = pd.read_csv(filepath, index_col=icol)
-    logging.info("Some regions do not intersect. Buffering...")
+
+    gdf.loc[gdf[column].isnull()].to_csv('buffer.csv')
     for row in gdf.loc[gdf[column].isnull()].iterrows():
         point = row[1].geom
         intersec = False
         reg = 0
         buffer = 0
-        logging.debug(
-            "{0} does not intersect with any region. Buffering...".format(
-                row[1].id))
         for n in range(500):
             if not intersec:
                 for i, v in spatial_df.iterrows():
@@ -190,7 +255,8 @@ def find_intersection_with_buffer(gdf, filepath, column, icol='gid'):
                             buffer = n
                             gdf.loc[gdf.id == row[1].id, column] = reg
         if intersec:
-            logging.debug("Region found: {0}, Buffer: {1}".format(reg, buffer))
+            logging.debug("Region found for {0}: {1}, Buffer: {2}".format(
+                row[1].id, reg, buffer))
         else:
             warnings.warn(
                 "{0} does not intersect with any region. Please check".format(
@@ -210,25 +276,33 @@ def prepare_conventional_power_plants():
                 'network_operator', 'geom', 'region']
 
     start = datetime.datetime.now()
+
+    # Read original file or download it from original source
     cpp = read_original_file('conventional')
     logging.info("File read: {0}".format(str(datetime.datetime.now() - start)))
+
+    # Create GeoDataFrame from original DataFrame
     gcpp = create_geo_df(cpp, start)
-    gcpp = add_spatial_name(
-        gcpp, os.path.join('geometries', 'polygons_de21.csv'), 'region',
-        time=start)
-    gcpp = add_spatial_name(
-        gcpp, os.path.join('geometries', 'federal_states.csv'), 'federal_state',
-        time=start, icol='iso')
-    gcpp = find_intersection_with_buffer(
-        gcpp, os.path.join('geometries', 'polygons_de21.csv'), 'region')
-    gcpp = find_intersection_with_buffer(
-        gcpp, os.path.join('geometries', 'federal_states.csv'), 'federal_state',
-        icol='iso')
+
+    # Add region column (DE01 - DE21)
+    geo_file = os.path.join('geometries', 'polygons_de21_vg.csv')
+    gcpp = add_spatial_name(gcpp, geo_file, 'region', time=start)
+
+    # Add column with name of the federal state (Bayern, Berlin,...)
+    geo_file = os.path.join('geometries', 'federal_states.csv')
+    gcpp = add_spatial_name(gcpp, geo_file, 'federal_state', time=start,
+                            icol='iso')
+
+    # Write new table to shape-file
     gcpp['region'] = gcpp['region'].apply(str)
     gcpp.to_file(os.path.join('data', 'conv_powerplants.shp'))
+
+    # Write new table to csv file
     cpp['region'] = gcpp['region']
     cpp['federal_state'] = gcpp['federal_state']
     cpp.to_csv(os.path.join('data', 'conv_power_plants_DE.edited.csv'))
+
+    # Write new table to hdf file
     cpp = clean_df(cpp, str_columns=str_cols)
     cpp.to_hdf(os.path.join('data', 'conv_power_plants_DE.edited.hdf'),
                'data', mode='w')
@@ -247,29 +321,47 @@ def prepare_re_power_plants():
     float_cols = ['electrical_capacity', 'thermal_capacity']
 
     start = datetime.datetime.now()
+
+    # Read original file or download it from original source
     ee = read_original_file('renewable')
     logging.info("File read: {0}".format(str(datetime.datetime.now() - start)))
+
+    # Trying to supplement missing coordinates
     ee = complete_geometries(ee, start)
+
+    # Remove unnecessary column and fix column types.
     ee = clean_df(ee, rmv_ls=remove_list, str_columns=str_cols,
                   float_columns=float_cols)
+
+    # Create GeoDataFrame from original DataFrame
     gee = create_geo_df(ee, start)
-    gee = add_spatial_name(gee, os.path.join('geometries', 'polygons_de21.csv'),
-                           'region', time=start)
+
+    # Add region column (DE01 - DE21)
+    gee = add_spatial_name(gee, os.path.join(
+        'geometries', 'polygons_de21_vg.csv'), 'region', time=start)
+
+    # Add column with coastdat id
     gee = add_spatial_name(gee, os.path.join('geometries', 'coastdat_grid.csv'),
                            'coastdat_id', time=start)
+
+    # Fix type of columns
     gee['region'] = gee['region'].apply(str)
     gee['coastdat_id'] = gee['coastdat_id'].apply(int)
-    gee = fill_region_with_coastdat(gee)
 
+    # Write new table to shape-file
     gee.to_file(os.path.join('data', 'ee_powerplants.shp'))
+
+    # Write new table to csv file
     ee = remove_cols(ee, ['geom', 'lat', 'lon'])
     ee['region'] = gee['region']
     ee['coastdat_id'] = gee['coastdat_id']
     ee.to_csv(os.path.join('data', 'renewable_power_plants_DE.edited.csv'))
+
+    # Write new table to hdf file
     ee.to_hdf(os.path.join('data', 'renewable_power_plants_DE.edited.hdf'),
               'data', mode='w')
 
 
 if __name__ == "__main__":
     prepare_conventional_power_plants()
-    # prepare_re_power_plants()
+    prepare_re_power_plants()
