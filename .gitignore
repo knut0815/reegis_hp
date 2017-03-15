@@ -64,10 +64,11 @@ target/
 # reegis
 results/
 weather/
-data_original/
-data/
-/reegis_hp/de21/invalid.csv
 my_scenarios/
+/reegis_hp/de21/data/powerplants/original/
+/reegis_hp/de21/data/powerplants/grouped/
+/reegis_hp/de21/data/powerplants/messages/
+/reegis_hp/de21/data/powerplants/prepared/
 
 # shape files
 *.shp
@@ -75,3 +76,4 @@ my_scenarios/
 *.dbf
 *.prj
 *.shx
+
