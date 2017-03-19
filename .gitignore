@@ -64,11 +64,15 @@ target/
 # reegis
 results/
 weather/
+feedin/
 my_scenarios/
+/reegis_hp/de21/data/demand/original/
+/reegis_hp/de21/data/demand/prepared/
 /reegis_hp/de21/data/powerplants/original/
 /reegis_hp/de21/data/powerplants/grouped/
 /reegis_hp/de21/data/powerplants/messages/
 /reegis_hp/de21/data/powerplants/prepared/
+/reegis_hp/de21/save/
 
 # shape files
 *.shp

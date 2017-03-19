@@ -12,21 +12,40 @@ from pvlib.modelchain import ModelChain
 from pvlib.tools import cosd
 import bisect
 import oemof.db as db
+import logging
+from oemof.tools import logger
+import calendar
 
 
 def get_average_wind_speed():
-
+    """
+    Get average wind speed over all years for each coastdat region. This can be
+    used to select the appropriate wind turbine for each region
+    (strong/low wind turbines).
+    """
     start = time.now()
-    polygons_wkt = pd.read_csv(os.path.join(os.path.dirname(__file__),
+    weather_path = os.path.join('data', 'weather')
+
+    # Finding existing weather files.
+    filelist = (os.listdir(weather_path))
+    years = list()
+    for y in range(1970, 2020):
+        if 'coastDat2_de_{0}.h5'.format(y) in filelist:
+            years.append(y)
+
+    # Loading coastdat-grid as shapely geometries.
+    polygons_wkt = pd.read_csv(os.path.join(os.path.dirname(__file__), 'data',
                                             'geometries', 'coastdat_grid.csv'))
     polygons = pd.DataFrame(geoplot.postgis2shapely(polygons_wkt.geom),
                             index=polygons_wkt.gid, columns=['geom'])
-    years = [1998, 2003, 2007, 2010, 2011, 2012, 2013, 2014]
+
+    # Opening all weather files
     store = dict()
     for year in years:
-        store[year] = pd.HDFStore('weather/coastDat2_de_{0}.h5'.format(year))
+        store[year] = pd.HDFStore(os.path.join(
+            weather_path, 'coastDat2_de_{0}.h5'.format(year)), mode='r')
     print("Files loaded", time.now() - start)
-    keys = store[1998].keys()
+    keys = store[years[0]].keys()
     print("Keys loaded", time.now() - start)
     firstyear = years[0]
     years.remove(firstyear)
@@ -38,61 +57,77 @@ def get_average_wind_speed():
         weather_id = int(key[2:])
         wind_speed_avg = store[firstyear][key]['v_wind']
         for year in years:
-            wind_speed_avg = wind_speed_avg.append(store[year][key]['v_wind'],
-                                                   verify_integrity=True)
+            # Remove entries if year has to many entries.
+            if calendar.isleap(year):
+                h_max = 8784
+            else:
+                h_max = 8760
+            ws = store[year][key]['v_wind']
+            surplus = h_max - len(ws)
+            if surplus < 0:
+                ws = ws.ix[:surplus]
+            wind_speed_avg = wind_speed_avg.append(ws, verify_integrity=True)
         polygons.loc[weather_id, 'v_wind_avg'] = wind_speed_avg.mean()
     years.append(firstyear)
     print(polygons.v_wind_avg.max())
     for year in years:
         store[year].close()
-    polygons.to_pickle('data/average_wind_speed_coastdat.pkl')
-    polygons.v_wind_avg.to_csv('data/average_wind_speed_coastdat.csv')
+    polygons.to_pickle(os.path.join(weather_path,
+                                    'average_wind_speed_coastdat_geo.pkl'))
+    polygons.v_wind_avg.to_csv(os.path.join(
+        weather_path, 'average_wind_speed_coastdat.csv'))
 
 
-def get_capacity(year):
-    wind_pwr = pd.HDFStore('weather/wind_power_de_{0}.h5'.format(year))
-    pv_pwr = pd.HDFStore('weather/pv_power_de_{0}.h5'.format(year))
+def time_series_by_region(overwrite=False):
+    source_path = os.path.join('data', 'powerplants', 'grouped',
+                               'renewable_cap.csv')
+    feedin_in_path = os.path.join('data', 'feedin', 'coastdat')
+    feedin_out_path = os.path.join('data', 'feedin', 'de21')
+    feedin_in_file = '{0}_feedin_coastdat_de_normalised_{1}.h5'
+    feedin_in = os.path.join(feedin_in_path, feedin_in_file)
+    feedin_out = os.path.join(feedin_out_path, '{0}_feedin_de21_{1}.csv')
+    df = pd.read_csv(source_path, index_col=[0, 1, 2, 3])
 
-    # my = pd.read_hdf('data/renewable_power_plants_DE.edited.hdf', 'data')
-    my = pd.read_csv('data/renewable_power_plants_DE.edited.csv')
-    my_index = wind_pwr[wind_pwr.keys()[0]].index
-    feedin_pv = pd.DataFrame(index=my_index)
-    feedin_pv_cap = pd.Series()
-    feedin_wind = pd.DataFrame(index=my_index)
-    feedin_wind_cap = pd.Series()
+    if not os.path.isdir(os.path.join('data', 'feedin', 'de21')):
+        os.makedirs(os.path.join('data', 'feedin', 'de21'))
 
-    for region in my.region.sort_values().unique():
-        wind_temp = pd.DataFrame(index=my_index)
-        wind_cap_temp = pd.Series()
-        pv_temp = pd.DataFrame(index=my_index)
-        pv_cap_temp = pd.Series()
+    for vtype in ['Solar', 'Wind']:
+        filelist = (os.listdir(feedin_in_path))
+        years = list()
 
-        print(region)
-        p_installed_by_coastdat_id = my.loc[my.region == region].groupby(
-            ['coastdat_id', 'energy_source_level_2']).electrical_capacity.sum()
+        for y in range(1970, 2020):
+            if (not os.path.isfile(feedin_out.format(y, vtype.lower()))) or (
+                    overwrite):
+                if feedin_in_file.format(y, vtype.lower()) in filelist:
+                    years.append(y)
+        if overwrite:
+            logging.warning("Existing files will be overwritten.")
+        else:
+            logging.info("Existing files are skipped.")
+        logging.info(
+            "Will create {0} time series for the following years: {1}".format(
+                vtype.lower(), years))
+        for year in years:
+            pwr = pd.HDFStore(feedin_in.format(year, vtype.lower()))
+            my_index = pwr[pwr.keys()[0]].index
+            feedin = pd.DataFrame(index=my_index)
+            for region in sorted(
+                    df.loc[(vtype, year)].index.get_level_values(0).unique()):
+                temp = pd.DataFrame(index=my_index)
+                logging.info(region)
+                for coastdat in df.loc[(vtype, year, region)].index:
+                    # Multiply time series (normalised to 1kW) with capacity(kW)
+                    temp[coastdat] = pwr['/A' + str(int(coastdat))].multiply(
+                        float(df.loc[(vtype, year, region, coastdat)]))
+                if str(region) == 'nan':
+                    region = 'unknown'
+                # Sum up time series for one region and divide it by the
+                # capacity of the region to get a normalised time series.
+                feedin[region] = temp.sum(axis=1).divide(
+                    float(df.loc[(vtype, year, region)].sum()))
 
-        for cd2_id, new_df in p_installed_by_coastdat_id.groupby(level=0):
-            electrical_capacity = new_df.loc[cd2_id, :]
-            pv_cap_temp.loc[cd2_id] = electrical_capacity.get('Solar', 0)
-            pv_temp[cd2_id] = (pv_pwr['/A' + str(cd2_id)] *
-                               pv_cap_temp.loc[cd2_id])
-            wind_cap_temp.loc[cd2_id] = electrical_capacity.get('Wind', 0)
-            wind_temp[cd2_id] = (wind_pwr['/A' + str(cd2_id)] *
-                                 wind_cap_temp.loc[cd2_id])
-        if str(region) == 'nan':
-            region = 'unknown'
-        feedin_pv_cap[region] = pv_cap_temp.sum()
-        feedin_pv[region] = pv_temp.sum(axis=1) / feedin_pv_cap[region]
-        feedin_wind_cap[region] = wind_cap_temp.sum()
-        feedin_wind[region] = wind_temp.sum(axis=1) / feedin_wind_cap[region]
-
-    filename = 'weather/{0}_de_{1}.csv'
-    feedin_pv.to_csv(filename.format('feedin_pv', year))
-    feedin_pv_cap.to_csv(filename.format('feedin_pv_cap', year))
-    feedin_wind.to_csv(filename.format('feedin_wind', year))
-    feedin_wind_cap.to_csv(filename.format('feedin_wind_cap', year))
-    wind_pwr.close()
-    pv_pwr.close()
+            feedin.to_csv(feedin_out.format(year, vtype.lower()))
+            pwr.close()
 
 
 def plot_pickle(filename, column, lmin=0, lmax=1, n=5):
@@ -213,108 +248,152 @@ def normalised_pv_power(latlon, key, weather_df):
     return mc.ac.fillna(0).clip(0).div(p_max_power)
 
 
-def write_feedin_to_scenario(name, path, year):
-    pv_cap = pd.read_csv(
-        os.path.join('weather', 'feedin_pv_cap_de_{0}.csv'.format(year)),
-        header=None, index_col=0, squeeze=True)
-    pv_seq = pd.read_csv(
-        os.path.join('weather', 'feedin_pv_de_{0}.csv'.format(year)))
-    wind_cap = pd.read_csv(
-        os.path.join('weather', 'feedin_wind_cap_de_{0}.csv'.format(year)),
-        header=None, index_col=0, squeeze=True)
-    wind_seq = pd.read_csv(
-        os.path.join('weather', 'feedin_wind_de_{0}.csv'.format(year)))
-
-    scenario = pd.read_csv(os.path.join(path, name + '.csv'), index_col='class')
-
-    full_path_seq = os.path.join(path, name + '_seq')
-    columns = pd.read_csv(full_path_seq + '.csv', header=1, nrows=1).columns
-    tmp_csv = pd.read_csv(full_path_seq + '.csv', skiprows=5, names=columns,
-                          index_col='label', parse_dates=True)
-    regions = list(pv_cap.index)
-    regions.remove('unknown')
-
-    for region in regions:
-        scenario.loc[scenario.label == '{0}_solar'.format(region),
-                     'nominal_value'] = pv_cap[region] * 1000
-        scenario.loc[scenario.label == '{0}_wind'.format(region),
-                     'nominal_value'] = wind_cap[region] * 1000
-        tmp_csv[region + '_solar'] = list(pv_seq[region])
-        tmp_csv[region + '_wind'] = list(wind_seq[region])
-    scenario.to_csv(os.path.join(path, name + '.csv'))
-    add2seq(tmp_csv, full_path_seq, path)
-
-
-def add2seq(tmp_csv, full_path_seq, path):
-    tmp_csv.to_csv(full_path_seq + '~.csv', header=False)
-
-    # read the current contents of the file
-    f = open(full_path_seq + '~.csv')
-    text = f.read()
-    f.close()
-
-    # reader header
-    f = open(os.path.join(path, 'reegis_de_21.header'))
-    header = f.read()
-    f.close()
-
-    # open a different file for writing
-    f = open(full_path_seq + '~.csv', 'w')
-    f.write(header)
-    f.write(text)
-    f.close()
-    os.rename(full_path_seq + '~.csv', full_path_seq + '.csv')
-
-
 def coastdat_id2coord():
+    """
+    Creating a file with the latitude and longitude for all coastdat2 data sets.
+    """
     conn = db.connection()
     sql = "select gid, st_x(geom), st_y(geom) from coastdat.spatial;"
     results = (conn.execute(sql))
     columns = results.keys()
     data = pd.DataFrame(results.fetchall(), columns=columns)
     data.set_index('gid', inplace=True)
-    data.to_csv(os.path.join('data_basic', 'id2latlon.csv'))
+    data.to_csv(os.path.join('data', 'basic', 'id2latlon.csv'))
 
 
-def normalised_feedin():
-    years = [1998, 2003, 2007, 2010, 2011, 2012, 2013, 2014]
+def normalised_feedin(years=None, overwrite=False):
+    """pass"""
 
-    latlon = pd.read_csv(os.path.join('data_basic', 'id2latlon.csv'),
+    # Finding existing weather files.
+    weather_path = os.path.join('data', 'weather')
+    avg_wind = os.path.join(weather_path, 'average_wind_speed_coastdat_geo.pkl')
+    feedin_path = os.path.join('data', 'feedin', 'coastdat')
+    feedin_full = os.path.join(
+        feedin_path, '{0}_feedin_coastdat_de_normalised_{1}.h5')
+
+    if not os.path.isdir(os.path.join('data', 'feedin')):
+        os.makedirs(os.path.join('data', 'feedin'))
+    if not os.path.isdir(os.path.join('data', 'feedin', 'coastdat')):
+        os.makedirs(os.path.join('data', 'feedin', 'coastdat'))
+
+    if years is None:
+        filelist = (os.listdir(weather_path))
+        years = list()
+        for y in range(1970, 2020):
+            if 'coastDat2_de_{0}.h5'.format(y) in filelist:
+                years.append(y)
+
+    latlon = pd.read_csv(os.path.join('data', 'basic', 'id2latlon.csv'),
                          index_col='gid')
-    filename = 'data/average_wind_speed_coastdat.pkl'
-    polygons = pd.read_pickle(filename)
+
+    polygons = pd.read_pickle(avg_wind)
     start = time.now()
+    logging.info("Creating normalised feedin time series.")
     for year in years:
-        print(year)
-        load = pd.HDFStore('weather/coastDat2_de_{0}.h5'.format(year))
-        wind_pwr = pd.HDFStore('weather/wind_power_de_{0}.h5'.format(year))
-        pv_pwr = pd.HDFStore('weather/pv_power_de_{0}.h5'.format(year))
+        file1 = feedin_full.format(year, 'wind')
+        file2 = feedin_full.format(year, 'solar')
+        if not os.path.isfile(file1) or not os.path.isfile(file2) or overwrite:
+            load = pd.HDFStore(os.path.join(
+                weather_path, 'coastDat2_de_{0}.h5').format(year), mode='r')
+            wind_pwr = pd.HDFStore(feedin_full.format(year, 'wind'), mode='w')
+            pv_pwr = pd.HDFStore(feedin_full.format(year, 'solar'), mode='w')
 
-        keys = load.keys()
-        for key in keys:
-            weather_df = load[key]
-            wind_pwr[key] = normalised_wind_power(polygons, key, weather_df)
-            polygons.loc[int(key[2:]), 'full_load_hours_wka'] = (
-                wind_pwr[key].sum())
-            pv_pwr[key] = normalised_pv_power(latlon, key, weather_df)
-            polygons.loc[int(key[2:]), 'full_load_hours_pv'] = (
-                pv_pwr[key].sum())
+            keys = load.keys()
+            length = len(keys)
+            for key in keys:
+                length -= 1
+                if length % 100 == 0:
+                    logging.info('{0} - {1}'.format(year, length))
+                weather_df = load[key]
+                wind_pwr[key] = normalised_wind_power(polygons, key, weather_df)
+                polygons.loc[int(key[2:]), 'full_load_hours_wka'] = (
+                    wind_pwr[key].sum())
+                pv_pwr[key] = normalised_pv_power(latlon, key, weather_df)
+                polygons.loc[int(key[2:]), 'full_load_hours_solar'] = (
+                    pv_pwr[key].sum())
 
-        print(year, time.now() - start)
-        load.close()
-        wind_pwr.close()
-        pv_pwr.close()
-        polygons.to_pickle('data/full_load_hours_{0}.pkl'.format(year))
+            logging.info("Normalised time series created: {0} - {1}".format(
+                year, time.now() - start))
+            load.close()
+            wind_pwr.close()
+            pv_pwr.close()
+            polygons.to_pickle(os.path.join(
+                feedin_path, '{0}_full_load_hours_solar_wind.pkl'.format(year)))
 
-# get_average_wind_speed()
-# plot_pickle('data/full_load_hours_2007.pkl', 'full_load_hours_wka', lmax=5000,
-#             n=5)
-plot_pickle('data/full_load_hours_1998.pkl', 'full_load_hours_pv', lmax=1000,
-            lmin=700, n=4)
-# plot_pickle('data/average_wind_speed_coastdat.pkl', 'v_wind_avg', lmax=7, n=7)
-# normalised_feedin()
-# coastdat_id2coord()
-# s_name = 'reegis_de_21_test'
-# s_path = 'scenarios'
-# write_feedin_to_scenario(s_name, s_path, 2014)
-# get_capacity(2014)
+
+def merge_tables(overwrite):
+    feedin_in_path = os.path.join('data', 'feedin', 'de21')
+    feedin_in_file = '{0}_feedin_de21_{1}.csv'
+    feedin_in = os.path.join(feedin_in_path, feedin_in_file)
+
+    filelist = (os.listdir(feedin_in_path))
+    years = list()
+
+    for y in range(1970, 2020):
+        if (not os.path.isfile(feedin_in.format(y, 'all'))) or (
+                overwrite):
+            if (feedin_in_file.format(y, 'wind') in filelist) and (
+                   feedin_in_file.format(y, 'solar') in filelist):
+                years.append(y)
+    pwr = dict()
+    logging.info("Merging feedin files of the following years: {0}".format(
+        years))
+    for year in years:
+        for vtype in ['wind', 'solar']:
+            pwr[vtype] = pd.read_csv(feedin_in.format(year, vtype),
+                                     index_col='Unnamed: 0')
+        my_index = pwr['wind'][pwr['wind'].keys()[0]].index
+        my_cols = pd.MultiIndex(
+            levels=[[1], [2]], labels=[[0], [0]], names=['vtype',
+                                                         'region'])
+
+        feedall = pd.DataFrame(index=my_index, columns=my_cols)
+
+        del feedall[1, 2]
+        for vtype in ['wind', 'solar']:
+            for reg in pwr['wind'].columns:
+                try:
+                    feedall[(vtype, reg)] = pwr[vtype][reg]
+                except KeyError:
+                    pass
+
+        feedall.to_csv(feedin_in.format(year, 'all'))
+
+
+def create_feedin_series(overwrite=False):
+    """pass"""
+    start = time.now()
+    weather_path = os.path.join('data', 'weather')
+
+    # Creating file with average wind speed for each coastdat id
+    avg1 = os.path.join(weather_path, 'average_wind_speed_coastdat_geo.pkl')
+    avg2 = os.path.join(weather_path, 'average_wind_speed_coastdat.csv')
+    logging.info("Average wind speed: {0}".format(time.now() - start))
+    if not os.path.isfile(avg1) or not os.path.isfile(avg2) or overwrite:
+        get_average_wind_speed()
+
+    normalised_feedin(overwrite=overwrite)
+    time_series_by_region(overwrite=overwrite)
+    merge_tables(overwrite=overwrite)
+
+
+def feedin_source_region(year):
+    feedin_out = os.path.join('data', 'feedin', 'de21',
+                              '{0}_feedin_de21_all.csv')
+    return pd.read_csv(feedin_out.format(year), header=[0, 1], parse_dates=True,
+                       index_col=0)
+
+if __name__ == "__main__":
+    logger.define_logging()
+
+    create_feedin_series(overwrite=False)
+    # plot_pickle('data/full_load_hours_2007.pkl', 'full_load_hours_wka',
+    #             lmax=5000, n=5)
+    # plot_pickle('data/full_load_hours_1998.pkl', 'full_load_hours_pv',
+    #             lmax=1000, lmin=700, n=4)
+    # plot_pickle('data/average_wind_speed_coastdat.pkl', 'v_wind_avg', lmax=7,
+    #             n=7)
+    # coastdat_id2coord()
+    # s_name = 'reegis_de_21_test'
+    # s_path = 'scenarios'
+    # write_feedin_to_scenario(s_name, s_path, 2014)

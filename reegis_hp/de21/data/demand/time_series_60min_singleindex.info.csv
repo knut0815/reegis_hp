@@ -1,0 +1,7 @@
+,
+editor,http://open-power-system-data.org/
+info,http://data.open-power-system-data.org/time_series/
+download,http://data.open-power-system-data.org/time_series/latest/time_series_60min_singleindex.csv
+date,2016-10-28
+readme,http://data.open-power-system-data.org/time_series/latest/README.md
+json,http://data.open-power-system-data.org/time_series/latest/datapackage.json

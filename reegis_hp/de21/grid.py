@@ -4,10 +4,9 @@ import math
 import geoplot
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-import scenario_writer as sw
 
 
-grid = pd.read_csv(os.path.join('data_basic', 'de21_grid_data.csv'))
+grid = pd.read_csv(os.path.join('data', 'basic', 'de21_grid_data.csv'))
 
 f_security = 0.7
 current_max = 2720
@@ -28,7 +27,7 @@ def get_grid_capacity(plus, minus):
 
 
 def add_labels(data, plotter, label=None,
-               coord_file='geometries/coord_lines.csv'):
+               coord_file='data/geometries/coord_lines.csv'):
     p = pd.read_csv(coord_file, index_col='name')
 
     data['point'] = p.geom
@@ -63,7 +62,7 @@ def plot_grid(lines):
     # plt.rcParams.update({'font.size': 19})
     # plt.style.use('grayscale')
 
-    background = pd.read_csv('geometries/polygons_de21_simple.csv',
+    background = pd.read_csv('data/geometries/polygons_de21_simple.csv',
                              index_col='gid')
 
     onshore = geoplot.postgis2shapely(
@@ -89,43 +88,54 @@ def plot_grid(lines):
     plt.show()
 
 
-# renpass F.Wiese (page 49)
-grid['capacity_calc'] = (grid.circuits * current_max * grid.voltage *
-                         f_security * math.sqrt(3) / 1000)
+def get_transmission_lines():
+    # renpass F.Wiese (page 49)
+    grid['capacity_calc'] = (grid.circuits * current_max * grid.voltage *
+                             f_security * math.sqrt(3) / 1000)
 
-pwr_lines = pd.read_csv(os.path.join('geometries', 'lines_de21.csv'),
-                        index_col='name')
+    pwr_lines = pd.read_csv(os.path.join('data', 'geometries',
+                                         'lines_de21.csv'),
+                            index_col='name')
 
-for l in pwr_lines.index:
-    split = l.split('-')
-    a = ('110{0}'.format(split[0][2:]))
-    b = ('110{0}'.format(split[1][2:]))
-    # print(a, b)
-    cap1, dist1 = get_grid_capacity(int(a), int(b))
-    cap2, dist2 = get_grid_capacity(int(b), int(a))
+    for l in pwr_lines.index:
+        split = l.split('-')
+        a = ('110{0}'.format(split[0][2:]))
+        b = ('110{0}'.format(split[1][2:]))
+        # print(a, b)
+        cap1, dist1 = get_grid_capacity(int(a), int(b))
+        cap2, dist2 = get_grid_capacity(int(b), int(a))
 
-    if cap1 == 0 and cap2 == 0:
-        pwr_lines.loc[l, 'capacity'] = 0
-        pwr_lines.loc[l, 'distance'] = 0
-    elif cap1 == 0 and cap2 != 0:
-        pwr_lines.loc[l, 'capacity'] = cap2
-        pwr_lines.loc[l, 'distance'] = dist2
-    elif cap1 != 0 and cap2 == 0:
-        pwr_lines.loc[l, 'capacity'] = cap1
-        pwr_lines.loc[l, 'distance'] = dist1
-    else:
-        print("Error in {0}".format(l))
+        if cap1 == 0 and cap2 == 0:
+            pwr_lines.loc[l, 'capacity'] = 0
+            pwr_lines.loc[l, 'distance'] = 0
+        elif cap1 == 0 and cap2 != 0:
+            pwr_lines.loc[l, 'capacity'] = cap2
+            pwr_lines.loc[l, 'distance'] = dist2
+        elif cap1 != 0 and cap2 == 0:
+            pwr_lines.loc[l, 'capacity'] = cap1
+            pwr_lines.loc[l, 'distance'] = dist1
+        else:
+            print("Error in {0}".format(l))
 
-# plot_grid(pwr_lines)
-tmp = pwr_lines.capacity
-values = tmp.copy()
+    # plot_grid(pwr_lines)
+    tmp = pwr_lines[['capacity', 'distance']]
+    values = tmp.copy()
 
-def id_inverter(name):
-    return '-'.join([name.split('-')[1], name.split('-')[0]])
+    def id_inverter(name):
+        return '-'.join([name.split('-')[1], name.split('-')[0]])
 
-tmp.index = tmp.index.map(id_inverter)
-values = pd.concat([values, tmp])
+    tmp.index = tmp.index.map(id_inverter)
+    df = pd.concat([values, tmp])
+    if not os.path.isdir(os.path.join('data', 'grid')):
+        os.makedirs(os.path.isdir(os.path.join('data', 'grid')))
+    df.to_csv(os.path.join('data', 'grid', 'de21_transmission.csv'))
+    return df
 
-obj_path = os.path.join('data_basic', 'grid_id.csv')
-sw.update_parameter('reegis_de_21_writer', '{0}_powerline', 'source',
-                    'nominal_value', values, obj_path)
+
+def get_grid():
+    return pd.read_csv(os.path.join('data', 'grid', 'de21_transmission.csv'),
+                       index_col='Unnamed: 0')
+
+
+if __name__ == "__main__":
+    get_transmission_lines()

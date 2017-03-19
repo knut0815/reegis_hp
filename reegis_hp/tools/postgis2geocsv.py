@@ -20,7 +20,7 @@ def fetch_geometries(**kwargs):
     """
     sql_str = '''
         SELECT {id_col}, ST_AsText(
-            ST_SIMPLIFY({geo_col},{simp_tolerance})) geom, name
+            ST_SIMPLIFY({geo_col},{simp_tolerance})) geom, zip_code
         FROM {schema}.{table}
         WHERE "{where_col}" {where_cond}
         ORDER BY {id_col} DESC;'''
@@ -36,13 +36,13 @@ logger.define_logging()
 start = time.time()
 
 map_def = {
-        'table': 'deu21_simple',
+        'table': 'plz',
         'geo_col': 'geom',
         'id_col': 'gid',
         'schema': 'deutschland',
         'simp_tolerance': '0',
         'where_col': 'gid',
-        'where_cond': "!= 'deu_21'",
+        'where_cond': ">0",
         }
 logging.info("Retrieving data from database...")
 df = fetch_geometries(**map_def)

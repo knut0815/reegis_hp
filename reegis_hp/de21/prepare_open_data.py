@@ -46,6 +46,7 @@ README = os.path.join(
     'data', 'powerplants', 'original', '{0}_readme.md')
 JSON = os.path.join(
     'data', 'powerplants', 'original', '{0}_datapackage.json')
+GROUPED = os.path.join('data', 'powerplants', 'grouped', '{0}')
 
 
 def read_original_file(p_type, overwrite):
@@ -349,6 +350,174 @@ def find_intersection_with_buffer(gdf, spatial_df, column):
     return gdf
 
 
+def group_re_powerplants(category, overwrite=False):
+    repp = pd.read_csv(EDITED_CSV_FILE.format(category),
+                       parse_dates=['commissioning_date',
+                                    'decommissioning_date']
+                       )
+
+    filepath = os.path.join(
+        'data', 'powerplants', 'messages',
+        '{0}_non_groupable_plants.csv'.format(category))
+    repp[repp.electrical_capacity.isnull()].to_csv(filepath)
+
+    repp = repp[repp.electrical_capacity.notnull()]
+
+    # Replace nan values by a string to avoid errors in string operations.
+    repp.region.fillna('XXYY', inplace=True)
+
+    # Set not existing commissioning dates to an unrealistic value to make it
+    # possible to find them afterwards. Nan values will be ignored by group.
+    repp.commissioning_date.fillna(pd.datetime(2099, 9, 9), inplace=True)
+    repp['year'] = repp.commissioning_date.map(lambda x: int(x.year))
+    repp.decommissioning_date.fillna(pd.datetime(2050, 1, 1), inplace=True)
+    years = repp.year.unique()
+
+    # Get all possible types
+    re_source = repp.energy_source_level_2.unique()
+    repp.energy_source_level_2.fillna('nan', inplace=True)
+
+    # Create an empty MultiIndex DataFrame to take the values.
+    my_idx = pd.MultiIndex(levels=[[], [], [], []], labels=[[], [], [], []],
+                           names=['source', 'year', 'region', 'coastdat'])
+    df = pd.DataFrame(index=my_idx, columns=['capacity'])
+
+    # Group DataFrame with coastdat (Wind/Solar)
+    repp_gc = repp.groupby(
+        ['energy_source_level_2', 'region', 'coastdat_id', 'commissioning_date',
+         'decommissioning_date']).sum().electrical_capacity
+
+    # Group DataFrame without coastdat (everything else)
+    repp_g = repp.groupby(
+        ['energy_source_level_2', 'region', 'commissioning_date',
+         'decommissioning_date']).sum().electrical_capacity
+
+    # Sort index for faster indexing.
+    repp_gc = repp_gc.sortlevel()
+    repp_g = repp_g.sortlevel()
+
+    # Create list with non existing files.
+    if overwrite:
+        re_source_new = re_source
+    else:
+        re_source_new = list()
+        for t in re_source:
+            filepath = GROUPED.format('{0}_cap.csv'.format(t.lower()))
+            if not os.path.isfile(filepath):
+                re_source_new.append(t)
+    logging.info("Will process the following types: {0}".format(re_source_new))
+    # Loop over list with non existing files or all files if overwrite=True
+    for t in re_source_new:
+        regions = repp_g.loc[t].index.get_level_values(0).unique()
+        for r in regions:
+            if t in ['Wind', 'Solar']:
+                coastdat_ids = repp_gc.loc[t, r].index.get_level_values(
+                    0).unique()
+            else:
+                coastdat_ids = list(('0000000',))
+            for c in coastdat_ids:
+                logging.info('{0}: {1} - {2}'.format(t, r, c))
+                if t in ['Wind', 'Solar']:
+                    sub = repp_gc.loc[(t, r, c)]
+                else:
+                    sub = repp_g.loc[(t, r,)]
+                for y in years:
+                    start = sub[
+                        (sub.index.get_level_values(0) < pd.datetime(y, 1, 1)) &
+                        (sub.index.get_level_values(1) > pd.datetime(y, 1, 1))
+                        ].sum()
+                    next_y = sub[
+                        (sub.index.get_level_values(0) < pd.datetime(y + 1, 1,
+                                                                     1)) &
+                        (sub.index.get_level_values(1) > pd.datetime(y + 1, 1,
+                                                                     1))
+                        ].sum()
+                    if next_y == start:
+                        df.loc[(t, y, r, c)] = next_y
+                    else:
+                        cap = start
+                        for m in range(11):
+                            cap += (sub[
+                                        (sub.index.get_level_values(0) <
+                                         pd.datetime(y, m + 2, 1)) &
+                                        (sub.index.get_level_values(1) >
+                                         pd.datetime(y, m + 2,
+                                                     1))].sum() - cap) * (
+                                       (11 - m) / 12)
+                        df.loc[(t, y, r, c)] = cap
+
+        # Store DataFrame to csv-file
+        df = df.sortlevel()
+        filepath = GROUPED.format('{0}_cap.csv'.format(t.lower()))
+        df.to_csv(filepath)
+
+        # Clear DataFrame
+        df = pd.DataFrame(index=my_idx, columns=['capacity'])
+
+    # Concat files if the main file does not exist.
+    df = pd.DataFrame(index=my_idx, columns=['capacity'])
+    filepath_all = GROUPED.format('{0}_cap.csv'.format('renewable'))
+    if not os.path.isfile(filepath_all) or overwrite:
+        for t in re_source:
+            filepath = GROUPED.format('{0}_cap.csv'.format(t.lower()))
+            df = pd.concat([df, pd.read_csv(filepath, index_col=[0, 1, 2, 3])])
+        df = df.sortlevel()
+        df.to_csv(filepath_all)
+
+
+def group_conventional_power_plants(overwrite=False):
+    cpp = pd.read_csv(os.path.join('data', 'powerplants', 'prepared',
+                                   'conventional_power_plants_DE_prepared.csv'),
+                      index_col='id')
+    del cpp['Unnamed: 0']
+    cpp.region.fillna('XXYY', inplace=True)
+    cpp.fuel.fillna('unknown', inplace=True)
+    cpp.shutdown.fillna(2050, inplace=True)
+
+    # Create an empty MultiIndex DataFrame to take the values.
+    my_idx = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []],
+                           names=['fuel', 'year', 'region'])
+    df = pd.DataFrame(index=my_idx, columns=['capacity', 'efficiency'])
+
+    # Calculate maximal input capacity using the maximal output and the
+    # efficiency.
+    cpp['max_in'] = cpp['capacity_net_bnetza'] / cpp['efficiency_estimate']
+
+    cpp_by_region_fuel = cpp.groupby(['fuel', 'region', 'commissioned',
+                                      'shutdown'])
+    cpp_g = cpp_by_region_fuel[['capacity_net_bnetza', 'max_in']].sum()
+
+    cpp_g['efficiency_avg'] = 0
+
+    filepath_all = GROUPED.format('{0}_cap.csv'.format('conventional'))
+    if os.path.isfile(filepath_all) and not overwrite:
+        type_fuel = list()
+        years = list()
+        logging.info("File exists. Skipping 'group_conventional_power_plants'.")
+        logging.info("Set overwrite=True to change this behaviour.")
+    else:
+        type_fuel = cpp_g.index.get_level_values(0).unique()
+        years = sorted(cpp_g.index.get_level_values(2).unique())
+        logging.info("Grouping conventional power plants...")
+
+    for t in type_fuel:
+        logging.info(t)
+        regions = cpp_g.loc[t].index.get_level_values(0).unique()
+        for r in regions:
+            for y in years:
+                sub = cpp_g.loc[(t, r)]
+                tmp = sub.loc[((sub.index.get_level_values(0) <= y) &
+                              (sub.index.get_level_values(1) >= y))].sum(axis=0)
+                tmp['efficiency_avg'] = (tmp['capacity_net_bnetza'] /
+                                         tmp['max_in'])
+                df.loc[(t, y, r)] = tuple(
+                    tmp[['capacity_net_bnetza', 'efficiency_avg']])
+
+    if not os.path.isfile(filepath_all) or overwrite:
+        df = df.sortlevel()
+        df.to_csv(filepath_all)
+
+
 def prepare_conventional_power_plants(category, overwrite=False):
 
     if os.path.isfile(EDITED_CSV_FILE.format(category)) and not overwrite:
@@ -402,6 +571,7 @@ def prepare_conventional_power_plants(category, overwrite=False):
             os.path.join('data', 'powerplants', 'prepared',
                          '{0}_power_plants_DE.prepared.hdf'.format(category)
                          ), 'data', mode='w')
+    group_conventional_power_plants()
 
 
 def prepare_re_power_plants(category, overwrite=False):
@@ -469,12 +639,17 @@ def prepare_re_power_plants(category, overwrite=False):
                          '{0}_power_plants_DE.prepared.hdf'.format(category)),
             'data', mode='w')
 
+    # Grouping the plants by type, year, region (and coastdat for Wind/Solar)
+    group_re_powerplants(category, overwrite=overwrite)
+
 
 if __name__ == "__main__":
-    prepare_conventional_power_plants('conventional', overwrite=True)
+    prepare_conventional_power_plants('conventional', overwrite=False)
     prepare_re_power_plants('renewable', overwrite=False)
     logging_source = os.path.join(os.path.expanduser('~'), '.oemof',
                                   'log_files', 'oemof.log')
+
     logging_target = os.path.join('data', 'powerplants', 'messages',
-                                  'prepare_open_data.log')
-    shutil.copyfile(logging_source, logging_target)
+                                  '{0}_prepare_open_data.log')
+    dtstring = datetime.datetime.now().strftime('%Y%m%d_%H%M')
+    shutil.copyfile(logging_source, logging_target.format(dtstring))

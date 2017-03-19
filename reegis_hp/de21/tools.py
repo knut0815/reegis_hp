@@ -2,6 +2,11 @@ import pandas as pd
 import os
 from matplotlib import pyplot as plt
 import geoplot
+import oemof.db.coastdat as coastdat
+from shapely.wkt import loads
+import oemof.db as db
+import logging
+from oemof.tools import logger
 
 
 def add_labels(data, plot_obj, column=None, coord_file=None, textcolour='blue'):
@@ -64,11 +69,55 @@ def read_seq_file():
 
     tmp_csv.to_csv(seq_neu)
     print(tmp_csv.index)
+
+
+def fetch_coastdat2_year_from_db(years=range(1980, 2020), overwrite=False):
+    """Fetch coastDat2 weather data sets from db and store it to hdf5 files.
+
+    Parameters
+    ----------
+    overwrite : boolean
+        Skip existing files if set to False.
+    years : list of integer
+        Years to fetch.
+
+    """
+    weather_path = os.path.join('data', 'weather', 'coastDat2_de_{0}.h5')
+    geometry_path = os.path.join('data', 'geometries', 'germany.csv')
+
+    if not os.path.isdir('data'):
+        os.makedirs('data')
+    if not os.path.isdir(os.path.join('data', 'weather')):
+        os.makedirs(os.path.join('data', 'weather'))
+
+    polygon = loads(
+        pd.read_csv(geometry_path, index_col='gid', squeeze=True)[0])
+
+    conn = db.connection()
+    for year in years:
+        if not os.path.isfile(weather_path.format(str(year))) or overwrite:
+            weather_sets = coastdat.get_weather(conn, polygon, year)
+            if len(weather_sets) > 0:
+                logging.info("Fetching weather data for {0}.".format(year))
+                store = pd.HDFStore(weather_path.format(str(year)), mode='w')
+                for weather_set in weather_sets:
+                    logging.debug(weather_set.name)
+                    store['A' + str(weather_set.name)] = weather_set.data
+                store.close()
+            else:
+                logging.warning("No weather data found for {0}.".format(year))
+        else:
+            logging.info("Weather data for {0} exists. Skipping.".format(year))
     
 
 if __name__ == "__main__":
     # plot_geocsv(os.path.join('geometries', 'federal_states.csv'),
     #             idx_col='iso',
     #             coord_file='data_basic/label_federal_state.csv')
-    plot_geocsv(os.path.join('geometries', 'polygons_de21.csv'), idx_col='gid',
-                coord_file=os.path.join('data_basic', 'centroid_region.csv'))
+    plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_vg.csv'),
+                idx_col='gid',
+                # coord_file=os.path.join('data_basic', 'centroid_region.csv')
+                )
+    # plot_geocsv('/home/uwe/geo.csv', idx_col='gid')
+    logger.define_logging()
+    # fetch_coastdat2_year_from_db()

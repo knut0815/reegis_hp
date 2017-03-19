@@ -5,27 +5,32 @@ import logging
 import requests
 import pandas as pd
 import datetime
-from matplotlib import pyplot as plt
-
-from oemof.solph import csv_tools as csv
+from oemof.tools import logger
 
 
-FIXED = False
-FILEPATH = os.path.join('data', 'entsoe_DE_load.csv')
-
-spath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'scenarios')
+BASICPATH = os.path.join('data', 'basic')
+DEMAND = os.path.join('data', 'demand')
+PREPARED = os.path.join('data', 'demand', 'prepared')
+PREPFILE = os.path.join(PREPARED, 'entsoe_DE_load.csv')
+SHARE = os.path.join('data', 'basic', 'de21_demand_share.csv')
 
 
 def read_original_file():
     """Read file if exists."""
 
-    orig_csv_file = os.path.join('data_original',
+    orig_csv_file = os.path.join(DEMAND, 'original',
                                  'time_series_60min_singleindex.csv')
-    info_file = os.path.join('data_basic',
+    info_file = os.path.join(DEMAND,
                              'time_series_60min_singleindex.info.csv')
+    readme = os.path.join(DEMAND, 'original', 'README.md')
+    json = os.path.join(DEMAND, 'original', 'datapackage.json')
 
-    if not os.path.isdir('data_original'):
-        os.makedirs('data_original')
+    if not os.path.isdir(DEMAND):
+        os.makedirs(DEMAND)
+    if not os.path.isdir(os.path.join(DEMAND, 'original')):
+        os.makedirs(os.path.join(DEMAND, 'original'))
+    if not os.path.isdir(PREPARED):
+        os.makedirs(PREPARED)
 
     if not os.path.isfile(orig_csv_file):
         csv = pd.read_csv(info_file, squeeze=True, index_col=[0])
@@ -38,59 +43,61 @@ def read_original_file():
             csv.download, orig_csv_file))
         logging.warning("This script is tested with the file of {0}.".format(
             csv.date))
+        req = requests.get(csv.readme)
+        with open(readme, 'wb') as fout:
+            fout.write(req.content)
+        req = requests.get(csv.json)
+        with open(json, 'wb') as fout:
+            fout.write(req.content)
 
     return pd.read_csv(orig_csv_file)
 
 
 def prepare_demand_file():
     """Convert demand file. CET index and Germany's load only."""
-    load = read_original_file()
+    if not os.path.isfile(PREPFILE):
+        load = read_original_file()
 
-    load['cet'] = (
-        pd.to_datetime(load.cet_cest_timestamp) + datetime.timedelta(hours=1))
+        load['cet'] = (
+            pd.to_datetime(load.cet_cest_timestamp) +
+            datetime.timedelta(hours=1))
 
-    load = load.set_index('cet')
+        load = load.set_index('cet')
 
-    load[['utc_timestamp', 'cet_cest_timestamp', 'comment', 'load_DE_load']
-         ].to_csv(FILEPATH)
+        load[['utc_timestamp', 'cet_cest_timestamp', 'DE_load_']
+             ].to_csv(PREPFILE)
 
 
-def get_time_period(region_code, start_cet, end_cet):
-    load = pd.read_csv(FILEPATH, index_col='cet',
-                       parse_dates=True)
+def get_time_period(load, region_code, start_cet, end_cet):
 
     if region_code == 'DE':
         share = 1
     else:
-        share = pd.read_csv(os.path.join('data_basic', 'de21_demand_share.csv'),
-                            index_col='region_code', squeeze=True)[region_code]
+        share = pd.read_csv(
+            SHARE, index_col='region_code', squeeze=True)[region_code]
 
-    return load.ix[start_cet:end_cet].load_DE_load.multiply(float(share))
+    return load.ix[start_cet:end_cet].DE_load_.multiply(float(share))
 
 
-if not os.path.isfile(FILEPATH):
-    prepare_demand_file()
+def get_demand_by_region(year):
+    if not os.path.isfile(PREPFILE):
+        prepare_demand_file()
 
-year = 2014
+    start = datetime.datetime(year, 1, 1, 0, 0)
+    end = datetime.datetime(year, 12, 31, 23, 0)
 
-start = datetime.datetime(year, 1, 1, 0, 0)
-end = datetime.datetime(year, 12, 31, 23, 0)
+    entsoe = pd.read_csv(PREPFILE, index_col='cet', parse_dates=True)
 
-load_profile = pd.DataFrame(get_time_period('DE', start, end))
+    load_profile = pd.DataFrame(get_time_period(entsoe, 'DE', start, end))
+    for i in range(21):
+        region = 'DE{:02.0f}'.format(i + 1)
+        load_profile[region] = get_time_period(entsoe, region, start, end)
 
-for i in range(21):
-    region = 'DE{:02.0f}'.format(i + 1)
-    load_profile[region] = get_time_period(region, start, end)
+    del load_profile['DE_load_']
+    logging.info("Retrieving load profiles for Germany ({0}).".format(year))
+    return load_profile
 
-print(load_profile.sum())
 
-del load_profile['load_DE_load']
-
-load_profile.plot()
-plt.show()
-
-objects = pd.read_csv(os.path.join('data_basic', 'region_id.csv'),
-                      index_col=0)
-
-csv.update_sequence('reegis_de_21_writer', '{0}_load', load_profile,
-                    objects.index, spath)
+if __name__ == "__main__":
+    logger.define_logging()
+    get_demand_by_region(2013)
