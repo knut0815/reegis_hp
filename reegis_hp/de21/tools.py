@@ -2,9 +2,13 @@ import pandas as pd
 import os
 from matplotlib import pyplot as plt
 import geoplot
-import oemof.db.coastdat as coastdat
+try:
+    import oemof.db.coastdat as coastdat
+    import oemof.db as db
+except ImportError:
+    coastdat = None
+    db = None
 from shapely.wkt import loads
-import oemof.db as db
 import logging
 from oemof.tools import logger
 
