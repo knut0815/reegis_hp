@@ -5,6 +5,7 @@ import os
 import os.path as path
 import logging
 from oemof import network
+from oemof.solph import EnergySystem
 from oemof.solph.options import BinaryFlow, Investment
 from oemof.solph.plumbing import sequence
 from oemof.solph.network import (Bus, Source, Sink, Flow, LinearTransformer,
@@ -20,9 +21,10 @@ PARAMETER = (
 INDEX = ('class', 'label', 'source', 'target')
 
 
-class SolphScenario:
+class SolphScenario(EnergySystem):
 
     def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.p = kwargs.get('parameters')
         self.s = kwargs.get('sequences')
         self.path = kwargs.get('path', path.dirname(path.realpath(__file__)))
@@ -39,15 +41,10 @@ class SolphScenario:
         self.p = pd.DataFrame(columns=PARAMETER + tuple(additional_parameter),
                               index=my_index)
 
-    def create_sequence_table(self, datetime_index=None, year=None,
-                              interval=None):
+    def create_sequence_table(self, datetime_index=None):
         """Create an empty sequence table."""
-        if interval is None:
-            interval = '60min'
         if datetime_index is None:
-            date_from = '{0}-01-01 00:00:00'.format(year)
-            date_to = '{0}-12-31 23:00:00'.format(year)
-            datetime_index = pd.date_range(date_from, date_to, freq=interval)
+            datetime_index = self.timeindex
 
         my_index = pd.MultiIndex(
             levels=[[1], [2], [3], [4], [5]], labels=[[0], [0], [0], [0], [0]],
@@ -58,11 +55,10 @@ class SolphScenario:
         self.s = df
 
     def create_tables(self, **kwargs):
+        """Create empty scenario tables (sequence and parameter)."""
         self.create_parameter_table(
             additional_parameter=kwargs.get('additional_parameter'))
-        self.create_sequence_table(datetime_index=kwargs.get('datetime_index'),
-                                   year=kwargs.get('year'),
-                                   interval=kwargs.get('interval'))
+        self.create_sequence_table(datetime_index=kwargs.get('datetime_index'))
 
     def read_parameter_table(self, filename=None):
         """Read existing parameter table from file."""
@@ -73,26 +69,21 @@ class SolphScenario:
     def read_sequence_table(self, filename=None):
         """Read existing parameter table from file."""
         if filename is None:
-            filename = path.join(self.path, self.name + '_seq_.csv')
+            filename = path.join(self.path, self.name + '_seq.csv')
         self.s = pd.read_csv(filename, header=[0, 1, 2, 3, 4], parse_dates=True,
                              index_col=0)
 
-    def read_tables(self, name=None, scenario_path=None):
+    def read_tables(self, parameterfile=None, sequencefile=None):
         """Read existing scenario tables (parameter and sequence)"""
-        if name is not None:
-            self.name = name
-        if scenario_path is not None:
-            self.path = scenario_path
-        self.read_parameter_table()
-        self.read_sequence_table()
+        self.read_parameter_table(parameterfile)
+        self.read_sequence_table(sequencefile)
 
     def write_parameter_table(self, filename=None):
         """Write parameter table to file."""
         if filename is None:
             filename = path.join(self.path, self.name + '.csv')
-        self.p = self.p.fillna('')
         self.p.sort_values('sort_index', inplace=True)
-        self.p.to_csv(filename)
+        self.p.fillna('').to_csv(filename)
 
     def write_sequence_table(self, filename=None):
         """Write sequence table to file."""
@@ -100,22 +91,33 @@ class SolphScenario:
             filename = path.join(self.path, self.name + '_seq.csv')
         self.s.to_csv(filename)
 
-    def write_tables(self, name=None, scenario_path=None):
+    def write_tables(self, parameterfile=None, sequencefile=None):
         """Write scenario tables into two separate files."""
-        if name is not None:
-            self.name = name
-        if scenario_path is not None:
-            self.path = scenario_path
-        self.write_parameter_table()
-        self.write_sequence_table()
+        self.write_parameter_table(parameterfile)
+        self.write_sequence_table(sequencefile)
 
     def create_nodes(self):
-        """Create nodes for a solph.energysystem."""
-        # Todo: self.p and self.s has to be adapt to have the shape needed by
-        # Todo: the 'nodes_from_csv' function.
-        df_p = self.p
-        df_s = self.s
-        nodes_from_csv(nodes_flows=df_p, nodes_flows_seq=df_s)
+        """
+        Create nodes for a solph.energysystem
+
+        Notes
+        -----
+        At the moment the nodes_from_csv function does not accept Multiindex
+        DataFrames therefore the DataFrames need to be reshaped.
+        """
+        tmp1 = pd.DataFrame(
+            index=self.s.columns).reset_index().transpose().reset_index()
+        tmp2 = self.s.reset_index()
+        for n in range(len(tmp2.columns.levels) - 1):
+            tmp2.columns = tmp2.columns.droplevel(0)
+        length = len(tmp1.columns)
+        tmp1.columns = list(range(length))
+        tmp2.columns = list(range(length))
+
+        # noinspection PyTypeChecker
+        return nodes_from_csv(
+            nodes_flows=self.p.reset_index(),
+            nodes_flows_seq=pd.concat([tmp1, tmp2], ignore_index=True))
 
     def add_parameters(self, idx, columns, values):
         self.p.loc[idx, columns] = values
@@ -153,6 +155,10 @@ def function1(row, nodes, classes, flow_attrs, seq_attributes, nodes_flows_seq,
                             'conversion_factors')):
                     if row[attr] != 'seq':
                         if attr in seq_attributes:
+                            print(attr)
+                            print(row)
+                            print(row[attr])
+                            print('blubb')
                             row[attr] = sequence(float(row[attr]))
                         # again from investment storage the next lines
                         # are a little hacky as we need to create an
@@ -339,12 +345,12 @@ def nodes_from_csv(file_nodes_flows=None, file_nodes_flows_sequences=None,
     if nodes_flows_seq is None:
         nodes_flows_seq = pd.read_csv(file_nodes_flows_sequences, sep=delimiter,
                                       header=None)
-        nodes_flows_seq.dropna(axis=0, how='all', inplace=True)
-        nodes_flows_seq.drop(0, axis=1, inplace=True)
-        nodes_flows_seq = nodes_flows_seq.transpose()
-        nodes_flows_seq.set_index([0, 1, 2, 3, 4], inplace=True)
-        nodes_flows_seq.columns = range(0, len(nodes_flows_seq.columns))
-        nodes_flows_seq = nodes_flows_seq.astype(float)
+    nodes_flows_seq.dropna(axis=0, how='all', inplace=True)
+    nodes_flows_seq.drop(0, axis=1, inplace=True)
+    nodes_flows_seq = nodes_flows_seq.transpose()
+    nodes_flows_seq.set_index([0, 1, 2, 3, 4], inplace=True)
+    nodes_flows_seq.columns = range(0, len(nodes_flows_seq.columns))
+    nodes_flows_seq = nodes_flows_seq.astype(float)
 
     # class dictionary for dynamic instantiation
     classes = {'Source': Source, 'Sink': Sink,
@@ -366,7 +372,6 @@ def nodes_from_csv(file_nodes_flows=None, file_nodes_flows_sequences=None,
     # iteration over dataframe rows to create objects
     nodes = {}
     for i, r in nodes_flows.iterrows():
-
         # check if current line holds valid data or is just for visual purposes
         # e.g. a blank line or a line that contains data explanations
         if isinstance(r['class'], str) and r['class'] in classes.keys():
@@ -539,3 +544,7 @@ def resample_sequence(seq_base_file=None, output_path=None,
         logging.info('Writing sample file to {0}.'.format(filename))
         seq_sampled.to_csv(filename, index=False)
     return seq_sampled
+
+# my = SolphScenario(path='my_scenarios', name='reegis_de_3_short')
+# my.read_tables()
+# my.create_nodes()
