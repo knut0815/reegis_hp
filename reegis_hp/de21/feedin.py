@@ -14,7 +14,10 @@ from pvlib.location import Location
 from pvlib.modelchain import ModelChain
 from pvlib.tools import cosd
 import bisect
-import oemof.db as db
+try:
+    import oemof.db as db
+except ImportError:
+    db = None
 import logging
 from oemof.tools import logger
 import calendar
