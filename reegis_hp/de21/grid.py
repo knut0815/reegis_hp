@@ -1,7 +1,10 @@
 import pandas as pd
 import os
 import math
-import geoplot
+try:
+    import geoplot
+except ImportError:
+    geoplot = None
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 

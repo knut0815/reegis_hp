@@ -2,7 +2,10 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from datetime import datetime as time
 import os
-import geoplot
+try:
+    import geoplot
+except ImportError:
+    geoplot = None
 from matplotlib.colors import LinearSegmentedColormap
 from windpowerlib import basicmodel
 import pvlib
