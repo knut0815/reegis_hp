@@ -146,7 +146,7 @@ def unit_round(values, min_value=False):
 
 
 def add_labels(data, plotter, label=None,
-               coord_file='geometries/coord_region.csv'):
+               coord_file='data/geometries/coord_region.csv'):
     p = pd.read_csv(coord_file, index_col='name')
     data.polygons['point'] = p.point
 
@@ -177,7 +177,7 @@ def add_labels(data, plotter, label=None,
 
 def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
                  filename=None):
-    geometry = 'geometries/polygons_de21_simple.csv'
+    geometry = 'data/geometries/polygons_de21_simple.csv'
     sets = {
         'load': {
             'obj': 'load',
@@ -234,11 +234,11 @@ def polygon_plot(l_min=None, l_max=None, setname=None, myset=None, method=None,
 def powerline_plot(l_min=None, l_max=None):
     s_data = SpatialData()
     reg = {
-        'geometry_file': 'geometries/polygons_de21_simple.csv'}
+        'geometry_file': 'data/geometries/polygons_de21_simple.csv'}
     poly = geoplot.postgis2shapely(load_geometry(**reg).geom)
     plotter = geoplot.GeoPlotter(poly, (3, 16, 47, 56))
     method = s_data.add_power_lines(
-        geometry_file='geometries/lines_de21.csv')
+        geometry_file='data/geometries/lines_de21.csv')
     plotter.plot(facecolor='grey', edgecolor='white')
 
     if method == 'sum':
@@ -308,14 +308,14 @@ def combined_plot():
     show()
 
 if __name__ == "__main__":
-    resf = ('/home/uwe/git_local/reegis-hp/reegis_hp/de21/results' +
-            '/scenario_reegis_de_21_test_2017-01-03 11:31:10.600830_' +
-            'results_complete.csv')
-    choice = 'polygons'
-    # choice = easy.get_choice(
-    #         "What geometry do you want to plot?", choices=['lines', 'polygons'])
+    # resf = ('/home/uwe/git_local/reegis-hp/reegis_hp/de21/results' +
+    #         '/scenario_reegis_de_21_test_2017-01-03 11:31:10.600830_' +
+    #         'results_complete.csv')
+    # choice = 'polygons'
+    choice = easy.get_choice(
+            "What geometry do you want to plot?", choices=['lines', 'polygons'])
     if choice == 'polygons':
-        polygon_plot(l_min=0, setname='pv', method='sum', filename=resf)
+        polygon_plot(l_min=0)
     elif choice == 'lines':
         powerline_plot()
     else:

@@ -49,6 +49,13 @@ def add_labels(data, plot_obj, column=None, coord_file=None, textcolour='blue'):
         plot_obj.ax.text(x, y, text, color=textcolour, fontsize=12)
 
 
+def draw_line(plot_obj, start, end, color='black'):
+    start_line = plot_obj.basemap(start[0], start[1])
+    end_line = plot_obj.basemap(end[0], end[1])
+    plt.plot([start_line[0], end_line[0]], [start_line[1], end_line[1]], '-',
+             color=color)
+
+
 def plot_geocsv(filepath, idx_col, facecolor=None, edgecolor='#aaaaaa',
                 bbox=(3, 16, 47, 56), labels=True, **kwargs):
     df = pd.read_csv(filepath, index_col=idx_col)
@@ -118,7 +125,7 @@ if __name__ == "__main__":
     # plot_geocsv(os.path.join('geometries', 'federal_states.csv'),
     #             idx_col='iso',
     #             coord_file='data_basic/label_federal_state.csv')
-    plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_vg.csv'),
+    plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_simple.csv'),
                 idx_col='gid',
                 # coord_file=os.path.join('data_basic', 'centroid_region.csv')
                 )

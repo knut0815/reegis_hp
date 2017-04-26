@@ -136,29 +136,31 @@ def time_series_by_region(overwrite=False):
             pwr.close()
 
 
-def plot_pickle(filename, column, lmin=0, lmax=1, n=5):
+def plot_pickle(filename, column, lmin=0, lmax=1, n=5, digits=50):
     polygons = pd.read_pickle(filename)
+    print(polygons)
     # my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#e0f3db'),
     #                                                        (0.5, '#338e7a'),
     #                                                        (1, '#304977')])
     my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#ffffff'),
-                                                           (1 / 6, '#ffeb00'),
-                                                           (2 / 6, '#26a926'),
-                                                           (3 / 6, '#c946e5'),
-                                                           (4 / 6, '#06ffff'),
-                                                           (5 / 6, '#f24141'),
-                                                           (6 / 6, '#1a2663')])
+                                                           (1 / 7, '#c946e5'),
+                                                           (2 / 7, '#ffeb00'),
+                                                           (3 / 7, '#26a926'),
+                                                           (4 / 7, '#c15c00'),
+                                                           (5 / 7, '#06ffff'),
+                                                           (6 / 7, '#f24141'),
+                                                           (7 / 7, '#1a2663')])
 
     coastdat_plot = geoplot.GeoPlotter(polygons.geom, (3, 16, 47, 56))
-    coastdat_plot.data = (polygons[column] - lmin) / (lmax - lmin)
+    coastdat_plot.data = (polygons[column].round(digits) - lmin) / (lmax - lmin)
     coastdat_plot.plot(facecolor='data', edgecolor='data', cmap=my_cmap)
     coastdat_plot.draw_legend((lmin, lmax), integer=True, extend='max',
                               cmap=my_cmap,
                               legendlabel="Average wind speed [m/s]",
                               number_ticks=n)
     coastdat_plot.geometries = geoplot.postgis2shapely(
-        pd.read_csv(os.path.join(os.path.dirname(__file__),
-                                 'geometries', 'polygons_de21.csv')).geom)
+        pd.read_csv(os.path.join(os.path.dirname(__file__), 'data',
+                                 'geometries', 'polygons_de21_simple.csv')).geom)
     coastdat_plot.plot(facecolor=None, edgecolor='white')
     plt.tight_layout()
     plt.box(on=None)
@@ -391,14 +393,15 @@ def feedin_source_region(year):
 
 if __name__ == "__main__":
     logger.define_logging()
-
-    create_feedin_series(overwrite=False)
-    # plot_pickle('data/full_load_hours_2007.pkl', 'full_load_hours_wka',
+    # get_average_wind_speed()
+    # create_feedin_series(overwrite=False)
+    # plot_pickle('data/feedin/coastdat/2007_full_load_hours_solar_wind.pkl',
+    #             'full_load_hours_wka',
     #             lmax=5000, n=5)
     # plot_pickle('data/full_load_hours_1998.pkl', 'full_load_hours_pv',
     #             lmax=1000, lmin=700, n=4)
-    # plot_pickle('data/average_wind_speed_coastdat.pkl', 'v_wind_avg', lmax=7,
-    #             n=7)
+    plot_pickle('data/weather/average_wind_speed_coastdat_geo.pkl',
+                'v_wind_avg', lmax=7, n=8, digits=50)
     # coastdat_id2coord()
     # s_name = 'reegis_de_21_test'
     # s_path = 'scenarios'
