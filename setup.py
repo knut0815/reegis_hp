@@ -15,5 +15,6 @@ setup(name='reegis_hp',
                         'matplotlib',
                         'shapely',
                         'windpowerlib',
-                        'pvlib']
+                        'pvlib',
+                        'tables']
       )
