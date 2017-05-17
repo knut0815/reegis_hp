@@ -1,5 +1,6 @@
 import os
 import weather
+from oemof.tools import logger
 
 
 def check_path(pathname):
@@ -29,6 +30,7 @@ def weather_data(weather_pth, geometry_pth, grid_geometry,
 
 
 if __name__ == "__main__":
+    logger.define_logging()
     overwrite = False
     skip_weather = False
     base_path = check_path(os.path.join(os.path.dirname(__file__), 'data'))
