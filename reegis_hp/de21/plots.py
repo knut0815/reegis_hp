@@ -4,6 +4,7 @@ import os
 import geoplot
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.patheffects as path_effects
 
 
 def add_grid_labels(data, plotter, label=None,
@@ -29,8 +30,9 @@ def add_grid_labels(data, plotter, label=None,
             if row[1][label] == 0:
                     textcolour = 'red'
 
-        plotter.ax.text(x, y, text, color=textcolour, fontsize=11,
-                        rotation=row[1].rotation)
+        plotter.ax.text(
+            x, y, text, color=textcolour, fontsize=9.5, rotation=row[1].rotation,
+            path_effects=[path_effects.withStroke(linewidth=3, foreground="w")])
 
 
 def de21_region():
@@ -60,10 +62,10 @@ def de21_region():
 
 
 def de21_grid():
-    # fig = plt.figure(figsize=(10, 14))
-    # plt.rc('legend', **{'fontsize': 19})
-    # plt.rcParams.update({'font.size': 19})
-    # plt.style.use('grayscale')
+    plt.figure(figsize=(7, 8))
+    plt.rc('legend', **{'fontsize': 16})
+    plt.rcParams.update({'font.size': 16})
+    plt.style.use('grayscale')
 
     data = pd.read_csv(os.path.join('data', 'grid', 'de21_transmission.csv'),
                        index_col='Unnamed: 0')
@@ -79,16 +81,16 @@ def de21_grid():
     onshore = geoplot.postgis2shapely(
         background[background['Unnamed: 0'] > 2].geom)
     plotter_poly = geoplot.GeoPlotter(onshore, (3, 16, 47, 56))
-    plotter_poly.plot(facecolor='#aab9aa', edgecolor='#7b987b')
+    plotter_poly.plot(facecolor='#d5ddc2', edgecolor='#7b987b')
 
     onshore = geoplot.postgis2shapely(
         background[background['Unnamed: 0'] < 3].geom)
     plotter_poly = geoplot.GeoPlotter(onshore, (3, 16, 47, 56))
-    plotter_poly.plot(facecolor='#d8e4ef', edgecolor='#98a7b5')
+    plotter_poly.plot(facecolor='#ccd4dd', edgecolor='#98a7b5')
 
     plotter_lines = geoplot.GeoPlotter(geoplot.postgis2shapely(lines.geom),
                                        (3, 16, 47, 56))
-    plotter_lines.cmapname = 'RdBu'
+    # plotter_lines.cmapname = 'RdBu'
     my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#860808'),
                                                            (1, '#3a3a48')])
     plotter_lines.data = lines.capacity
@@ -99,5 +101,74 @@ def de21_grid():
     plt.show()
 
 
+def draw_line(plot_obj, start, end, color='black'):
+    start_line = plot_obj.basemap(start[0], start[1])
+    end_line = plot_obj.basemap(end[0], end[1])
+    plt.plot([start_line[0], end_line[0]], [start_line[1], end_line[1]], '-',
+             color=color)
+
+
+def add_labels(data, plot_obj, column=None, coord_file=None, textcolour='blue'):
+    """
+    Add labels to a geoplot.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+    plot_obj : geoplot.plotter
+    column : str
+    coord_file : str
+    textcolour : str
+
+    Returns
+    -------
+
+    """
+
+    if coord_file is not None:
+        p = pd.read_csv(coord_file, index_col='name')
+        data = pd.concat([data, p], axis=1)
+
+    for row in data.iterrows():
+        if 'point' not in row[1]:
+            point = geoplot.postgis2shapely([row[1].geom, ])[0].centroid
+        else:
+            print(row[1].point)
+            point = geoplot.postgis2shapely([row[1].point, ])[0]
+        (x, y) = plot_obj.basemap(point.x, point.y)
+        if column is None:
+            text = str(row[0])
+        else:
+            text = str(row[1][column])
+
+        plot_obj.ax.text(x, y, text, color=textcolour, fontsize=12,
+                         path_effects=[path_effects.withStroke(
+                             linewidth=3, foreground="w")])
+
+
+def plot_geocsv(filepath, idx_col, facecolor=None, edgecolor='#aaaaaa',
+                bbox=(3, 16, 47, 56), labels=True, **kwargs):
+    df = pd.read_csv(filepath, index_col=idx_col)
+
+    plotter = geoplot.GeoPlotter(geoplot.postgis2shapely(df.geom), bbox)
+    plotter.plot(facecolor=facecolor, edgecolor=edgecolor)
+
+    if labels:
+        add_labels(df, plotter, **kwargs)
+
+    plt.tight_layout()
+    plt.box(on=None)
+    plt.show()
+
+
 if __name__ == "__main__":
     de21_grid()
+    de21_region()
+    plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_simple.csv'),
+                idx_col='gid',
+                # coord_file=os.path.join('data_basic', 'centroid_region.csv')
+                )
+    # plot_geocsv(os.path.join('geometries', 'federal_states.csv'),
+    #             idx_col='iso',
+    #             coord_file='data_basic/label_federal_state.csv')
+    # plot_geocsv('/home/uwe/geo.csv', idx_col='gid')
