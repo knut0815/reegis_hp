@@ -43,7 +43,7 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
     filelist = (os.listdir(weather_path))
     years = list()
     for y in range(1970, 2020):
-        if in_file_pattern.format(y) in filelist:
+        if in_file_pattern.format(year=y) in filelist:
             years.append(y)
     from_year = np.array(years).min()
     to_year = np.array(years).max()
@@ -59,7 +59,7 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
     # open hdf files
     for year in years:
         store[year] = pd.HDFStore(os.path.join(
-            weather_path, in_file_pattern.format(year)), mode='r')
+            weather_path, in_file_pattern.format(year=year)), mode='r')
     logging.info("Files loaded", time.now() - start)
     keys = store[years[0]].keys()
     logging.info("Keys loaded", time.now() - start)
@@ -96,7 +96,7 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
 
     # write results to csv file
     polygons.to_csv(os.path.join(weather_path, out_file_pattern.format(
-        from_year, to_year)))
+        from_year=from_year, to_year=to_year)))
 
 
 def fetch_coastdat2_year_from_db(weather_path, geometry_path, out_file_pattern,
@@ -134,11 +134,11 @@ def fetch_coastdat2_year_from_db(weather_path, geometry_path, out_file_pattern,
 
     conn = db.connection()
     for year in years:
-        if not os.path.isfile(weather.format(str(year))) or overwrite:
+        if not os.path.isfile(weather.format(year=str(year))) or overwrite:
             weather_sets = coastdat.get_weather(conn, polygon, year)
             if len(weather_sets) > 0:
                 logging.info("Fetching weather data for {0}.".format(year))
-                store = pd.HDFStore(weather.format(str(year)), mode='w')
+                store = pd.HDFStore(weather.format(year=str(year)), mode='w')
                 for weather_set in weather_sets:
                     logging.debug(weather_set.name)
                     store['A' + str(weather_set.name)] = weather_set.data
