@@ -9,8 +9,8 @@ def check_path(pathname):
     return pathname
 
 
-def extend_base_path(name):
-    return check_path(os.path.join(base_path, name))
+def extend_path(ex_path, name):
+    return check_path(os.path.join(ex_path, name))
 
 
 def weather_data(weather_pth, geometry_pth, grid_geometry,
@@ -33,9 +33,10 @@ if __name__ == "__main__":
     logger.define_logging()
     overwrite = False
     skip_weather = False
+    data_path = check_path(os.path.join(os.path.dirname(__file__), 'data'))
     base_path = check_path(os.path.join(os.path.dirname(__file__), 'data'))
-    weather_path = extend_base_path('weather')
-    geometry_path = extend_base_path('geometries')
+    weather_path = extend_path(data_path, 'weather')
+    geometry_path = extend_path(base_path, 'geometries')
     grid_geometry_file = 'coastdat_grid.csv'
     weather_file_pattern = 'coastDat2_de_{0}.h5'
     region_geometry_file = 'germany.csv'
