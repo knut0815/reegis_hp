@@ -37,7 +37,7 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
         Name of the results file (csv) with two wildcards for first year and
         last year e.g. average_wind_speed_from_{0}_to_{1}.csv
     """
-    start = time.now()
+    logging.info("Calculating the average wind speed...")
 
     # Finding existing weather files.
     filelist = (os.listdir(weather_path))
@@ -60,16 +60,16 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
     for year in years:
         store[year] = pd.HDFStore(os.path.join(
             weather_path, in_file_pattern.format(year=year)), mode='r')
-    logging.info("Files loaded", time.now() - start)
+    logging.info("Files loaded.")
     keys = store[years[0]].keys()
-    logging.info("Keys loaded", time.now() - start)
+    logging.info("Keys loaded.")
     firstyear = years[0]
     years.remove(firstyear)
     n = len(list(keys))
     for key in keys:
         n -= 1
         if n % 100 == 0:
-            logging.info(n)
+            logging.info("Remaining: {0}".format(n))
         weather_id = int(key[2:])
         wind_speed_avg = store[firstyear][key]['v_wind']
         for year in years:
