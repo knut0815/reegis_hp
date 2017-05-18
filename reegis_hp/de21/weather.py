@@ -125,11 +125,6 @@ def fetch_coastdat2_year_from_db(weather_path, geometry_path, out_file_pattern,
     weather = os.path.join(weather_path, out_file_pattern)
     geometry = os.path.join(geometry_path, geometry_file)
 
-    if not os.path.isdir('data'):
-        os.makedirs('data')
-    if not os.path.isdir(os.path.join('data', 'weather')):
-        os.makedirs(os.path.join('data', 'weather'))
-
     polygon = wkt.loads(
         pd.read_csv(geometry, index_col='gid', squeeze=True)[0])
 
