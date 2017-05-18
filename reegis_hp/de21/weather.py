@@ -128,6 +128,10 @@ def fetch_coastdat2_year_from_db(weather_path, geometry_path, out_file_pattern,
     polygon = wkt.loads(
         pd.read_csv(geometry, index_col='gid', squeeze=True)[0])
 
+    # remove year 2000 due to an internal error
+    years = list(years)
+    years.remove(2000)
+
     conn = db.connection()
     for year in years:
         if not os.path.isfile(weather.format(str(year))) or overwrite:
