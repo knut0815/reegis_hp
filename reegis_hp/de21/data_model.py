@@ -11,6 +11,8 @@ def load_ini_file():
     target_ini = os.path.join(os.path.expanduser("~"), '.oemof', 'reegis.ini')
     if not os.path.isfile(target_ini):
         copyfile(default_ini, target_ini)
+        logging.info("Default ini file copied to {0}".format(target_ini))
+        logging.info("Adapt it to your needs.")
     cfg.load_config(target_ini)
 
 
