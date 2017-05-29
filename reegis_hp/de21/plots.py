@@ -161,6 +161,46 @@ def plot_geocsv(filepath, idx_col, facecolor=None, edgecolor='#aaaaaa',
     plt.show()
 
 
+def plot_pickle(filename, column, lmin=0, lmax=1, n=5, digits=50):
+    polygons = pd.read_pickle(filename)
+    print(polygons)
+    # my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#e0f3db'),
+    #                                                        (0.5, '#338e7a'),
+    #                                                        (1, '#304977')])
+    my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#ffffff'),
+                                                           (1 / 7,
+                                                            '#c946e5'),
+                                                           (2 / 7,
+                                                            '#ffeb00'),
+                                                           (3 / 7,
+                                                            '#26a926'),
+                                                           (4 / 7,
+                                                            '#c15c00'),
+                                                           (5 / 7,
+                                                            '#06ffff'),
+                                                           (6 / 7,
+                                                            '#f24141'),
+                                                           (7 / 7,
+                                                            '#1a2663')])
+
+    coastdat_plot = geoplot.GeoPlotter(polygons.geom, (3, 16, 47, 56))
+    coastdat_plot.data = (polygons[column].round(digits) - lmin) / (
+    lmax - lmin)
+    coastdat_plot.plot(facecolor='data', edgecolor='data', cmap=my_cmap)
+    coastdat_plot.draw_legend((lmin, lmax), integer=True, extend='max',
+                              cmap=my_cmap,
+                              legendlabel="Average wind speed [m/s]",
+                              number_ticks=n)
+    coastdat_plot.geometries = geoplot.postgis2shapely(
+        pd.read_csv(os.path.join(os.path.dirname(__file__), 'data',
+                                 'geometries',
+                                 'polygons_de21_simple.csv')).geom)
+    coastdat_plot.plot(facecolor=None, edgecolor='white')
+    plt.tight_layout()
+    plt.box(on=None)
+    plt.show()
+
+
 if __name__ == "__main__":
     de21_grid()
     de21_region()

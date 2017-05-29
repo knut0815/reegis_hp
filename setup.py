@@ -16,5 +16,5 @@ setup(name='reegis_hp',
                         'shapely',
                         'windpowerlib',
                         'pvlib',
-                        'tables']
+                        'tables', 'geopandas', 'requests']
       )

@@ -1,5 +1,6 @@
 import os
 import weather
+import powerplants as pp
 import oemof.tools
 import config as cfg
 import logging
@@ -28,25 +29,7 @@ def extend_path(ex_path, name):
     return check_path(os.path.join(ex_path, name))
 
 
-def weather_data(paths, grid_geometry,
-                 weather_file, region_geometry, avg_wind_file, ovw):
-
-    if not os.path.isdir('data'):
-        os.makedirs('data')
-
-    # Fetch non-existing weather data from a file. Use overwrite or a new
-    # pattern if the region geometry changed.
-    weather.fetch_coastdat2_year_from_db(paths['weather'], paths['geometry'],
-                                         weather_file, region_geometry,
-                                         overwrite=ovw)
-
-    # Calculate the average wind speed for all available weather data sets.
-    weather.get_average_wind_speed(paths['weather'], grid_geometry,
-                                   paths['geometry'], weather_file,
-                                   avg_wind_file)
-
-
-if __name__ == "__main__":
+def run():
     # initialise logger
     oemof.tools.logger.define_logging()
 
@@ -54,23 +37,78 @@ if __name__ == "__main__":
     load_ini_file()
 
     # set variable from ini file
-    de21_path = dict()
+    paths = dict()
+    pattern = dict()
+    files = dict()
+
+    # ********* general ******************************************************
     overwrite = cfg.get('general', 'overwrite')
     skip_weather = cfg.get('general', 'skip_weather')
-    de21_path['basic'] = check_path(cfg.get('paths', 'basic'))
-    de21_path['data'] = check_path(cfg.get('paths', 'data'))
-    de21_path['weather'] = extend_path(
-        de21_path[cfg.get('weather', 'path')], cfg.get('weather', 'dir'))
-    de21_path['geometry'] = extend_path(
-        de21_path[cfg.get('geometry', 'path')], cfg.get('geometry', 'dir'))
-    grid_geometry_file = cfg.get('weather', 'grid_polygons')
-    weather_file_pattern = cfg.get('weather', 'file_pattern')
-    region_geometry_file = cfg.get('weather', 'clip_geometry')
-    average_wind_speed_file_pattern = cfg.get('weather',
-                                              'avg_wind_speed_pattern')
+    skip_re_power_plants = cfg.get('general', 'skip_re_power_plants')
+    skip_conv_power_plants = cfg.get('general', 'skip_conv_power_plants')
+
+    # ********* paths ********************************************************
+    paths['basic'] = check_path(cfg.get('paths', 'basic'))
+    paths['data'] = check_path(cfg.get('paths', 'data'))
+    paths['messages'] = extend_path(
+        paths[cfg.get('paths', 'msg_path')], cfg.get('paths', 'msg_dir'))
+
+    # ********* weather ******************************************************
+    paths['weather'] = extend_path(
+        paths[cfg.get('weather', 'path')], cfg.get('weather', 'dir'))
+    files['grid_geometry'] = cfg.get('weather', 'grid_polygons')
+    files['region_geometry'] = cfg.get('weather', 'clip_geometry')
+    pattern['weather'] = cfg.get('weather', 'file_pattern')
+    pattern['average_wind_speed'] = cfg.get('weather', 'avg_wind_speed_pattern')
+
+    # ********* geometry *****************************************************
+    paths['geometry'] = extend_path(
+        paths[cfg.get('geometry', 'path')], cfg.get('geometry', 'dir'))
+
+    # ********* power plants *************************************************
+    paths['powerplants'] = extend_path(
+        paths[cfg.get('powerplants', 'path')],
+        cfg.get('powerplants', 'dir'))
+    paths['powerplants_basic'] = extend_path(
+        paths[cfg.get('powerplants', 'in_path')],
+        cfg.get('powerplants', 'in_dir'))
+    paths['conventional'] = extend_path(
+        paths[cfg.get('conventional', 'path')],
+        cfg.get('conventional', 'dir'))
+    paths['renewable'] = extend_path(
+        paths[cfg.get('renewable', 'path')],
+        cfg.get('renewable', 'dir'))
+    pattern['original'] = cfg.get('powerplants', 'original_file_pattern')
+    pattern['fixed'] = cfg.get('powerplants', 'fixed_file_pattern')
+    pattern['info'] = cfg.get('powerplants', 'info_file_pattern')
+    pattern['prepared'] = cfg.get('powerplants', 'prepared_csv_file_pattern')
+    pattern['prepared_h5'] = cfg.get('powerplants', 'prepared_hdf_file_pattern')
+    pattern['grouped'] = cfg.get('powerplants', 'grouped_file_pattern')
+    pattern['readme'] = cfg.get('powerplants', 'readme_file_pattern')
+    pattern['json'] = cfg.get('powerplants', 'json_file_pattern')
+    pattern['shp'] = cfg.get('powerplants', 'shp_file_pattern')
 
     # Store weather data
     if not skip_weather:
-        weather_data(de21_path, grid_geometry_file, weather_file_pattern,
-                     region_geometry_file, average_wind_speed_file_pattern,
-                     overwrite)
+        weather.fetch_coastdat2_year_from_db(paths['weather'],
+                                             paths['geometry'],
+                                             pattern['weather'],
+                                             files['region_geometry'],
+                                             overwrite=overwrite)
+
+        # Calculate the average wind speed for all available weather data sets.
+        weather.get_average_wind_speed(paths['weather'],
+                                       files['grid_geometry'],
+                                       paths['geometry'],
+                                       pattern['weather'],
+                                       pattern['average_wind_speed'])
+
+    if not skip_conv_power_plants:
+        pp.prepare_conventional_power_plants(paths, pattern,
+                                             overwrite=overwrite)
+
+    if not skip_re_power_plants:
+        pp.prepare_re_power_plants(paths, pattern, overwrite=overwrite)
+
+if __name__ == "__main__":
+    run()

@@ -23,67 +23,6 @@ from oemof.tools import logger
 import calendar
 
 
-def get_average_wind_speed():
-    """
-    Get average wind speed over all years for each coastdat region. This can be
-    used to select the appropriate wind turbine for each region
-    (strong/low wind turbines).
-    """
-    start = time.now()
-    weather_path = os.path.join('data', 'weather')
-
-    # Finding existing weather files.
-    filelist = (os.listdir(weather_path))
-    years = list()
-    for y in range(1970, 2020):
-        if 'coastDat2_de_{0}.h5'.format(y) in filelist:
-            years.append(y)
-
-    # Loading coastdat-grid as shapely geometries.
-    polygons_wkt = pd.read_csv(os.path.join(os.path.dirname(__file__), 'data',
-                                            'geometries', 'coastdat_grid.csv'))
-    polygons = pd.DataFrame(geoplot.postgis2shapely(polygons_wkt.geom),
-                            index=polygons_wkt.gid, columns=['geom'])
-
-    # Opening all weather files
-    store = dict()
-    for year in years:
-        store[year] = pd.HDFStore(os.path.join(
-            weather_path, 'coastDat2_de_{0}.h5'.format(year)), mode='r')
-    print("Files loaded", time.now() - start)
-    keys = store[years[0]].keys()
-    print("Keys loaded", time.now() - start)
-    firstyear = years[0]
-    years.remove(firstyear)
-    n = len(list(keys))
-    for key in keys:
-        n -= 1
-        if n % 100 == 0:
-            print(n)
-        weather_id = int(key[2:])
-        wind_speed_avg = store[firstyear][key]['v_wind']
-        for year in years:
-            # Remove entries if year has to many entries.
-            if calendar.isleap(year):
-                h_max = 8784
-            else:
-                h_max = 8760
-            ws = store[year][key]['v_wind']
-            surplus = h_max - len(ws)
-            if surplus < 0:
-                ws = ws.ix[:surplus]
-            wind_speed_avg = wind_speed_avg.append(ws, verify_integrity=True)
-        polygons.loc[weather_id, 'v_wind_avg'] = wind_speed_avg.mean()
-    years.append(firstyear)
-    print(polygons.v_wind_avg.max())
-    for year in years:
-        store[year].close()
-    polygons.to_pickle(os.path.join(weather_path,
-                                    'average_wind_speed_coastdat_geo.pkl'))
-    polygons.v_wind_avg.to_csv(os.path.join(
-        weather_path, 'average_wind_speed_coastdat.csv'))
-
-
 def time_series_by_region(overwrite=False):
     source_path = os.path.join('data', 'powerplants', 'grouped',
                                'renewable_cap.csv')
@@ -134,37 +73,6 @@ def time_series_by_region(overwrite=False):
 
             feedin.to_csv(feedin_out.format(year, vtype.lower()))
             pwr.close()
-
-
-def plot_pickle(filename, column, lmin=0, lmax=1, n=5, digits=50):
-    polygons = pd.read_pickle(filename)
-    print(polygons)
-    # my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#e0f3db'),
-    #                                                        (0.5, '#338e7a'),
-    #                                                        (1, '#304977')])
-    my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#ffffff'),
-                                                           (1 / 7, '#c946e5'),
-                                                           (2 / 7, '#ffeb00'),
-                                                           (3 / 7, '#26a926'),
-                                                           (4 / 7, '#c15c00'),
-                                                           (5 / 7, '#06ffff'),
-                                                           (6 / 7, '#f24141'),
-                                                           (7 / 7, '#1a2663')])
-
-    coastdat_plot = geoplot.GeoPlotter(polygons.geom, (3, 16, 47, 56))
-    coastdat_plot.data = (polygons[column].round(digits) - lmin) / (lmax - lmin)
-    coastdat_plot.plot(facecolor='data', edgecolor='data', cmap=my_cmap)
-    coastdat_plot.draw_legend((lmin, lmax), integer=True, extend='max',
-                              cmap=my_cmap,
-                              legendlabel="Average wind speed [m/s]",
-                              number_ticks=n)
-    coastdat_plot.geometries = geoplot.postgis2shapely(
-        pd.read_csv(os.path.join(os.path.dirname(__file__), 'data',
-                                 'geometries', 'polygons_de21_simple.csv')).geom)
-    coastdat_plot.plot(facecolor=None, edgecolor='white')
-    plt.tight_layout()
-    plt.box(on=None)
-    plt.show()
 
 
 def normalised_wind_power(polygons, key, weather_df):
