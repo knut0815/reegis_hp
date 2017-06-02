@@ -7,7 +7,7 @@ try:
 except ImportError:
     geoplot = None
 from matplotlib.colors import LinearSegmentedColormap
-from windpowerlib import basicmodel
+import windpowerlib as wpwr
 import pvlib
 from pvlib.pvsystem import PVSystem
 from pvlib.location import Location
@@ -21,6 +21,7 @@ except ImportError:
 import logging
 from oemof.tools import logger
 import calendar
+import config as cfg
 
 
 def time_series_by_region(overwrite=False):
@@ -75,7 +76,7 @@ def time_series_by_region(overwrite=False):
             pwr.close()
 
 
-def normalised_wind_power(polygons, key, weather_df):
+def normalised_feedin_wind_single(polygons, key, weather_df):
     coastdat2 = {
         'dhi': 0,
         'dirhi': 0,
@@ -115,53 +116,45 @@ def normalised_wind_power(polygons, key, weather_df):
     avg_wind_speed = polygons.loc[int(key[2:]), 'v_wind_avg']
     wka_class = avg_wind2type.iloc[
         bisect.bisect_right(list(avg_wind2type.index), avg_wind_speed)]
-    wpp = basicmodel.SimpleWindTurbine(**wind_power_plants[wka_class])
+    wpp = wpwr.wind_turbine.WindTurbine(**wind_power_plants[wka_class])
+
+    # add information about converter type and class to the polygons table
     polygons.loc[int(key[2:]), 'wind_conv_type'] = wind_power_plants[wka_class][
         'wind_conv_type']
     polygons.loc[int(key[2:]), 'wind_conv_class'] = wka_class
+
+    modelchain_data = {
+        'obstacle_height': 0,
+        'wind_model': 'logarithmic',
+        'rho_model': 'ideal_gas',
+        'power_output_model': 'p_values',
+        'density_corr': True,
+        'hellman_exp': None}
+
+    mc_e126 = modelchain.ModelChain(e126, **modelchain_data).run_model(
+        weather, data_height)
     return wpp.turbine_power_output(
         weather=weather_df, data_height=coastdat2).div(
             wind_power_plants[wka_class]['nominal_power'])
 
 
-def normalised_pv_power(latlon, key, weather_df):
+def normalised_feedin_pv_single(location, system, weather_df):
     weather_df['temp_air'] = weather_df.temp_air - 273.15
-    times = weather_df.index
-    # get module and inverter parameter from sandia database
-    sandia_modules = pvlib.pvsystem.retrieve_sam('SandiaMod')
-    sapm_inverters = pvlib.pvsystem.retrieve_sam('sandiainverter')
-
-    location = {
-        # 'altitude': 34,
-        'latitude': latlon.loc[int(key[2:]), 'st_y'],
-        'longitude': latlon.loc[int(key[2:]), 'st_x'],
-        }
-
-    # own module parameters
-    invertername = 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_'
-    yingli210 = {
-        'module_parameters': sandia_modules['Yingli_YL210__2008__E__'],
-        'inverter_parameters': sapm_inverters[invertername],
-        'surface_azimuth': 180,
-        'surface_tilt': 60,
-        'albedo': 0.2,
-        }
-    p_max_power = (sandia_modules['Yingli_YL210__2008__E__'].Impo *
-                   sandia_modules['Yingli_YL210__2008__E__'].Vmpo)
     weather_df['ghi'] = weather_df.dirhi + weather_df.dhi
 
     if weather_df.get('dni') is None:
         weather_df['dni'] = (weather_df.ghi - weather_df.dhi) / cosd(
-            Location(**location).get_solarposition(times).zenith.clip(upper=90))
+            Location(**location).get_solarposition(
+                weather_df.index).zenith.clip(upper=90))
 
     # pvlib's ModelChain
-    mc = ModelChain(PVSystem(**yingli210),
-                    Location(**location),
-                    orientation_strategy='south_at_latitude_tilt')
+    pmax = system.pop('p_max')
+    mc = ModelChain(PVSystem(**system), Location(**location))
+    system['p_max'] = pmax
     mc.complete_irradiance(weather_df.index, weather=weather_df)
-    mc.run_model(times)
+    mc.run_model()
     mc.ac.fillna(0).clip(0)
-    return mc.ac.fillna(0).clip(0).div(p_max_power)
+    return mc.ac.fillna(0).clip(0).div(system['p_max'])
 
 
 def coastdat_id2coord():
@@ -177,64 +170,156 @@ def coastdat_id2coord():
     data.to_csv(os.path.join('data', 'basic', 'id2latlon.csv'))
 
 
-def normalised_feedin(years=None, overwrite=False):
+def get_optimal_pv_angle(lat):
+    """about 27 to 34 in Germany"""
+    return 90 - (lat - 20)
+
+
+def normalised_feedin_pv(paths, pattern, files, weather, year):
     """pass"""
+    feedin_file = os.path.join(
+        paths['feedin'], pattern['feedin'].format(year=year, type='solar'))
+    pwr = pd.HDFStore(feedin_file.format(year, 'solar'), mode='w')
 
+    # get module and inverter parameter from sandia database
+    sandia_modules = pvlib.pvsystem.retrieve_sam('sandiamod')
+    sapm_inverters = pvlib.pvsystem.retrieve_sam('sandiainverter')
+
+    latlon = pd.read_csv(os.path.join(paths['geometry'],
+                                      files['grid_centroid']), index_col='gid')
+
+    def get_list(section, parameter):
+        try:
+            my_list = cfg.get(section, parameter).replace(' ', '').split(',')
+        except AttributeError:
+            my_list = list((cfg.get(section, parameter), ))
+        return my_list
+
+    module_names = get_list('solar', 'module_name')
+    module_keys = get_list('solar', 'module_key')
+    modules = {module_keys[n]: module_names[n] for n in range(len(module_keys))}
+    inverters = get_list('solar', 'inverter_name')
+    azimuth_angles = get_list('solar', 'surface_azimuth')
+    tilt_angles = get_list('solar', 'surface_tilt')
+    albedo_values = get_list('solar', 'albedo')
+
+    # create sets *************************
+    set_number = 0
+    pv_systems = dict()
+    for mk, mn in modules.items():
+        for i in inverters:
+            for t in tilt_angles:
+                if t == '90':
+                    az_angles = (0, )
+                else:
+                    az_angles = azimuth_angles
+                for a in az_angles:
+                    for alb in albedo_values:
+                        set_number += 1
+                        pv_systems[set_number] = {
+                           'module_parameters': sandia_modules[mn],
+                           'inverter_parameters': sapm_inverters[i],
+                           'surface_azimuth': float(a),
+                           'surface_tilt': t,
+                           'albedo': float(alb)}
+                        pv_systems[set_number]['p_max'] = (
+                            pv_systems[set_number]['module_parameters'].Impo *
+                            pv_systems[set_number]['module_parameters'].Vmpo)
+                        pv_systems[set_number]['name'] = "_".join([
+                            mk,
+                            i[:3],
+                            "tlt{}".format(t[:3].rjust(3, '0')),
+                            "az{}".format(str(a).rjust(3, '0')),
+                            "alb{}".format(str(alb).replace('.', ''))
+                        ])
+                        logging.info("PV set: {}".format(
+                            pv_systems[set_number]['name']))
+    # *************************************
+
+    keys = weather.keys()
+    length = len(keys)
+    for key in keys:
+        one_region = pd.DataFrame()
+        length -= 1
+        if length % 100 == 0:
+            logging.info('Remaining polygons for {0}: {1}'.format(year, length))
+        location = {
+            # 'altitude': 34,
+            'latitude': latlon.loc[int(key[2:]), 'st_y'],
+            'longitude': latlon.loc[int(key[2:]), 'st_x'],
+            }
+        w = weather[key]
+        for pv_system in pv_systems.values():
+            if pv_system['surface_tilt'] == 'optimal':
+                get_optimal_pv_angle(location['latitude'])
+            else:
+                pv_system['surface_tilt'] = float(pv_system['surface_tilt'])
+            one_region[pv_system['name']] = normalised_feedin_pv_single(
+                location, pv_system, w)
+        pwr[key] = one_region
+    pwr.close()
+
+
+def normalised_feedin_wind(paths, pattern, files, weather, year):
+    """pass"""
+    feedin_file = os.path.join(paths['feedin'],
+                               pattern['feedin'].format('wind'))
+    pwr = pd.HDFStore(feedin_file.format(year, 'wind'), mode='w')
+    average_wind_speed = pd.read_csv(os.path.join(pattern['weather'],
+                                                  files['average_wind_speed']))
+
+    keys = weather.keys()
+    length = len(keys)
+    for key in keys:
+        length -= 1
+        if length % 100 == 0:
+            logging.info('Remaining polygons for {0}: {1}'.format(year, length))
+        weather_df = weather[key]
+        pwr[key] = normalised_feedin_wind_single(average_wind_speed, key,
+                                                 weather_df)
+    pwr.close()
+
+
+def normalised_feedin_one_year(paths, pattern, files, year, overwrite):
+    """pass"""
+    start = time.now()
+    weather = None
+    feedin_pattern = os.path.join(paths['feedin'], pattern['feedin'])
+    f_wind = feedin_pattern.format(year=year, type='wind')
+    f_solar = feedin_pattern.format(year=year, type='solar')
+
+    if not os.path.isfile(f_wind) or not os.path.isfile(f_solar) or overwrite:
+        weather = pd.HDFStore(os.path.join(
+            paths['weather'], pattern['weather'].format(year=year)),
+            mode='r')
+
+    # if not os.path.isfile(f_wind) or overwrite:
+    #     logging.info("Creating normalised wind feedin time series.")
+    #     normalised_feedin_wind(paths, pattern, files, weather, year)
+
+    if not os.path.isfile(f_solar) or overwrite:
+        logging.info("Creating normalised solar feedin time series.")
+        normalised_feedin_pv(paths, pattern, files, weather, year)
+
+    if not os.path.isfile(f_wind) or not os.path.isfile(f_solar) or overwrite:
+        weather.close()
+
+    logging.info("Normalised time series created: {0} - {1}".format(
+        year, time.now() - start))
+
+
+def normalised_feedin(paths, pattern, files, years=None, overwrite=False):
+    """pass"""
     # Finding existing weather files.
-    weather_path = os.path.join('data', 'weather')
-    avg_wind = os.path.join(weather_path, 'average_wind_speed_coastdat_geo.pkl')
-    feedin_path = os.path.join('data', 'feedin', 'coastdat')
-    feedin_full = os.path.join(
-        feedin_path, '{0}_feedin_coastdat_de_normalised_{1}.h5')
-
-    if not os.path.isdir(os.path.join('data', 'feedin')):
-        os.makedirs(os.path.join('data', 'feedin'))
-    if not os.path.isdir(os.path.join('data', 'feedin', 'coastdat')):
-        os.makedirs(os.path.join('data', 'feedin', 'coastdat'))
-
     if years is None:
-        filelist = (os.listdir(weather_path))
+        filelist = (os.listdir(paths['weather']))
         years = list()
         for y in range(1970, 2020):
-            if 'coastDat2_de_{0}.h5'.format(y) in filelist:
+            if pattern['weather'].format(year=y) in filelist:
                 years.append(y)
 
-    latlon = pd.read_csv(os.path.join('data', 'basic', 'id2latlon.csv'),
-                         index_col='gid')
-
-    polygons = pd.read_pickle(avg_wind)
-    start = time.now()
-    logging.info("Creating normalised feedin time series.")
     for year in years:
-        file1 = feedin_full.format(year, 'wind')
-        file2 = feedin_full.format(year, 'solar')
-        if not os.path.isfile(file1) or not os.path.isfile(file2) or overwrite:
-            load = pd.HDFStore(os.path.join(
-                weather_path, 'coastDat2_de_{0}.h5').format(year), mode='r')
-            wind_pwr = pd.HDFStore(feedin_full.format(year, 'wind'), mode='w')
-            pv_pwr = pd.HDFStore(feedin_full.format(year, 'solar'), mode='w')
-
-            keys = load.keys()
-            length = len(keys)
-            for key in keys:
-                length -= 1
-                if length % 100 == 0:
-                    logging.info('{0} - {1}'.format(year, length))
-                weather_df = load[key]
-                wind_pwr[key] = normalised_wind_power(polygons, key, weather_df)
-                polygons.loc[int(key[2:]), 'full_load_hours_wka'] = (
-                    wind_pwr[key].sum())
-                pv_pwr[key] = normalised_pv_power(latlon, key, weather_df)
-                polygons.loc[int(key[2:]), 'full_load_hours_solar'] = (
-                    pv_pwr[key].sum())
-
-            logging.info("Normalised time series created: {0} - {1}".format(
-                year, time.now() - start))
-            load.close()
-            wind_pwr.close()
-            pv_pwr.close()
-            polygons.to_pickle(os.path.join(
-                feedin_path, '{0}_full_load_hours_solar_wind.pkl'.format(year)))
+        normalised_feedin_one_year(paths, pattern, files, year, overwrite)
 
 
 def merge_tables(overwrite):
@@ -276,19 +361,19 @@ def merge_tables(overwrite):
         feedall.to_csv(feedin_in.format(year, 'all'))
 
 
-def create_feedin_series(overwrite=False):
+def create_feedin_series(paths, pattern, files, overwrite=False):
     """pass"""
-    start = time.now()
-    weather_path = os.path.join('data', 'weather')
+    # start = time.now()
+    # weather_path = os.path.join('data', 'weather')
+    #
+    # # Creating file with average wind speed for each coastdat id
+    # avg1 = os.path.join(weather_path, 'average_wind_speed_coastdat_geo.pkl')
+    # avg2 = os.path.join(weather_path, 'average_wind_speed_coastdat.csv')
+    # logging.info("Average wind speed: {0}".format(time.now() - start))
+    # if not os.path.isfile(avg1) or not os.path.isfile(avg2) or overwrite:
+    #     get_average_wind_speed()
 
-    # Creating file with average wind speed for each coastdat id
-    avg1 = os.path.join(weather_path, 'average_wind_speed_coastdat_geo.pkl')
-    avg2 = os.path.join(weather_path, 'average_wind_speed_coastdat.csv')
-    logging.info("Average wind speed: {0}".format(time.now() - start))
-    if not os.path.isfile(avg1) or not os.path.isfile(avg2) or overwrite:
-        get_average_wind_speed()
-
-    normalised_feedin(overwrite=overwrite)
+    normalised_feedin(paths, pattern, files, overwrite=overwrite)
     time_series_by_region(overwrite=overwrite)
     merge_tables(overwrite=overwrite)
 
@@ -301,6 +386,7 @@ def feedin_source_region(year):
 
 if __name__ == "__main__":
     logger.define_logging()
+    # create_feedin_series(paths, pattern, overwrite=False)
     # get_average_wind_speed()
     # create_feedin_series(overwrite=False)
     # plot_pickle('data/feedin/coastdat/2007_full_load_hours_solar_wind.pkl',
@@ -308,8 +394,8 @@ if __name__ == "__main__":
     #             lmax=5000, n=5)
     # plot_pickle('data/full_load_hours_1998.pkl', 'full_load_hours_pv',
     #             lmax=1000, lmin=700, n=4)
-    plot_pickle('data/weather/average_wind_speed_coastdat_geo.pkl',
-                'v_wind_avg', lmax=7, n=8, digits=50)
+    # plot_pickle('data/weather/average_wind_speed_coastdat_geo.pkl',
+    #             'v_wind_avg', lmax=7, n=8, digits=50)
     # coastdat_id2coord()
     # s_name = 'reegis_de_21_test'
     # s_path = 'scenarios'
