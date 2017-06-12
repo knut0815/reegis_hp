@@ -1,3 +1,6 @@
+__copyright__ = "Uwe Krien"
+__license__ = "GPLv3"
+
 import pandas as pd
 import os
 import calendar
@@ -14,8 +17,9 @@ except ImportError:
     db = None
     sqlalchemy = None
 
+
 def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
-                           in_file_pattern, out_file):
+                           in_file_pattern, out_file, overwrite=False):
     """
     Get average wind speed over all years for each coastdat region. This can be
     used to select the appropriate wind turbine for each region
@@ -23,6 +27,8 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
     
     Parameters
     ----------
+    overwrite : boolean
+        Will overwrite existing files if set to 'True'.
     weather_path : str
         Path to folder that contains all needed files.
     geometry_path : str
@@ -35,63 +41,68 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
     out_file : str
         Name of the results file (csv)
     """
-    logging.info("Calculating the average wind speed...")
+    if not os.path.isfile(os.path.join(weather_path, out_file)) or overwrite:
+        logging.info("Calculating the average wind speed...")
 
-    # Finding existing weather files.
-    filelist = (os.listdir(weather_path))
-    years = list()
-    for y in range(1970, 2020):
-        if in_file_pattern.format(year=y) in filelist:
-            years.append(y)
+        # Finding existing weather files.
+        filelist = (os.listdir(weather_path))
+        years = list()
+        for y in range(1970, 2020):
+                if in_file_pattern.format(year=y) in filelist:
+                    years.append(y)
 
-    # Loading coastdat-grid as shapely geometries.
-    polygons_wkt = pd.read_csv(os.path.join(geometry_path, grid_geometry_file))
-    polygons = pd.DataFrame(tools.postgis2shapely(polygons_wkt.geom),
-                            index=polygons_wkt.gid, columns=['geom'])
+        # Loading coastdat-grid as shapely geometries.
+        polygons_wkt = pd.read_csv(os.path.join(geometry_path,
+                                                grid_geometry_file))
+        polygons = pd.DataFrame(tools.postgis2shapely(polygons_wkt.geom),
+                                index=polygons_wkt.gid, columns=['geom'])
 
-    # Opening all weather files
-    store = dict()
+        # Opening all weather files
+        store = dict()
 
-    # open hdf files
-    for year in years:
-        store[year] = pd.HDFStore(os.path.join(
-            weather_path, in_file_pattern.format(year=year)), mode='r')
-    logging.info("Files loaded.")
-    keys = store[years[0]].keys()
-    logging.info("Keys loaded.")
-    firstyear = years[0]
-    years.remove(firstyear)
-    n = len(list(keys))
-    for key in keys:
-        n -= 1
-        if n % 100 == 0:
-            logging.info("Remaining: {0}".format(n))
-        weather_id = int(key[2:])
-        wind_speed_avg = store[firstyear][key]['v_wind']
+        # open hdf files
         for year in years:
-            # Remove entries if year has to many entries.
-            if calendar.isleap(year):
-                h_max = 8784
-            else:
-                h_max = 8760
-            ws = store[year][key]['v_wind']
-            surplus = h_max - len(ws)
-            if surplus < 0:
-                ws = ws.ix[:surplus]
+            store[year] = pd.HDFStore(os.path.join(
+                weather_path, in_file_pattern.format(year=year)), mode='r')
+        logging.info("Files loaded.")
 
-            # add wind speed time series
-            wind_speed_avg = wind_speed_avg.append(ws, verify_integrity=True)
+        keys = store[years[0]].keys()
+        logging.info("Keys loaded.")
 
-        # calculate the average wind speed for one grid item
-        polygons.loc[weather_id, 'v_wind_avg'] = wind_speed_avg.mean()
-    years.append(firstyear)
+        n = len(list(keys))
+        logging.info("Remaining: {0}".format(n))
+        for key in keys:
+            wind_speed_avg = pd.Series()
+            n -= 1
+            if n % 100 == 0:
+                logging.info("Remaining: {0}".format(n))
+            weather_id = int(key[2:])
+            for year in years:
+                # Remove entries if year has to many entries.
+                if calendar.isleap(year):
+                    h_max = 8784
+                else:
+                    h_max = 8760
+                ws = store[year][key]['v_wind']
+                surplus = h_max - len(ws)
+                if surplus < 0:
+                    ws = ws.ix[:surplus]
 
-    # Close hdf files
-    for year in years:
-        store[year].close()
+                # add wind speed time series
+                wind_speed_avg = wind_speed_avg.append(
+                    ws, verify_integrity=True)
 
-    # write results to csv file
-    polygons.to_csv(os.path.join(weather_path, out_file))
+            # calculate the average wind speed for one grid item
+            polygons.loc[weather_id, 'v_wind_avg'] = wind_speed_avg.mean()
+
+        # Close hdf files
+        for year in years:
+            store[year].close()
+
+        # write results to csv file
+        polygons.to_csv(os.path.join(weather_path, out_file))
+    else:
+        logging.info("Skipped: Calculating the average wind speed.")
 
 
 def fetch_coastdat2_year_from_db(weather_path, geometry_path, out_file_pattern,
@@ -148,3 +159,16 @@ def fetch_coastdat2_year_from_db(weather_path, geometry_path, out_file_pattern,
                 logging.warning("No weather data found for {0}.".format(year))
         else:
             logging.info("Weather data for {0} exists. Skipping.".format(year))
+
+
+def coastdat_id2coord():
+    """
+    Creating a file with the latitude and longitude for all coastdat2 data sets.
+    """
+    conn = db.connection()
+    sql = "select gid, st_x(geom), st_y(geom) from coastdat.spatial;"
+    results = (conn.execute(sql))
+    columns = results.keys()
+    data = pd.DataFrame(results.fetchall(), columns=columns)
+    data.set_index('gid', inplace=True)
+    data.to_csv(os.path.join('data', 'basic', 'id2latlon.csv'))

@@ -16,6 +16,10 @@ print(csv.date)
 Or just start the script and follow the instructions.
 
 """
+
+__copyright__ = "Uwe Krien"
+__license__ = "GPLv3"
+
 import pandas as pd
 import numpy as np
 import os
@@ -663,7 +667,15 @@ def prepare_re_power_plants(paths, pattern, overwrite=False):
                                pattern['prepared'].format(cat=category)))
 
     # Grouping the plants by type, year, region (and coastdat for Wind/Solar)
-    group_re_powerplants(paths, pattern, overwrite=overwrite)
+    renewables_grouped_file = os.path.join(
+        paths[category], pattern['grouped'].format(cat='renewable'))
+    if not os.path.isfile(renewables_grouped_file) or overwrite:
+        group_re_powerplants(paths, pattern, overwrite=overwrite)
+    else:
+        logging.warning("File exists. Skip grouping of " +
+                        "{0} power plants".format(category))
+        logging.warning("Will not overwrite existing file: {0}".format(
+            pattern['grouped'].format(cat=category)))
 
 
 class PowerPlantsDE21:

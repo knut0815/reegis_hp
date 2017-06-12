@@ -1,10 +1,11 @@
 import pandas as pd
-import tools
+import numpy as np
 import os
 import geoplot
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.patheffects as path_effects
+import configuration as config
 
 
 def add_grid_labels(data, plotter, label=None,
@@ -31,7 +32,8 @@ def add_grid_labels(data, plotter, label=None,
                     textcolour = 'red'
 
         plotter.ax.text(
-            x, y, text, color=textcolour, fontsize=9.5, rotation=row[1].rotation,
+            x, y, text, color=textcolour, fontsize=9.5,
+            rotation=row[1].rotation,
             path_effects=[path_effects.withStroke(linewidth=3, foreground="w")])
 
 
@@ -45,7 +47,7 @@ def de21_region():
         index_col='gid')
 
     label_coord = os.path.join(os.path.dirname(__file__),
-                                     'data', 'geometries', 'coord_region.csv')
+                               'data', 'geometries', 'coord_region.csv')
 
     offshore = geoplot.postgis2shapely(my_df.iloc[18:21].geom)
     onshore = geoplot.postgis2shapely(my_df.iloc[0:18].geom)
@@ -53,9 +55,9 @@ def de21_region():
     plotde21.plot(facecolor='#badd69', edgecolor='white')
     plotde21.geometries = offshore
     plotde21.plot(facecolor='#a5bfdd', edgecolor='white')
-    tools.add_labels(my_df, plotde21, coord_file=label_coord,
-                     textcolour='black')
-    tools.draw_line(plotde21, (9.7, 53.4), (10.0, 53.55))
+    add_labels(my_df, plotde21, coord_file=label_coord,
+               textcolour='black')
+    draw_line(plotde21, (9.7, 53.4), (10.0, 53.55))
     plt.tight_layout()
     plt.box(on=None)
     plt.show()
@@ -161,9 +163,21 @@ def plot_geocsv(filepath, idx_col, facecolor=None, edgecolor='#aaaaaa',
     plt.show()
 
 
-def plot_pickle(filename, column, lmin=0, lmax=1, n=5, digits=50):
-    polygons = pd.read_pickle(filename)
-    print(polygons)
+def coastdat_plot(data, data_col=None, lmin=0, lmax=1, n=5, digits=50,
+                  legendlabel=''):
+    paths, pattern, files, general = config.get_configuration()
+    polygons = pd.read_csv(os.path.join(paths['geometry'], 'coastdat_grid.csv'),
+                           index_col='gid')
+    polygons['geom'] = geoplot.postgis2shapely(polygons.geom)
+
+    if isinstance(data, pd.DataFrame):
+        data = data[data_col]
+    else:
+        data_col = data.name
+
+    polygons = pd.DataFrame(pd.concat([polygons, data], axis=1))
+    polygons = polygons[pd.notnull(polygons['geom'])]
+
     # my_cmap = LinearSegmentedColormap.from_list('mycmap', [(0, '#e0f3db'),
     #                                                        (0.5, '#338e7a'),
     #                                                        (1, '#304977')])
@@ -183,25 +197,185 @@ def plot_pickle(filename, column, lmin=0, lmax=1, n=5, digits=50):
                                                            (7 / 7,
                                                             '#1a2663')])
 
-    coastdat_plot = geoplot.GeoPlotter(polygons.geom, (3, 16, 47, 56))
-    coastdat_plot.data = (polygons[column].round(digits) - lmin) / (
-    lmax - lmin)
-    coastdat_plot.plot(facecolor='data', edgecolor='data', cmap=my_cmap)
-    coastdat_plot.draw_legend((lmin, lmax), integer=True, extend='max',
-                              cmap=my_cmap,
-                              legendlabel="Average wind speed [m/s]",
-                              number_ticks=n)
-    coastdat_plot.geometries = geoplot.postgis2shapely(
+    coastdatplot = geoplot.GeoPlotter(polygons.geom, (3, 16, 47, 56))
+    coastdatplot.data = (polygons[data_col].round(digits) - lmin) / (
+        lmax - lmin)
+    coastdatplot.plot(facecolor='data', edgecolor='data', cmap=my_cmap)
+    coastdatplot.draw_legend((lmin, lmax), integer=True, extend='max',
+                             cmap=my_cmap,
+                             legendlabel=legendlabel,
+                             number_ticks=n)
+    coastdatplot.geometries = geoplot.postgis2shapely(
         pd.read_csv(os.path.join(os.path.dirname(__file__), 'data',
                                  'geometries',
                                  'polygons_de21_simple.csv')).geom)
-    coastdat_plot.plot(facecolor=None, edgecolor='white')
+    coastdatplot.plot(facecolor=None, edgecolor='white')
     plt.tight_layout()
     plt.box(on=None)
+    return coastdatplot
+
+
+def heatmap_pv_orientation():
+    # import seaborn as sns
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    paths, pattern, files, general = config.get_configuration()
+    df = pd.read_csv(os.path.join(paths['analyses'],
+                                  'orientation_feedin_ac.csv'),
+                     index_col='Unnamed: 0')
+    df = df.transpose()
+    df.index = df.index.map(int)
+    df = df.sort_index(ascending=False)
+    # df = df.div(df.max().max())
+    print(df)
+    print(df.max().max())
+    plt.title('year: 2003, coastDat-2 region: 1129087, ' +
+              'module type: LG_LG290N1C_G3__2013_, ' +
+              'inverter: ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_')
+    ax = plt.gca()
+    im = ax.imshow(df)  # vmin=0
+    n = 10
+    plt.yticks(np.arange(0, len(df.index), n), reversed(range(0, 91, 10)))
+    plt.xticks(np.arange(0, len(df.columns), n), df.columns * n)
+    plt.ylabel('tilt angle')
+    plt.xlabel('azimuth angle')
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="2%", pad=0.2)
+    plt.colorbar(im, cax=cax)
     plt.show()
 
 
+def plot_module_comparison():
+    paths, pattern, files, general = config.get_configuration()
+    df = pd.read_csv(os.path.join(paths['analyses'],
+                                  'module_feedin_dc.csv'),
+                     header=None, index_col=0, squeeze=True)
+    print(df.sort_values())
+    # df = df[df > 943]
+    df.sort_values().plot(linewidth=5, ylim=(0, df.max() + 20))
+    print(df.mean())
+    print(df.std())
+    plt.plot((0, len(df)), (df.mean(), df.mean()), 'k-')
+    plt.plot((0, len(df)), (df.mean() - df.std(), df.mean() - df.std()), 'k-.')
+    plt.plot((0, len(df)), (df.mean() + df.std(), df.mean() + df.std()), 'k-.')
+    plt.plot((253, 253), (0,  df.max() + 20), 'k-')
+    plt.plot((479, 479), (0,  df.max() + 20), 'r-')
+    plt.plot((394, 394), (0,  df.max() + 20), 'r-')
+    plt.xticks(np.arange(0, len(df), 20), range(0, len(df), 20))
+    plt.show()
+
+
+def plot_module_comparison_ts():
+    paths, pattern, files, general = config.get_configuration()
+    df = pd.read_csv(os.path.join(paths['analyses'],
+                                  'module_feedin_ac_ts.csv'),
+                     index_col='Unnamed: 0')
+
+    df[['LG_LG290N1C_G3_2013_', 'Solar_Frontier_SF_160S_2013_']].plot()
+    plt.show()
+
+
+def plot_inverter_comparison():
+    paths, pattern, files, general = config.get_configuration()
+    df = pd.read_csv(os.path.join(paths['analyses'],
+                                  'sapm_inverters_feedin_full.csv'),
+                     index_col='Unnamed: 0')
+    df = df['ac']
+    print(df.sort_values())
+    len1 = len(df)
+    df = df[df > 1]
+    print(len(df) - len1)
+    df.sort_values().plot(linewidth=5, ylim=(0, df.max() + 20))
+    print(df.mean())
+    print(df.std())
+    plt.plot((0, len(df)), (df.mean(), df.mean()), 'k-')
+    plt.plot((0, len(df)), (1253, 1253), 'g-')
+    plt.plot((0, len(df)), (df.mean() - df.std(), df.mean() - df.std()), 'k-.')
+    plt.plot((0, len(df)), (df.mean() + df.std(), df.mean() + df.std()), 'k-.')
+    plt.xlabel('Number of inverters')
+    plt.plot((651, 651), (0,  df.max() + 20), 'k-')
+    plt.plot((1337, 1337), (0,  df.max() + 20), 'r-')
+    # plt.plot((496, 496), (0,  df.max() + 20), 'r-')
+    plt.xticks(np.arange(0, len(df), 50), range(0, len(df), 50))
+    plt.show()
+
+
+def plot_full_load_hours(year):
+    paths, pattern, files, general = config.get_configuration()
+    df = pd.read_csv(os.path.join(paths['analyses'], 'full_load_hours.csv'),
+                     index_col=[0, 1])
+
+    plt.figure(figsize=(8, 10))
+    plt.rc('legend', **{'fontsize': 19})
+    plt.rcParams.update({'font.size': 19})
+    title = "Full load hours for wind in the year {0}[h].".format(year)
+    coastdat_plot(df.loc[year, :]['wind'], lmax=3500, n=8, legendlabel=title)
+    plt.savefig(os.path.join(paths['plots'],
+                             'full_load_hours_{0}_{1}.svg'.format(year,
+                                                                  'wind')))
+    columns = list(df.columns)
+    columns.remove('wind')
+
+    for col in columns:
+        print(col)
+        plt.figure(figsize=(8, 10))
+        plt.rc('legend', **{'fontsize': 19})
+        plt.rcParams.update({'font.size': 19})
+        title = "Full load hours for {0} [h].".format(col)
+        coastdat_plot(df.loc[year, :][col], lmax=1200, lmin=500, n=8,
+                      legendlabel=title)
+        plt.savefig(os.path.join(paths['plots'],
+                                 'full_load_hours_{0}_{1}.svg'.format(
+                                     year, col)))
+
+    fig = plt.figure(figsize=(18, 10))
+    plt.rc('legend', **{'fontsize': 14})
+    plt.rcParams.update({'font.size': 14})
+    ax = fig.add_subplot(1, 1, 1)
+
+    columns = ['wind', 'LG290G3_ABB_tltopt_az180_alb02',
+               'SF160S_ABB_tltopt_az180_alb02']
+    reg = 1129087
+    one_region = df.swaplevel(0, 1, axis=0).loc[reg][columns]
+    maximum = one_region.max()
+    minimum = one_region.min()
+    print(maximum, minimum)
+    one_region.plot(kind='bar', ax=ax)
+    plt.ylabel('Full load hours')
+    plt.title("Full load hours in different years in region {0}".format(reg))
+    lgnd = plt.legend()
+    n = 0
+    for col in columns:
+        lgnd.get_texts()[n].set_text('{0}, min: {1}, max: {2}'.format(
+            col, int(round(minimum[n] / 10) * 10),
+            int(round(maximum[n] / 10) * 10)))
+        n += 1
+    plt.tight_layout()
+    plt.savefig(os.path.join(paths['plots'],
+                             'full_load_hours_region_{0}.svg'.format(reg)))
+
+    colors = ['#6e6ead', '#ed943c', '#da7411']
+    n = 0
+    for col in columns:
+        fig = plt.figure(figsize=(16, 9))
+        ax = fig.add_subplot(1, 1, 1)
+        one_region_sort = df.swaplevel(0, 1, axis=0).loc[reg][col].sort_values()
+        avg = one_region_sort[0]
+        one_region_sort.drop(0, inplace=True)
+        one_region_sort.plot(kind='bar', ax=ax, color=colors[n])
+        title = "Sorted full load hours for {0} in region {1}".format(col, reg)
+        plt.title(title)
+        ax.plot((-1, 18), (avg, avg), 'r-')
+        n += 1
+        plt.savefig(os.path.join(paths['plots'],
+                                 'full_load_hours_{0}_region_{1}.svg'.format(
+                                    col, reg)))
+
+
 if __name__ == "__main__":
+    # heatmap_pv_orientation()
+    plot_full_load_hours(0)
+    # plot_module_comparison()
+    exit(0)
     de21_grid()
     de21_region()
     plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_simple.csv'),
