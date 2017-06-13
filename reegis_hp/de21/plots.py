@@ -386,3 +386,5 @@ if __name__ == "__main__":
     #             idx_col='iso',
     #             coord_file='data_basic/label_federal_state.csv')
     # plot_geocsv('/home/uwe/geo.csv', idx_col='gid')
+    # plot_pickle('data/weather/average_wind_speed_coastdat_geo.pkl',
+    #             'v_wind_avg', lmax=7, n=8, digits=50)

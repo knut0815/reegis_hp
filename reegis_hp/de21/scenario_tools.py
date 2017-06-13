@@ -114,10 +114,10 @@ class SolphScenario(EnergySystem):
         tmp1.columns = list(range(length))
         tmp2.columns = list(range(length))
 
-        # noinspection PyTypeChecker
         return nodes_from_csv(
             nodes_flows=self.p.reset_index(),
-            nodes_flows_seq=pd.concat([tmp1, tmp2], ignore_index=True))
+            nodes_flows_seq=pd.DataFrame(pd.concat([tmp1, tmp2],
+                                                   ignore_index=True)))
 
     def add_parameters(self, idx, columns, values):
         self.p.loc[idx, columns] = values

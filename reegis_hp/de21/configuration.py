@@ -46,7 +46,8 @@ def get_configuration():
     general['skip_re_power_plants'] = cfg.get('general', 'skip_re_power_plants')
     general['skip_conv_power_plants'] = cfg.get('general',
                                                 'skip_conv_power_plants')
-    general['skip_feedin'] = cfg.get('general', 'skip_feedin')
+    general['skip_feedin_weather'] = cfg.get('general', 'skip_feedin_weather')
+    general['skip_feedin_region'] = cfg.get('general', 'skip_feedin_region')
 
     # ********* paths ********************************************************
     paths['basic'] = check_path(cfg.get('paths', 'basic'))
@@ -95,6 +96,7 @@ def get_configuration():
         paths[cfg.get('feedin', 'path')],
         cfg.get('feedin', 'dir'))
     pattern['feedin'] = cfg.get('feedin', 'feedin_file_pattern')
+    pattern['feedin_de21'] = cfg.get('feedin', 'feedin_de21_pattern')
 
     # ********* analyses ******************************************************
     paths['analyses'] = extend_path(

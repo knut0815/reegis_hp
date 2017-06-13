@@ -36,9 +36,12 @@ def run():
         pp.prepare_re_power_plants(paths, pattern,
                                    overwrite=general['overwrite'])
 
-    if not general['skip_feedin']:
-        feedin.create_feedin_series(paths, pattern, files,
-                                    overwrite=general['overwrite'])
+    if not general['skip_feedin_weather']:
+        feedin.normalised_feedin_by_weather(paths, pattern, files,
+                                            overwrite=general['overwrite'])
+    if not general['skip_feedin_region']:
+        feedin.normalised_feedin_by_region(paths, pattern,
+                                           overwrite=general['overwrite'])
 
 
 if __name__ == "__main__":
