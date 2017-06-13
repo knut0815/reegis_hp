@@ -194,14 +194,68 @@ def analyse_inverter(year, key, module_name, orientation):
         except ValueError:
             logging.info("Inverter {0} failed.".format(name))
             failed.loc[name] = 'failed'
-    inv.to_csv(os.path.join(paths['analyses'], 'sapm_inverters_feedin_full.csv'))
+    inv.to_csv(os.path.join(paths['analyses'],
+                            'sapm_inverters_feedin_full.csv'))
     failed.to_csv(os.path.join(paths['analyses'], 'sapm_inverters_failed.csv'))
 
 
+def analyse_feedin_de(year):
+    paths, pattern, files, general = config.get_configuration()
+    pp = pd.read_csv(os.path.join(paths['renewable'],
+                                  pattern['grouped'].format(cat='renewable')),
+                     index_col=[0, 1, 2, 3])
+    my_index = pp.loc['Wind', year].groupby(level=0).sum().index
+    new_df = pd.DataFrame(index=my_index)
+    for pptype in pp.index.levels[0]:
+        new_df[pptype] = pp.loc[pptype, year].groupby(level=0).sum()
+
+    fw = pd.read_csv(os.path.join(paths['feedin'], 'wind',
+                                  pattern['feedin_de21'].format(year=year,
+                                                                type='wind')),
+                     index_col=0, header=[0, 1])
+    wind = pd.DataFrame()
+    for reg in fw.columns.levels[0]:
+        wind[reg] = fw[reg, 'feedin_wind_turbine'].multiply(
+            new_df.loc[reg, 'Wind'])
+    wind = wind.sum(1)
+    wind.to_csv(os.path.join(paths['analyses'], 'wind_de.csv'))
+
+    fs = pd.read_csv(os.path.join(paths['feedin'], 'solar',
+                                  pattern['feedin_de21'].format(year=year,
+                                                                type='solar')),
+                     index_col=0, header=[0, 1])
+
+    pv_frac = {
+        'LG290G3_ABB_tlt000_az000_alb02': 0.0,
+        'LG290G3_ABB_tlt090_az120_alb02': 0.0,
+        'LG290G3_ABB_tlt090_az180_alb02': 0.0,
+        'LG290G3_ABB_tlt090_az240_alb02': 0.0,
+        'LG290G3_ABB_tltopt_az120_alb02': 0.0,
+        'LG290G3_ABB_tltopt_az180_alb02': 0.8,
+        'LG290G3_ABB_tltopt_az240_alb02': 0.0,
+        'SF160S_ABB_tlt000_az000_alb02': 0.0,
+        'SF160S_ABB_tlt090_az120_alb02': 0.0,
+        'SF160S_ABB_tlt090_az180_alb02': 0.0,
+        'SF160S_ABB_tlt090_az240_alb02': 0.0,
+        'SF160S_ABB_tltopt_az120_alb02': 0.0,
+        'SF160S_ABB_tltopt_az180_alb02': 0.2,
+        'SF160S_ABB_tltopt_az240_alb02': 0.0,
+    }
+
+    solar = pd.DataFrame(index=fs.index)
+    for reg in fs.columns.levels[0]:
+        solar[reg] = 0
+        for col in fs.columns.levels[1]:
+            if reg in new_df.index:
+                solar[reg] += fs[reg, col].multiply(
+                    new_df.loc[reg, 'Solar']).multiply(pv_frac[col])
+    solar = solar.sum(1)
+    solar.to_csv(os.path.join(paths['analyses'], 'solar_de.csv'))
 if __name__ == "__main__":
     # initialise logger
     logger.define_logging()
-    get_full_load_hours()
+    analyse_feedin_de(2014)
+    # get_full_load_hours()
     # analyse_pv_types(2003, 1129087, orientation={'azimuth': 180, 'tilt': 32})
     # analyse_pv_orientation(2003, 1129087, 'LG_LG290N1C_G3__2013_')
     # analyse_inverter(2003, 1129087, 'LG_LG290N1C_G3__2013_',
