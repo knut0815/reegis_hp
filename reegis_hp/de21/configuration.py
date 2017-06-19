@@ -8,9 +8,21 @@ import logging
 from shutil import copyfile
 
 
-def load_ini_file():
-    default_ini = os.path.join(os.path.dirname(__file__), 'reegis_default.ini')
-    target_ini = os.path.join(os.path.expanduser("~"), '.oemof', 'reegis.ini')
+class ConfigurationDe21:
+    def __init__(self):
+        self.default_ini = os.path.join(
+            os.path.dirname(__file__), 'de21_default.ini')
+        self.target_ini = os.path.join(
+            os.path.expanduser("~"), '.oemof', 'de21.ini')
+        self.paths = dict()
+        self.pattern = dict()
+        self.files = dict()
+        self.general = dict()
+        self.url = dict()
+        load_ini_file(self.default_ini, self.target_ini)
+
+
+def load_ini_file(default_ini, target_ini):
     if not os.path.isfile(target_ini):
         copyfile(default_ini, target_ini)
         logging.info("Default ini file copied to {0}".format(target_ini))
@@ -31,81 +43,114 @@ def extend_path(ex_path, name):
 
 
 def get_configuration():
-    # load ini file, copy default ini file if necessary
-    load_ini_file()
-
-    paths = dict()
-    pattern = dict()
-    files = dict()
-    general = dict()
+    # initialise class
+    c = ConfigurationDe21()
 
     # set variables from ini file
     #  ********* general ******************************************************
-    general['overwrite'] = cfg.get('general', 'overwrite')
-    general['skip_weather'] = cfg.get('general', 'skip_weather')
-    general['skip_re_power_plants'] = cfg.get('general', 'skip_re_power_plants')
-    general['skip_conv_power_plants'] = cfg.get('general',
-                                                'skip_conv_power_plants')
-    general['skip_feedin_weather'] = cfg.get('general', 'skip_feedin_weather')
-    general['skip_feedin_region'] = cfg.get('general', 'skip_feedin_region')
+    c.general['overwrite'] = cfg.get('general', 'overwrite')
+    c.general['skip_weather'] = cfg.get('general', 'skip_weather')
+    c.general['skip_re_power_plants'] = cfg.get('general',
+                                                'skip_re_power_plants')
+    c.general['skip_conv_power_plants'] = cfg.get('general',
+                                                  'skip_conv_power_plants')
+    c.general['skip_feedin_weather'] = cfg.get('general', 'skip_feedin_weather')
+    c.general['skip_feedin_region'] = cfg.get('general', 'skip_feedin_region')
+    c.general['skip_time_series'] = cfg.get('general', 'skip_time_series')
+
+    # ********* download *****************************************************
+    c.url['conventional_data'] = cfg.get('download', 'url_conventional_data')
+    c.url['conventional_readme'] = cfg.get('download',
+                                           'url_conventional_readme')
+    c.url['conventional_json'] = cfg.get('download', 'url_conventional_json')
+    c.url['renewable_data'] = cfg.get('download', 'url_renewable_data')
+    c.url['renewable_readme'] = cfg.get('download', 'url_renewable_readme')
+    c.url['renewable_json'] = cfg.get('download', 'url_renewable_json')
+    c.url['time_series_data'] = cfg.get('download', 'url_timeseries_data')
+    c.url['time_series_readme'] = cfg.get('download', 'url_timeseries_readme')
+    c.url['time_series_json'] = cfg.get('download', 'url_timeseries_json')
 
     # ********* paths ********************************************************
-    paths['basic'] = check_path(cfg.get('paths', 'basic'))
-    paths['data'] = check_path(cfg.get('paths', 'data'))
-    paths['messages'] = extend_path(
-        paths[cfg.get('paths', 'msg_path')], cfg.get('paths', 'msg_dir'))
+    c.paths['basic'] = check_path(cfg.get('paths', 'basic'))
+    c.paths['data'] = check_path(cfg.get('paths', 'data'))
+    c.paths['messages'] = extend_path(
+        c.paths[cfg.get('paths', 'msg_path')], cfg.get('paths', 'msg_dir'))
 
     # ********* weather ******************************************************
-    paths['weather'] = extend_path(
-        paths[cfg.get('weather', 'path')], cfg.get('weather', 'dir'))
-    files['grid_geometry'] = cfg.get('weather', 'grid_polygons')
-    files['grid_centroid'] = cfg.get('weather', 'grid_centroid')
-    files['region_geometry'] = cfg.get('weather', 'clip_geometry')
-    pattern['weather'] = cfg.get('weather', 'file_pattern')
-    files['average_wind_speed'] = cfg.get('weather', 'avg_wind_speed_file')
+    c.paths['weather'] = extend_path(
+        c.paths[cfg.get('weather', 'path')], cfg.get('weather', 'dir'))
+    c.files['grid_geometry'] = cfg.get('weather', 'grid_polygons')
+    c.files['grid_centroid'] = cfg.get('weather', 'grid_centroid')
+    c.files['region_geometry'] = cfg.get('weather', 'clip_geometry')
+    c.pattern['weather'] = cfg.get('weather', 'file_pattern')
+    c.files['average_wind_speed'] = cfg.get('weather', 'avg_wind_speed_file')
 
     # ********* geometry *****************************************************
-    paths['geometry'] = extend_path(
-        paths[cfg.get('geometry', 'path')], cfg.get('geometry', 'dir'))
+    c.paths['geometry'] = extend_path(
+        c.paths[cfg.get('geometry', 'path')], cfg.get('geometry', 'dir'))
+    c.files['federal_states_centroid'] = cfg.get('geometry',
+                                                 'federal_states_centroid')
+    c.files['federal_states_polygon'] = cfg.get('geometry',
+                                                'federal_states_polygon')
+    c.files['polygons_de21'] = cfg.get('geometry', 'polygons_de21')
 
     # ********* power plants *************************************************
-    paths['powerplants'] = extend_path(
-        paths[cfg.get('powerplants', 'path')],
+    c.paths['powerplants'] = extend_path(
+        c.paths[cfg.get('powerplants', 'path')],
         cfg.get('powerplants', 'dir'))
-    paths['powerplants_basic'] = extend_path(
-        paths[cfg.get('powerplants', 'in_path')],
-        cfg.get('powerplants', 'in_dir'))
-    paths['conventional'] = extend_path(
-        paths[cfg.get('conventional', 'path')],
+    c.paths['conventional'] = extend_path(
+        c.paths[cfg.get('conventional', 'path')],
         cfg.get('conventional', 'dir'))
-    paths['renewable'] = extend_path(
-        paths[cfg.get('renewable', 'path')],
+    c.paths['renewable'] = extend_path(
+        c.paths[cfg.get('renewable', 'path')],
         cfg.get('renewable', 'dir'))
-    pattern['original'] = cfg.get('powerplants', 'original_file_pattern')
-    pattern['fixed'] = cfg.get('powerplants', 'fixed_file_pattern')
-    pattern['info'] = cfg.get('powerplants', 'info_file_pattern')
-    pattern['prepared'] = cfg.get('powerplants', 'prepared_csv_file_pattern')
-    pattern['prepared_h5'] = cfg.get('powerplants', 'prepared_hdf_file_pattern')
-    pattern['grouped'] = cfg.get('powerplants', 'grouped_file_pattern')
-    pattern['readme'] = cfg.get('powerplants', 'readme_file_pattern')
-    pattern['json'] = cfg.get('powerplants', 'json_file_pattern')
-    pattern['shp'] = cfg.get('powerplants', 'shp_file_pattern')
+    c.pattern['original'] = cfg.get('powerplants', 'original_file_pattern')
+    c.pattern['fixed'] = cfg.get('powerplants', 'fixed_file_pattern')
+    c.pattern['prepared'] = cfg.get('powerplants', 'prepared_csv_file_pattern')
+    c.pattern['grouped'] = cfg.get('powerplants', 'grouped_file_pattern')
+    c.pattern['readme'] = cfg.get('powerplants', 'readme_file_pattern')
+    c.pattern['json'] = cfg.get('powerplants', 'json_file_pattern')
+    c.pattern['shp'] = cfg.get('powerplants', 'shp_file_pattern')
+
+    # ********* time series ***************************************************
+    c.paths['time_series'] = extend_path(
+        c.paths[cfg.get('time_series', 'path')],
+        cfg.get('time_series', 'dir'))
+    c.files['time_series_original'] = cfg.get('time_series', 'original_file')
+    c.files['time_series_de'] = cfg.get('time_series', 'de_file')
+    c.files['renewables_time_series'] = cfg.get('time_series',
+                                                'renewables_file')
+    c.files['load_time_series'] = cfg.get('time_series', 'load_file')
+    c.files['time_series_readme'] = cfg.get('time_series', 'readme_file')
+    c.files['time_series_json'] = cfg.get('time_series', 'json_file')
+
+    # ********* reegis ********************************************************
+    c.paths['reegis'] = extend_path(
+        c.paths[cfg.get('reegis', 'path')],
+        cfg.get('reegis', 'dir'))
+    c.files['demand_share'] = cfg.get('reegis', 'demand_share')
+
+    # ********* demand ********************************************************
+    c.paths['demand'] = extend_path(
+        c.paths[cfg.get('demand', 'path')],
+        cfg.get('demand', 'dir'))
+    c.files['demand'] = cfg.get('demand', 'demand_file')
 
     # ********* feedin ********************************************************
-    paths['feedin'] = extend_path(
-        paths[cfg.get('feedin', 'path')],
+    c.paths['feedin'] = extend_path(
+        c.paths[cfg.get('feedin', 'path')],
         cfg.get('feedin', 'dir'))
-    pattern['feedin'] = cfg.get('feedin', 'feedin_file_pattern')
-    pattern['feedin_de21'] = cfg.get('feedin', 'feedin_de21_pattern')
+    c.pattern['feedin'] = cfg.get('feedin', 'feedin_file_pattern')
+    c.pattern['feedin_de21'] = cfg.get('feedin', 'feedin_de21_pattern')
+    c.general['solar_set'] = cfg.get('solar', 'solar_set')
 
     # ********* analyses ******************************************************
-    paths['analyses'] = extend_path(
-        paths[cfg.get('analyses', 'path')],
+    c.paths['analyses'] = extend_path(
+        c.paths[cfg.get('analyses', 'path')],
         cfg.get('analyses', 'dir'))
 
     # ********* plots *********************************************************
-    paths['plots'] = extend_path(
-        paths[cfg.get('plots', 'path')],
+    c.paths['plots'] = extend_path(
+        c.paths[cfg.get('plots', 'path')],
         cfg.get('plots', 'dir'))
-
-    return paths, pattern, files, general
+    return c

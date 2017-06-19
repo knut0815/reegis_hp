@@ -20,70 +20,167 @@ from oemof.tools import logger
 import config as cfg
 
 
-def normalised_feedin_by_region(paths, pattern, overwrite=False):
-    feedin_de21 = os.path.join(paths['feedin'], '{type}',
-                               pattern['feedin_de21'])
-    feedin_coastdat = os.path.join(paths['feedin'], '{type}', pattern['feedin'])
+def get_list(section, parameter):
+    try:
+        my_list = cfg.get(section, parameter).replace(' ', '').split(',')
+    except AttributeError:
+        my_list = list((cfg.get(section, parameter),))
+    return my_list
+
+
+def normalised_feedin_by_region_wind(pp, feedin_de21, feedin_coastdat,
+                                     overwrite):
+    vtype = 'Wind'
+
+    # Check for existing in-files and non-existing out-files
+    years = list()
+    for y in range(1990, 2025):
+        outfile = feedin_de21.format(year=y, type=vtype.lower())
+        infile = feedin_coastdat.format(year=y, type=vtype.lower())
+        if not os.path.isfile(outfile) or overwrite:
+            if os.path.isfile(infile):
+                years.append(y)
+    if overwrite:
+        logging.warning("Existing files will be overwritten.")
+    else:
+        logging.info("Existing files are skipped.")
+    logging.info(
+        "Will create {0} time series for the following years: {1}".format(
+            vtype.lower(), years))
+
+    # Loop over all years according to the file check above
+    for year in years:
+        logging.info("Processing {0}...".format(year))
+        pwr = pd.HDFStore(feedin_coastdat.format(year=year,
+                                                 type=vtype.lower()))
+        my_index = pwr[pwr.keys()[0]].index
+        feedin = pd.DataFrame(index=my_index)
+
+        # Loop over all aggregation regions
+        for region in sorted(
+                pp.loc[(vtype, year)].index.get_level_values(0).unique()):
+
+            # Create an temporary DataFrame to collect the results
+            temp = pd.DataFrame(index=my_index)
+            logging.debug("{0} - {1}".format(year, region))
+
+            # Multiply normalised time series (normalised to 1kW_peak) with peak
+            # capacity(kW).
+            for coastdat in pp.loc[(vtype, year, region)].index:
+                tmp = pwr['/A' + str(int(coastdat))].multiply(
+                    float(pp.loc[(vtype, year, region, coastdat)]))
+                temp[coastdat] = tmp
+            if str(region) == 'nan':
+                region = 'unknown'
+
+            # Sum up time series for one region and divide it by the
+            # capacity of the region to get a normalised time series.
+            feedin[region] = temp.sum(axis=1).divide(
+                    float(pp.loc[(vtype, year, region)].sum()))
+
+        # Write table into a csv-file
+        feedin.to_csv(feedin_de21.format(year=year, type=vtype.lower()))
+        pwr.close()
+
+
+def normalised_feedin_by_region_solar(pp, feedin_de21, feedin_coastdat,
+                                      overwrite):
+    vtype = 'Solar'
+    de21_dir = os.path.dirname(feedin_de21.format(type=vtype.lower(),
+                                                  year=2000))
+    if not os.path.isdir(de21_dir):
+        os.mkdir(de21_dir)
+
+    set_list = get_list('solar', 'solar_sets_list')
+    set_names = list()
+    for my_set in set_list:
+        set_names.append(cfg.get(my_set, 'pv_set_name'))
+
+    # Check for existing output and input files
+    # Only years with all sets will be used
+    years = list()
+    for y in range(1990, 2025):
+        outfile = feedin_de21.format(year=y, type=vtype.lower())
+        infiles_exist = True
+        if not os.path.isfile(outfile) or overwrite:
+            for name_set in set_names:
+                infile = feedin_coastdat.format(year=y, type=vtype.lower(),
+                                                sub=name_set)
+                if not os.path.isfile(infile):
+                    infiles_exist = False
+            if infiles_exist:
+                years.append(y)
+
+    # Display logging warning of files will be overwritten
+    if overwrite:
+        logging.warning("Existing files will be overwritten.")
+    else:
+        logging.info("Existing files are skipped.")
+    logging.info(
+        "Will create {0} time series for the following years: {1}".format(
+            vtype.lower(), years))
+
+    pwr = dict()
+    columns = dict()
+    for year in years:
+        logging.info("Processing {0}...".format(year))
+        name_of_set = None
+        for name_of_set in set_names:
+            pwr[name_of_set] = pd.HDFStore(
+                feedin_coastdat.format(year=year, sub=name_of_set,
+                                       type=vtype.lower()))
+            columns[name_of_set] = pwr[name_of_set]['/A1129087'].columns
+
+        # Create DataFrame with MultiColumns to take the results
+        my_index = pwr[name_of_set]['/A1129087'].index
+        my_cols = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []],
+                                names=[u'region', u'set', u'subset'])
+        feedin = pd.DataFrame(index=my_index, columns=my_cols)
+
+        # Loop over all aggregation regions
+        for region in sorted(
+                pp.loc[(vtype, year)].index.get_level_values(0).unique()):
+            coastdat_ids = pp.loc[(vtype, year, region)].index
+            logging.info("{0} - {1} ({2})".format(
+                year, region, len(coastdat_ids)))
+            logging.debug("{0}".format(pp.loc[(vtype, year, region)].index))
+
+            # Loop over all coastdat ids, that intersect with the region
+            for name in set_names:
+                for col in columns[name]:
+                    temp = pd.DataFrame(index=my_index)
+                    for coastdat in pp.loc[(vtype, year, region)].index:
+                        coastdat_id = '/A{0}'.format(int(coastdat))
+                        pp_inst = float(pp.loc[(vtype, year, region, coastdat)])
+                        temp[coastdat_id] = (
+                            pwr[name][coastdat_id][col][:8760].multiply(
+                                pp_inst))
+                    colname = '_'.join(col.split('_')[-3:])
+                    feedin[region, name, colname] = (
+                        temp.sum(axis=1).divide(float(
+                            pp.loc[(vtype, year, region)].sum())))
+
+            # Sum up time series for one region and divide it by the
+            # capacity of the region to get a normalised time series.
+
+        feedin.to_csv(feedin_de21.format(year=year, type=vtype.lower()))
+        for name_of_set in set_names:
+            pwr[name_of_set].close()
+
+
+def normalised_feedin_by_region(c, overwrite=False):
+    feedin_de21 = os.path.join(c.paths['feedin'], '{type}', 'de21',
+                               c.pattern['feedin_de21'])
+    feedin_coastdat = os.path.join(c.paths['feedin'], '{type}', '{sub}',
+                                   c.pattern['feedin'])
     category = 'renewable'
-    powerplants = os.path.join(paths[category],
-                               pattern['grouped'].format(cat=category))
+    powerplants = os.path.join(c.paths[category],
+                               c.pattern['grouped'].format(cat=category))
 
     pp = pd.read_csv(powerplants, index_col=[0, 1, 2, 3])
 
-    for vtype in ['Wind', 'Solar']:
-        years = list()
-        for y in range(1990, 2025):
-            outfile = feedin_de21.format(year=y, type=vtype.lower())
-            infile = feedin_coastdat.format(year=y, type=vtype.lower())
-            if not os.path.isfile(outfile) or overwrite:
-                if os.path.isfile(infile):
-                    years.append(y)
-        if overwrite:
-            logging.warning("Existing files will be overwritten.")
-        else:
-            logging.info("Existing files are skipped.")
-        logging.info(
-            "Will create {0} time series for the following years: {1}".format(
-                vtype.lower(), years))
-        for year in years:
-            logging.info("Processing {0}...".format(year))
-            pwr = pd.HDFStore(feedin_coastdat.format(year=year,
-                                                     type=vtype.lower()))
-            try:
-                columns = pwr['/A1129087'].columns
-            except AttributeError:
-                columns = (pwr['/A1129087'].name, )
-            my_index = pwr[pwr.keys()[0]].index
-            my_cols = pd.MultiIndex(levels=[[], []], labels=[[], []],
-                                    names=[u'region', u'set'])
-            feedin = pd.DataFrame(index=my_index, columns=my_cols)
-            for region in sorted(
-                    pp.loc[(vtype, year)].index.get_level_values(0).unique()):
-                temp = dict()
-                for col in columns:
-                    temp[col] = pd.DataFrame(index=my_index)
-                logging.debug("{0} - {1}".format(year, region))
-
-                for coastdat in pp.loc[(vtype, year, region)].index:
-                    # Multiply time series (normalised to 1kW) with capacity(kW)
-                    tmp = pwr['/A' + str(int(coastdat))].multiply(
-                        float(pp.loc[(vtype, year, region, coastdat)]))
-                    for col in columns:
-                        try:
-                            temp[col][coastdat] = tmp[col]
-                        except KeyError:
-                            temp[col][coastdat] = tmp
-                if str(region) == 'nan':
-                    region = 'unknown'
-
-                # Sum up time series for one region and divide it by the
-                # capacity of the region to get a normalised time series.
-                for col in columns:
-                    feedin[region, col] = temp[col].sum(axis=1).divide(
-                        float(pp.loc[(vtype, year, region)].sum()))
-
-            feedin.to_csv(feedin_de21.format(year=year, type=vtype.lower()))
-            pwr.close()
+    normalised_feedin_by_region_solar(pp, feedin_de21, feedin_coastdat,
+                                      overwrite)
 
 
 def normalised_feedin_wind_single(polygons, key, weather):
@@ -149,7 +246,7 @@ def normalised_feedin_wind_single(polygons, key, weather):
 def feedin_pvlib_modelchain(location, system, weather, tilt=None,
                             orientation_strategy=None):
     if tilt is None:
-        tilt = system['tilt']
+        tilt = system['surface_tilt']
 
     # pvlib's ModelChain
     pvsys = PVSystem(inverter_parameters=system['inverter_parameters'],
@@ -172,25 +269,18 @@ def get_optimal_pv_angle(lat):
     return lat - 20
 
 
-def create_pv_sets():
+def create_pv_sets(set_name):
     # get module and inverter parameter from sandia database
     sandia_modules = pvlib.pvsystem.retrieve_sam('sandiamod')
     sapm_inverters = pvlib.pvsystem.retrieve_sam('sandiainverter')
 
-    def get_list(section, parameter):
-        try:
-            my_list = cfg.get(section, parameter).replace(' ', '').split(',')
-        except AttributeError:
-            my_list = list((cfg.get(section, parameter),))
-        return my_list
-
-    module_names = get_list('solar', 'module_name')
-    module_keys = get_list('solar', 'module_key')
+    module_names = get_list(set_name, 'module_name')
+    module_keys = get_list(set_name, 'module_key')
     modules = {module_keys[n]: module_names[n] for n in range(len(module_keys))}
-    inverters = get_list('solar', 'inverter_name')
-    azimuth_angles = get_list('solar', 'surface_azimuth')
-    tilt_angles = get_list('solar', 'surface_tilt')
-    albedo_values = get_list('solar', 'albedo')
+    inverters = get_list(set_name, 'inverter_name')
+    azimuth_angles = get_list(set_name, 'surface_azimuth')
+    tilt_angles = get_list(set_name, 'surface_tilt')
+    albedo_values = get_list(set_name, 'albedo')
 
     set_number = 0
     pv_systems = dict()
@@ -222,6 +312,7 @@ def create_pv_sets():
                         ])
                         logging.info("PV set: {}".format(
                             pv_systems[set_number]['name']))
+
     return pv_systems
 
 
@@ -237,17 +328,18 @@ def adapt_weather_to_pvlib(w, location):
     return w
 
 
-def normalised_feedin_pv(paths, pattern, files, weather, year):
+def normalised_feedin_pv(c, weather, year, feedin_file):
     """pass"""
-    feedin_file = os.path.join(
-        paths['feedin'], 'solar',
-        pattern['feedin'].format(year=year, type='solar'))
+    if not os.path.isdir(os.path.dirname(feedin_file)):
+        os.mkdir(os.path.dirname(feedin_file))
+    pv_systems = create_pv_sets(c.general['solar_set'])
+
     pwr = pd.HDFStore(feedin_file.format(year, 'solar'), mode='w')
 
-    latlon = pd.read_csv(os.path.join(paths['geometry'],
-                                      files['grid_centroid']), index_col='gid')
+    latlon = pd.read_csv(os.path.join(c.paths['geometry'],
+                                      c.files['grid_centroid']),
+                         index_col='gid')
 
-    pv_systems = create_pv_sets()
     keys = weather.keys()
     length = len(keys)
     logging.info('Remaining polygons for {0}: {1}'.format(year, length))
@@ -277,14 +369,14 @@ def normalised_feedin_pv(paths, pattern, files, weather, year):
     pwr.close()
 
 
-def normalised_feedin_wind(paths, pattern, files, weather, year):
+def normalised_feedin_wind(c, weather, year, feedin_file):
     """pass"""
-    feedin_file = os.path.join(paths['feedin'], 'wind',
-                               pattern['feedin'].format(year=year, type='wind'))
-    pwr = pd.HDFStore(feedin_file.format(year, 'wind'), mode='w')
-    average_wind_speed = pd.read_csv(os.path.join(paths['weather'],
-                                                  files['average_wind_speed']),
-                                     index_col='gid')
+    if not os.path.isdir(os.path.dirname(feedin_file)):
+        os.mkdir(os.path.dirname(feedin_file))
+    pwr = pd.HDFStore(feedin_file, mode='w')
+    average_wind_speed = pd.read_csv(
+        os.path.join(c.paths['weather'], c.files['average_wind_speed']),
+        index_col='gid')
 
     keys = weather.keys()
     length = len(keys)
@@ -299,18 +391,21 @@ def normalised_feedin_wind(paths, pattern, files, weather, year):
     pwr.close()
 
 
-def normalised_feedin_one_year(paths, pattern, files, year, overwrite):
+def normalised_feedin_one_year(c, year, overwrite):
     """pass"""
     start = time.now()
     weather = None
     fileopen = False
-    feedin_pattern = os.path.join(paths['feedin'], '{type}', pattern['feedin'])
-    f_wind = feedin_pattern.format(year=year, type='wind')
-    f_solar = feedin_pattern.format(year=year, type='solar')
+    set_name = cfg.get(c.general['solar_set'], 'pv_set_name')
+    feedin_pattern = os.path.join(c.paths['feedin'], '{type}', '{sub}',
+                                  c.pattern['feedin'])
+
+    f_wind = feedin_pattern.format(year=year, type='wind', sub='coastdat')
+    f_solar = feedin_pattern.format(year=year, type='solar', sub=set_name)
 
     if not os.path.isfile(f_wind) or not os.path.isfile(f_solar) or overwrite:
         weather = pd.HDFStore(os.path.join(
-            paths['weather'], pattern['weather'].format(year=year)),
+            c.paths['weather'], c.pattern['weather'].format(year=year)),
             mode='r')
         fileopen = True
 
@@ -319,13 +414,13 @@ def normalised_feedin_one_year(paths, pattern, files, year, overwrite):
 
     if not os.path.isfile(f_wind) or overwrite:
         logging.info(txt_create.format('wind', year))
-        normalised_feedin_wind(paths, pattern, files, weather, year)
+        normalised_feedin_wind(c, weather, year, f_wind)
     else:
         logging.info(txt_skip.format(f_wind))
 
     if not os.path.isfile(f_solar) or overwrite:
         logging.info(txt_create.format('solar', year))
-        normalised_feedin_pv(paths, pattern, files, weather, year)
+        normalised_feedin_pv(c, weather, year, f_solar)
     else:
         logging.info(txt_skip.format(f_solar))
 
@@ -335,19 +430,18 @@ def normalised_feedin_one_year(paths, pattern, files, year, overwrite):
             year, time.now() - start))
 
 
-def normalised_feedin_by_weather(paths, pattern, files, years=None,
-                                 overwrite=False):
+def normalised_feedin_by_weather(c, years=None, overwrite=False):
     """pass"""
     # Finding existing weather files.
     if years is None:
-        filelist = (os.listdir(paths['weather']))
+        filelist = (os.listdir(c.paths['weather']))
         years = list()
         for y in range(1970, 2020):
-            if pattern['weather'].format(year=y) in filelist:
+            if c.pattern['weather'].format(year=y) in filelist:
                 years.append(y)
 
     for year in years:
-        normalised_feedin_one_year(paths, pattern, files, year, overwrite)
+        normalised_feedin_one_year(c, year, overwrite)
 
 
 if __name__ == "__main__":

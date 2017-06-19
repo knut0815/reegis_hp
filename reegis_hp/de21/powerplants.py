@@ -31,7 +31,7 @@ import requests
 import logging
 import warnings
 import pyproj
-import shutil
+
 
 from oemof.tools import logger
 
@@ -39,13 +39,13 @@ from oemof.tools import logger
 logger.define_logging()
 
 
-def read_original_file(category, paths, pattern, overwrite):
+def read_original_file(category, c, overwrite):
     """Read file if exists."""
 
-    orig_csv_file = os.path.join(paths[category],
-                                 pattern['original'].format(cat=category))
-    fixed_csv_file = os.path.join(paths[category],
-                                  pattern['fixed'].format(cat=category))
+    orig_csv_file = os.path.join(c.paths[category],
+                                 c.pattern['original'].format(cat=category))
+    fixed_csv_file = os.path.join(c.paths[category],
+                                  c.pattern['fixed'].format(cat=category))
 
     # If a fixed file is present it will be used instead of the original file.
     if os.path.isfile(fixed_csv_file):
@@ -54,26 +54,21 @@ def read_original_file(category, paths, pattern, overwrite):
     # Download non existing files. If you think that there are newer files you
     # have to set overwrite=True to overwrite existing with downloaded files.
     if not os.path.isfile(orig_csv_file) or overwrite:
-        csv = pd.read_csv(os.path.join(paths['powerplants_basic'],
-                                       pattern['info'].format(cat=category)),
-                          squeeze=True, index_col=[0])
         logging.warning("File not found. Try to download it from server.")
         logging.warning("Check URL if download does not work.")
-        req = requests.get(csv.download)
+        req = requests.get(c.url['{0}_data'.format(category)])
         with open(orig_csv_file, 'wb') as fout:
             fout.write(req.content)
         logging.warning("Downloaded from {0} and copied to '{1}'.".format(
-            csv.download, orig_csv_file))
-        logging.warning("This script is tested with the file of {0}.".format(
-            csv.date))
-        req = requests.get(csv.readme)
-        with open(os.path.join(paths[category],
-                               pattern['readme'].format(cat=category)),
+            c.url['{0}_data'.format(category)], orig_csv_file))
+        req = requests.get(c.url['{0}_readme'.format(category)])
+        with open(os.path.join(c.paths[category],
+                               c.pattern['readme'].format(cat=category)),
                   'wb') as fout:
             fout.write(req.content)
-        req = requests.get(csv.json)
-        with open(os.path.join(paths[category],
-                               pattern['json'].format(cat=category)),
+        req = requests.get(c.url['{0}_json'.format(category)])
+        with open(os.path.join(c.paths[category],
+                               c.pattern['json'].format(cat=category)),
                   'wb') as fout:
             fout.write(req.content)
 
@@ -140,7 +135,8 @@ def guess_coordinates_by_postcode(df):
     return df
 
 
-def guess_coordinates_by_spatial_names(df, fs_column, cap_col, total_cap, stat):
+def guess_coordinates_by_spatial_names(c, df, fs_column, cap_col,
+                                       total_cap, stat):
     # *** Use municipal_code and federal_state to define coordinates ***
     if fs_column in df:
         if 'municipality_code' in df:
@@ -158,8 +154,10 @@ def guess_coordinates_by_spatial_names(df, fs_column, cap_col, total_cap, stat):
             stat.loc[state, 'undefined_capacity'] = capacity
 
         # A simple table with the centroid of each federal state.
-        f2c = pd.read_csv(os.path.join('data', 'basic',
-                                       'centroid_federal_state'),
+        print(os.path.join(c.paths['geometry'],
+                           c.files['federal_states_centroid']))
+        f2c = pd.read_csv(os.path.join(c.paths['geometry'],
+                                       c.files['federal_states_centroid']),
                           index_col='name')
 
         # Use the centroid of each federal state if the federal state is given.
@@ -181,7 +179,7 @@ def log_undefined_capcity(df, cap_col, total_cap, msg):
     return undefined_cap
 
 
-def complete_geometries(df, paths, cap_col, category, time=None,
+def complete_geometries(c, df, cap_col, category, time=None,
                         fs_column='federal_state'):
     """
     Try different methods to fill missing coordinates.
@@ -210,8 +208,8 @@ def complete_geometries(df, paths, cap_col, category, time=None,
     statistics.loc['postcode', 'undefined_capacity'] = log_undefined_capcity(
         df, cap_col, total_capacity, "Reduced undefined plants by postcode.")
 
-    df = guess_coordinates_by_spatial_names(df, fs_column, cap_col,
-                                            total_capacity, statistics)
+    df = guess_coordinates_by_spatial_names(c, df, fs_column,
+                                            cap_col, total_capacity, statistics)
     statistics.loc['name', 'undefined_capacity'] = log_undefined_capcity(
         df, cap_col, total_capacity,
         "Reduced undefined plants by federal_state centroid.")
@@ -219,18 +217,18 @@ def complete_geometries(df, paths, cap_col, category, time=None,
     # Store table of undefined sets to csv-file
     if incomplete.any():
         df.loc[incomplete].to_csv(os.path.join(
-            paths['messages'],
+            c.paths['messages'],
             '{0}_incomplete_geometries_before.csv'.format(category)))
 
     incomplete = df.lon.isnull()
     if incomplete.any():
         df.loc[incomplete].to_csv(os.path.join(
-            paths['messages'],
+            c.paths['messages'],
             '{0}_incomplete_geometries_after.csv'.format(category)))
-    logging.debug("Gaps stored to: {0}".format(paths['messages']))
+    logging.debug("Gaps stored to: {0}".format(c.paths['messages']))
 
     statistics['total_capacity'] = total_capacity
-    statistics.to_csv(os.path.join(paths['messages'],
+    statistics.to_csv(os.path.join(c.paths['messages'],
                                    'statistics_{0}_pp.csv'.format(category)))
 
     # Log information
@@ -366,11 +364,12 @@ def find_intersection_with_buffer(gdf, spatial_df, column):
     return gdf
 
 
-def group_conventional_power_plants(paths, pattern, overwrite=False):
-    filepath_prep = os.path.join(paths['conventional'],
-                                 pattern['prepared'].format(cat='conventional'))
-    filepath_grp = os.path.join(paths['conventional'],
-                                pattern['grouped'].format(cat='conventional'))
+def group_conventional_power_plants(c, overwrite=False):
+    filepath_prep = os.path.join(c.paths['conventional'],
+                                 c.pattern['prepared'].format(
+                                     cat='conventional'))
+    filepath_grp = os.path.join(c.paths['conventional'],
+                                c.pattern['grouped'].format(cat='conventional'))
     cpp = pd.read_csv(filepath_prep, index_col='id')
     del cpp['Unnamed: 0']
     cpp.region.fillna('XXYY', inplace=True)
@@ -398,7 +397,7 @@ def group_conventional_power_plants(paths, pattern, overwrite=False):
         logging.warning(
             "File exists. Skip grouping of conventional power plants.")
         logging.warning("Will not overwrite existing file: {0}".format(
-            pattern['prepared'].format(cat='conventional')))
+            c.pattern['prepared'].format(cat='conventional')))
         logging.warning("Set overwrite to True to change this behaviour.")
     else:
         type_fuel = cpp_g.index.get_level_values(0).unique()
@@ -422,22 +421,22 @@ def group_conventional_power_plants(paths, pattern, overwrite=False):
                     tmp[['capacity_net_bnetza', 'efficiency_avg']])
 
     if not os.path.isfile(filepath_grp) or overwrite:
-        df = df.sortlevel()
+        df = df.sort_index()
         df.to_csv(filepath_grp)
 
 
-def group_re_powerplants(paths, pattern, overwrite=False, keep_files=False):
+def group_re_powerplants(c, overwrite=False, keep_files=False):
     category = 'renewable'
-    repp = pd.read_csv(os.path.join(paths[category],
-                                    pattern['prepared'].format(cat=category)),
+    repp = pd.read_csv(os.path.join(c.paths[category],
+                                    c.pattern['prepared'].format(cat=category)),
                        parse_dates=['commissioning_date',
                                     'decommissioning_date']
                        )
-    filepath_pattern = os.path.join(paths[category], pattern['grouped'])
+    filepath_pattern = os.path.join(c.paths[category], c.pattern['grouped'])
     filepath_all = filepath_pattern.format(cat='renewable')
 
     non_groupable = os.path.join(
-        paths['messages'],
+        c.paths['messages'],
         '{0}_non_groupable_plants.csv'.format(category))
     repp[repp.electrical_capacity.isnull()].to_csv(non_groupable)
 
@@ -559,65 +558,66 @@ def group_re_powerplants(paths, pattern, overwrite=False, keep_files=False):
         logging.warning(
             "File exists. Skip grouping of renewable power plants.")
         logging.warning("Will not overwrite existing file: {0}".format(
-            pattern['grouped'].format(cat='renewable')))
+            c.pattern['grouped'].format(cat='renewable')))
         logging.warning("Set overwrite to True to change this behaviour.")
 
 
-def prepare_conventional_power_plants(paths, pattern, overwrite=False):
+def prepare_conventional_power_plants(c, overwrite=False):
     category = 'conventional'
-    if (os.path.isfile(os.path.join(paths[category],
-                                    pattern['prepared'].format(cat=category)))
+    if (os.path.isfile(os.path.join(c.paths[category],
+                                    c.pattern['prepared'].format(cat=category)))
             and not overwrite):
         logging.warning("File exists. Skip spatial preparation of " +
                         "{0} power plants".format(category))
         logging.warning("Will not overwrite existing file: {0}".format(
-            pattern['prepared'].format(cat=category)))
+            c.pattern['prepared'].format(cat=category)))
     else:
         start = datetime.datetime.now()
 
         # Read original file or download it from original source
-        cpp = read_original_file(category, paths, pattern, overwrite)
+        cpp = read_original_file(category, c, overwrite)
         logging.info(
             "File read: {0}".format(str(datetime.datetime.now() - start)))
 
-        cpp = complete_geometries(cpp, paths, 'capacity_net_bnetza', category,
-                                  start, fs_column='state')
+        cpp = complete_geometries(c, cpp, 'capacity_net_bnetza',
+                                  category, start, fs_column='state')
 
         # Create GeoDataFrame from original DataFrame
         gcpp = create_geo_df(cpp, start)
 
         # Add region column (DE01 - DE21)
-        geo_file = os.path.join('data', 'geometries', 'polygons_de21_vg.csv')
+        geo_file = os.path.join(c.paths['geometry'], c.files['polygons_de21'])
         gcpp = add_spatial_name(gcpp, geo_file, 'region', category, time=start)
 
         # Add column with name of the federal state (Bayern, Berlin,...)
-        geo_file = os.path.join('data', 'geometries', 'federal_states.csv')
+        geo_file = os.path.join(c.paths['geometry'],
+                                c.files['federal_states_polygon'])
         gcpp = add_spatial_name(gcpp, geo_file, 'federal_state', category,
                                 time=start, icol='iso')
 
         # Write new table to shape-file
         gcpp['region'] = gcpp['region'].apply(str)
-        gcpp.to_file(os.path.join(paths[category],
-                                  pattern['shp'].format(cat=category)))
+        gcpp.to_file(os.path.join(c.paths[category],
+                                  c.pattern['shp'].format(cat=category)))
 
         # Write new table to csv file
         cpp['region'] = gcpp['region']
         cpp['federal_state'] = gcpp['federal_state']
-        cpp.to_csv(os.path.join(paths[category],
-                                pattern['prepared'].format(cat=category)))
+        cpp.to_csv(os.path.join(c.paths[category],
+                                c.pattern['prepared'].format(cat=category)))
 
-    group_conventional_power_plants(paths, pattern)
+    group_conventional_power_plants(c)
 
 
-def prepare_re_power_plants(paths, pattern, overwrite=False):
+def prepare_re_power_plants(c, overwrite=False):
     category = 'renewable'
-    if (os.path.isfile(os.path.join(paths[category],
-                                    pattern['prepared'].format(cat=category)))
+    if (os.path.isfile(os.path.join(c.paths[category],
+                                    c.pattern['prepared'].format(cat=category)))
             and not overwrite):
         logging.warning("File exists. Skip spatial preparation of " +
                         "{0} power plants".format(category))
         logging.warning("Will not overwrite existing file: {0}".format(
-            pattern['prepared'].format(cat=category)))
+            c.pattern['prepared'].format(cat=category)))
     else:
         remove_list = ['tso', 'dso', 'dso_id', 'eeg_id', 'bnetza_id',
                        'federal_state', 'postcode', 'municipality_code',
@@ -627,13 +627,12 @@ def prepare_re_power_plants(paths, pattern, overwrite=False):
         start = datetime.datetime.now()
 
         # Read original file or download it from original source
-        ee = read_original_file(category, paths, pattern, overwrite)
+        ee = read_original_file(category, c, overwrite)
         logging.info("File read: {0}".format(
             str(datetime.datetime.now() - start)))
 
         # Trying to supplement missing coordinates
-        ee = complete_geometries(ee, paths, 'electrical_capacity', category,
-                                 start)
+        ee = complete_geometries(c, ee, 'electrical_capacity', category, start)
 
         # Remove unnecessary column and fix column types.
         ee = clean_df(ee, rmv_ls=remove_list)
@@ -663,29 +662,28 @@ def prepare_re_power_plants(paths, pattern, overwrite=False):
         ee = remove_cols(ee, ['geom', 'lat', 'lon'])
         ee['region'] = gee['region']
         ee['coastdat_id'] = gee['coastdat_id']
-        ee.to_csv(os.path.join(paths[category],
-                               pattern['prepared'].format(cat=category)))
+        ee.to_csv(os.path.join(c.paths[category],
+                               c.pattern['prepared'].format(cat=category)))
 
     # Grouping the plants by type, year, region (and coastdat for Wind/Solar)
     renewables_grouped_file = os.path.join(
-        paths[category], pattern['grouped'].format(cat='renewable'))
+        c.paths[category], c.pattern['grouped'].format(cat='renewable'))
     if not os.path.isfile(renewables_grouped_file) or overwrite:
-        group_re_powerplants(paths, pattern, overwrite=overwrite)
+        group_re_powerplants(c, overwrite=overwrite)
     else:
         logging.warning("File exists. Skip grouping of " +
                         "{0} power plants".format(category))
         logging.warning("Will not overwrite existing file: {0}".format(
-            pattern['grouped'].format(cat=category)))
+            c.pattern['grouped'].format(cat=category)))
 
 
 class PowerPlantsDE21:
 
     def __init__(self):
-
-        self.cpp = pd.read_csv(GROUPED.format('conventional'),
-                               index_col=[0, 1, 2])
-        self.repp = pd.read_csv(GROUPED.format('renewable'),
-                                index_col=[0, 1, 2, 3])
+        self.cpp = None  # pd.read_csv(GROUPED.format('conventional'),
+        #                              index_col=[0, 1, 2])
+        self.repp = None  # pd.read_csv(GROUPED.format('renewable'),
+        #                               index_col=[0, 1, 2, 3])
 
     def fuels(self):
         return list(self.cpp.index.get_level_values(0).unique())
@@ -698,21 +696,22 @@ class PowerPlantsDE21:
 
 
 if __name__ == "__main__":
-    prepare_conventional_power_plants('conventional', overwrite=False)
-    prepare_re_power_plants('renewable', overwrite=False)
-    logging_source = os.path.join(os.path.expanduser('~'), '.oemof',
-                                  'log_files', 'oemof.log')
-
-    logging_target = os.path.join('data', 'powerplants', 'messages',
-                                  '{0}_prepare_open_data.log')
-    dtstring = datetime.datetime.now().strftime('%Y%m%d_%H%M')
-    shutil.copyfile(logging_source, logging_target.format(dtstring))
-    pp = PowerPlantsDE21()
-    print(pp.cpp_region_fuel(2016))
-    print(pp.repp_region_fuel(2016))
-    copp = pd.read_csv('/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/powerplants/prepared/conventional_power_plants_DE_prepared.csv')
-    copp.loc[copp.fuel == 'Biomass and biogas'].to_csv('cpp_bio.csv')
-    renpp = pd.read_csv('/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/powerplants/prepared/renewable_power_plants_DE_prepared.csv')
-    renpp.loc[
-        (renpp.energy_source_level_2 == 'Bioenergy') &
-        (renpp.electrical_capacity > 1)].to_csv('repp_bio.csv')
+    pass
+    # prepare_conventional_power_plants('conventional', overwrite=False)
+    # prepare_re_power_plants('renewable', overwrite=False)
+    # logging_source = os.path.join(os.path.expanduser('~'), '.oemof',
+    #                               'log_files', 'oemof.log')
+    #
+    # logging_target = os.path.join('data', 'powerplants', 'messages',
+    #                               '{0}_prepare_open_data.log')
+    # dtstring = datetime.datetime.now().strftime('%Y%m%d_%H%M')
+    # shutil.copyfile(logging_source, logging_target.format(dtstring))
+    # pp = PowerPlantsDE21()
+    # print(pp.cpp_region_fuel(2016))
+    # print(pp.repp_region_fuel(2016))
+    # copp = pd.read_csv('/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/powerplants/prepared/conventional_power_plants_DE_prepared.csv')
+    # copp.loc[copp.fuel == 'Biomass and biogas'].to_csv('cpp_bio.csv')
+    # renpp = pd.read_csv('/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/powerplants/prepared/renewable_power_plants_DE_prepared.csv')
+    # renpp.loc[
+    #     (renpp.energy_source_level_2 == 'Bioenergy') &
+    #     (renpp.electrical_capacity > 1)].to_csv('repp_bio.csv')

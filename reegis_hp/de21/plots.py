@@ -245,15 +245,16 @@ def heatmap_pv_orientation():
 
 
 def plot_module_comparison():
-    paths, pattern, files, general = config.get_configuration()
-    df = pd.read_csv(os.path.join(paths['analyses'],
-                                  'module_feedin_dc.csv'),
-                     header=None, index_col=0, squeeze=True)
+    c = config.get_configuration()
+    df = pd.read_csv(os.path.join(c.paths['analyses'],
+                                  'module_feedin.csv'),
+                     index_col=0)['dc_norm']
+    print(df)
     print(df.sort_values())
     # df = df[df > 943]
     df.sort_values().plot(linewidth=5, ylim=(0, df.max() + 20))
-    print(df.mean())
-    print(df.std())
+    print('avg:', df.mean())
+    print('std div:', df.std())
     plt.plot((0, len(df)), (df.mean(), df.mean()), 'k-')
     plt.plot((0, len(df)), (df.mean() - df.std(), df.mean() - df.std()), 'k-.')
     plt.plot((0, len(df)), (df.mean() + df.std(), df.mean() + df.std()), 'k-.')
@@ -265,8 +266,8 @@ def plot_module_comparison():
 
 
 def plot_module_comparison_ts():
-    paths, pattern, files, general = config.get_configuration()
-    df = pd.read_csv(os.path.join(paths['analyses'],
+    c = config.get_configuration()
+    df = pd.read_csv(os.path.join(c.paths['analyses'],
                                   'module_feedin_ac_ts.csv'),
                      index_col='Unnamed: 0')
 
@@ -275,13 +276,15 @@ def plot_module_comparison_ts():
 
 
 def plot_inverter_comparison():
-    paths, pattern, files, general = config.get_configuration()
-    df = pd.read_csv(os.path.join(paths['analyses'],
-                                  'sapm_inverters_feedin_full.csv'),
-                     index_col='Unnamed: 0')
-    df = df['ac']
-    print(df.sort_values())
+    c = config.get_configuration()
+    df = pd.read_csv(os.path.join(c.paths['analyses'],
+                                  'sapm_inverters_feedin_full2.csv'),
+                     index_col=[0])['ac']
+    pv_module = df.index.name
+
+    print(df.fillna(0).sort_values())
     len1 = len(df)
+    print(df)
     df = df[df > 1]
     print(len(df) - len1)
     df.sort_values().plot(linewidth=5, ylim=(0, df.max() + 20))
@@ -292,6 +295,7 @@ def plot_inverter_comparison():
     plt.plot((0, len(df)), (df.mean() - df.std(), df.mean() - df.std()), 'k-.')
     plt.plot((0, len(df)), (df.mean() + df.std(), df.mean() + df.std()), 'k-.')
     plt.xlabel('Number of inverters')
+    plt.title("AC-output of {0} with different inverters".format(pv_module))
     plt.plot((651, 651), (0,  df.max() + 20), 'k-')
     plt.plot((1337, 1337), (0,  df.max() + 20), 'r-')
     # plt.plot((496, 496), (0,  df.max() + 20), 'r-')
@@ -373,8 +377,10 @@ def plot_full_load_hours(year):
 
 if __name__ == "__main__":
     # heatmap_pv_orientation()
-    plot_full_load_hours(0)
+    # plot_full_load_hours(0)
     # plot_module_comparison()
+    de21_region()
+    # plot_inverter_comparison()
     exit(0)
     de21_grid()
     de21_region()
