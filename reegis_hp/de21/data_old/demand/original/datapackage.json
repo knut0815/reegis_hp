@@ -1,0 +1,1988 @@
+{
+    "last_changes": " update datasets up to 2016-12-31 and reformat output files",
+    "title": "Time series",
+    "geographical-scope": "35 European countries",
+    "resources": [
+        {
+            "path": "time_series.xlsx",
+            "mediatype": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "format": "xlsx"
+        },
+        {
+            "dialect": {
+                "csvddfVersion": 1.0,
+                "lineTerminator": "\n",
+                "header": true,
+                "delimiter": ","
+            },
+            "alternative_formats": [
+                {
+                    "path": "time_series_60min_singleindex.csv",
+                    "stacking": "Singleindex",
+                    "format": "csv"
+                },
+                {
+                    "path": "time_series.xlsx",
+                    "stacking": "Multiindex",
+                    "format": "xlsx"
+                },
+                {
+                    "path": "time_series_60min_multiindex.csv",
+                    "stacking": "Multiindex",
+                    "format": "csv"
+                },
+                {
+                    "path": "time_series_60min_stacked.csv",
+                    "stacking": "Stacked",
+                    "format": "csv"
+                }
+            ],
+            "schema": "60min",
+            "format": "csv",
+            "path": "time_series_60min_singleindex.csv",
+            "mediatype": "text/csv",
+            "encoding": "UTF8"
+        },
+        {
+            "dialect": {
+                "csvddfVersion": 1.0,
+                "lineTerminator": "\n",
+                "header": true,
+                "delimiter": ","
+            },
+            "alternative_formats": [
+                {
+                    "path": "time_series_15min_singleindex.csv",
+                    "stacking": "Singleindex",
+                    "format": "csv"
+                },
+                {
+                    "path": "time_series.xlsx",
+                    "stacking": "Multiindex",
+                    "format": "xlsx"
+                },
+                {
+                    "path": "time_series_15min_multiindex.csv",
+                    "stacking": "Multiindex",
+                    "format": "csv"
+                },
+                {
+                    "path": "time_series_15min_stacked.csv",
+                    "stacking": "Stacked",
+                    "format": "csv"
+                }
+            ],
+            "schema": "15min",
+            "format": "csv",
+            "path": "time_series_15min_singleindex.csv",
+            "mediatype": "text/csv",
+            "encoding": "UTF8"
+        }
+    ],
+    "version": "2017-03-06",
+    "keywords": [
+        "Open Power System Data",
+        "time series",
+        "power systems",
+        "in-feed",
+        "renewables",
+        "wind",
+        "solar",
+        "power consumption",
+        "power market"
+    ],
+    "sources": [
+        {
+            "name": "CEPS"
+        },
+        {
+            "name": "Svenska Kraftnaet"
+        },
+        {
+            "name": "own calculation"
+        },
+        {
+            "name": "BNetzA and Netztransparenz.de"
+        },
+        {
+            "name": "TenneT"
+        },
+        {
+            "name": "PSE"
+        },
+        {
+            "name": "Energinet.dk"
+        },
+        {
+            "name": "TransnetBW"
+        },
+        {
+            "name": "Amprion"
+        },
+        {
+            "name": "ENTSO-E Data Portal"
+        },
+        {
+            "name": "50Hertz"
+        }
+    ],
+    "long_description": "This data package contains different kinds of timeseries data relevant for power system modelling, namely electricity consumption (load) for 36 European countries as well as wind and solar power generation and capacities and prices for a growing subset of countries. The timeseries become available at different points in time depending on the sources. The data has been downloaded from the sources, resampled and merged in a large CSV file with hourly resolution. Additionally, the data available at a higher resolution (Some renewables in-feed, 15 minutes) is provided in a separate file. All data processing is conducted in python and pandas and has been documented in the Jupyter notebooks linked below.",
+    "name": "opsd_time_series",
+    "documentation": "https://github.com/Open-Power-System-Data/datapackage_timeseries/blob/2017-03-06/main.ipynb",
+    "contributors": [
+        {
+            "web": "http://neon-energie.de/en/team/",
+            "email": "muehlenpfordt@neon-energie.de",
+            "name": "Jonathan Muehlenpfordt"
+        }
+    ],
+    "description": "Load, wind and solar, prices in hourly resolution",
+    "schemas": {
+        "60min": {
+            "fields": [
+                {
+                    "name": "utc_timestamp",
+                    "description": "Start of timeperiod in Coordinated Universal Time",
+                    "opsd-contentfilter": true,
+                    "format": "fmt:%Y-%m-%dT%H%M%SZ",
+                    "type": "datetime"
+                },
+                {
+                    "description": "Start of timeperiod in Central European (Summer-) Time",
+                    "type": "datetime",
+                    "format": "fmt:%Y-%m-%dT%H%M%S%z",
+                    "name": "cet_cest_timestamp"
+                },
+                {
+                    "type": "string",
+                    "description": "marker to indicate which columns are missing data in source data and has been interpolated (e.g. DE_transnetbw_solar_generation;)",
+                    "name": "interpolated_values"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "AT",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Austria in MW",
+                    "name": "AT_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "BA",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Bosnia and Herzegovina in MW",
+                    "name": "BA_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "BE",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Belgium in MW",
+                    "name": "BE_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "BG",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Bulgaria in MW",
+                    "name": "BG_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "CH",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Switzerland in MW",
+                    "name": "CH_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "CS",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Serbia and Montenegro in MW",
+                    "name": "CS_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "CY",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Cyprus in MW",
+                    "name": "CY_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "CZ",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Czechia in MW",
+                    "name": "CZ_load_"
+                },
+                {
+                    "source": {
+                        "web": "http://www.ceps.cz/ENG/Data/Vsechna-data/Pages/odhad-vyroby-obnovitelnych-zdroju.aspx",
+                        "name": "CEPS"
+                    },
+                    "opsd-properties": {
+                        "Region": "CZ",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in Czechia in MW",
+                    "name": "CZ_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.ceps.cz/ENG/Data/Vsechna-data/Pages/odhad-vyroby-obnovitelnych-zdroju.aspx",
+                        "name": "CEPS"
+                    },
+                    "opsd-properties": {
+                        "Region": "CZ",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in Czechia in MW",
+                    "name": "CZ_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Germany in MW",
+                    "name": "DE_load_"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "price",
+                        "Attribute": "day_ahead"
+                    },
+                    "type": "number (float)",
+                    "description": "Day-ahead spot price for Germany",
+                    "name": "DE_price_day_ahead"
+                },
+                {
+                    "source": {
+                        "web": "http://data.open-power-system-data.org/renewable_power_plants/",
+                        "name": "BNetzA and Netztransparenz.de"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "solar",
+                        "Attribute": "capacity"
+                    },
+                    "type": "number (float)",
+                    "description": "Electrical capacity of solar in Germany in MW",
+                    "name": "DE_solar_capacity"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in Germany in MW",
+                    "name": "DE_solar_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "solar",
+                        "Attribute": "profile"
+                    },
+                    "type": "number (float)",
+                    "description": "Share of solar capacity producing in Germany",
+                    "name": "DE_solar_profile"
+                },
+                {
+                    "source": {
+                        "web": "http://data.open-power-system-data.org/renewable_power_plants",
+                        "name": "BNetzA and Netztransparenz.de"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind",
+                        "Attribute": "capacity"
+                    },
+                    "type": "number (float)",
+                    "description": "Electrical capacity of wind in Germany in MW",
+                    "name": "DE_wind_capacity"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in Germany in MW",
+                    "name": "DE_wind_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind",
+                        "Attribute": "profile"
+                    },
+                    "type": "number (float)",
+                    "description": "Share of wind capacity producing in Germany",
+                    "name": "DE_wind_profile"
+                },
+                {
+                    "source": {
+                        "web": "http://data.open-power-system-data.org/renewable_power_plants/",
+                        "name": "BNetzA and Netztransparenz.de"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_offshore",
+                        "Attribute": "capacity"
+                    },
+                    "type": "number (float)",
+                    "description": "Electrical capacity of wind_offshore in Germany in MW",
+                    "name": "DE_wind_offshore_capacity"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_offshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_offshore generation in Germany in MW",
+                    "name": "DE_wind_offshore_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_offshore",
+                        "Attribute": "profile"
+                    },
+                    "type": "number (float)",
+                    "description": "Share of wind_offshore capacity producing in Germany",
+                    "name": "DE_wind_offshore_profile"
+                },
+                {
+                    "source": {
+                        "web": "http://data.open-power-system-data.org/renewable_power_plants/",
+                        "name": "BNetzA and Netztransparenz.de"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_onshore",
+                        "Attribute": "capacity"
+                    },
+                    "type": "number (float)",
+                    "description": "Electrical capacity of wind_onshore in Germany in MW",
+                    "name": "DE_wind_onshore_capacity"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in Germany in MW",
+                    "name": "DE_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_onshore",
+                        "Attribute": "profile"
+                    },
+                    "type": "number (float)",
+                    "description": "Share of wind_onshore capacity producing in Germany",
+                    "name": "DE_wind_onshore_profile"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Photovoltaics/Archive-Photovoltaics",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "solar",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted solar generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_solar_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Photovoltaics/Archive-Photovoltaics",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind_offshore",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind_offshore generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_offshore_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind_offshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_offshore generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_offshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind_onshore",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind_onshore generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_onshore_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.amprion.net/en/photovoltaic-infeed",
+                        "name": "Amprion"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "solar",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted solar generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_solar_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.amprion.net/en/photovoltaic-infeed",
+                        "name": "Amprion"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.amprion.net/en/wind-feed-in",
+                        "name": "Amprion"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "wind",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_wind_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.amprion.net/en/wind-feed-in",
+                        "name": "Amprion"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_wind_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-photovoltaic-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "solar",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted solar generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_solar_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-photovoltaic-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-wind-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "wind",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_wind_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-wind-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-wind-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "wind_offshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_offshore generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_wind_offshore_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "https://www.transnetbw.com/en/transparency/market-data/key-figures",
+                        "name": "TransnetBW"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "solar",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted solar generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_solar_forecast"
+                },
+                {
+                    "source": {
+                        "web": "https://www.transnetbw.com/en/transparency/market-data/key-figures",
+                        "name": "TransnetBW"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "https://www.transnetbw.com/en/transparency/market-data/key-figures",
+                        "name": "TransnetBW"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "wind",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_wind_forecast"
+                },
+                {
+                    "source": {
+                        "web": "https://www.transnetbw.com/en/transparency/market-data/key-figures",
+                        "name": "TransnetBW"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_wind_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Denmark in MW",
+                    "name": "DK_load_"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK",
+                        "Variable": "wind_offshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_offshore generation in Denmark in MW",
+                    "name": "DK_wind_offshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in Denmark in MW",
+                    "name": "DK_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK_east",
+                        "Variable": "price",
+                        "Attribute": "day_ahead"
+                    },
+                    "type": "number (float)",
+                    "description": "Day-ahead spot price for DK_east balancing area",
+                    "name": "DK_east_price_day_ahead"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK_east",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DK_east balancing area in MW",
+                    "name": "DK_east_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK_east",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DK_east balancing area in MW",
+                    "name": "DK_east_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK_west",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in DK_west balancing area in MW",
+                    "name": "DK_west_load_"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK_west",
+                        "Variable": "price",
+                        "Attribute": "day_ahead"
+                    },
+                    "type": "number (float)",
+                    "description": "Day-ahead spot price for DK_west balancing area",
+                    "name": "DK_west_price_day_ahead"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK_west",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DK_west balancing area in MW",
+                    "name": "DK_west_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "DK_west",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DK_west balancing area in MW",
+                    "name": "DK_west_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "EE",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Estonia in MW",
+                    "name": "EE_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "ES",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Spain in MW",
+                    "name": "ES_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "FI",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Finland in MW",
+                    "name": "FI_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "FR",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in France in MW",
+                    "name": "FR_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "GB",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in United Kingdom in MW",
+                    "name": "GB_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "GR",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Greece in MW",
+                    "name": "GR_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "HR",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Croatia in MW",
+                    "name": "HR_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "HU",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Hungary in MW",
+                    "name": "HU_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "IE",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Ireland in MW",
+                    "name": "IE_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "IS",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Iceland in MW",
+                    "name": "IS_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "IT",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Italy in MW",
+                    "name": "IT_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "LT",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Lithuania in MW",
+                    "name": "LT_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "LU",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Luxembourg in MW",
+                    "name": "LU_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "LV",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Latvia in MW",
+                    "name": "LV_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "ME",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Montenegro in MW",
+                    "name": "ME_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "MK",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Macedonia, Republic of in MW",
+                    "name": "MK_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "NI",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Northern Ireland in MW",
+                    "name": "NI_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "NL",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Netherlands in MW",
+                    "name": "NL_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "NO",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Norway in MW",
+                    "name": "NO_load_"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "NO",
+                        "Variable": "price",
+                        "Attribute": "day_ahead"
+                    },
+                    "type": "number (float)",
+                    "description": "Day-ahead spot price for Norway",
+                    "name": "NO_price_day_ahead"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "PL",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Poland in MW",
+                    "name": "PL_load_"
+                },
+                {
+                    "source": {
+                        "web": "http://www.pse.pl/index.php?modul=21&id_rap=24",
+                        "name": "PSE"
+                    },
+                    "opsd-properties": {
+                        "Region": "PL",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in Poland in MW",
+                    "name": "PL_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "PT",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Portugal in MW",
+                    "name": "PT_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "RO",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Romania in MW",
+                    "name": "RO_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "RS",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Serbia in MW",
+                    "name": "RS_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "SE",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Sweden in MW",
+                    "name": "SE_load_"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "SE",
+                        "Variable": "price",
+                        "Attribute": "day_ahead"
+                    },
+                    "type": "number (float)",
+                    "description": "Day-ahead spot price for Sweden",
+                    "name": "SE_price_day_ahead"
+                },
+                {
+                    "source": {
+                        "web": "http://www.svk.se/aktorsportalen/elmarknad/statistik/",
+                        "name": "Svenska Kraftnaet"
+                    },
+                    "opsd-properties": {
+                        "Region": "SE",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in Sweden in MW",
+                    "name": "SE_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.svk.se/aktorsportalen/elmarknad/statistik/",
+                        "name": "Svenska Kraftnaet"
+                    },
+                    "opsd-properties": {
+                        "Region": "SE",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in Sweden in MW",
+                    "name": "SE_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "SE_3",
+                        "Variable": "price",
+                        "Attribute": "day_ahead"
+                    },
+                    "type": "number (float)",
+                    "description": "Day-ahead spot price for SE_3 balancing area",
+                    "name": "SE_3_price_day_ahead"
+                },
+                {
+                    "source": {
+                        "web": "http://www.energinet.dk/en/el/engrosmarked/udtraek-af-markedsdata/Sider/default.aspx",
+                        "name": "Energinet.dk"
+                    },
+                    "opsd-properties": {
+                        "Region": "SE_4",
+                        "Variable": "price",
+                        "Attribute": "day_ahead"
+                    },
+                    "type": "number (float)",
+                    "description": "Day-ahead spot price for SE_4 balancing area",
+                    "name": "SE_4_price_day_ahead"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "SI",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Slovenia in MW",
+                    "name": "SI_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "SK",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in Slovakia in MW",
+                    "name": "SK_load_"
+                },
+                {
+                    "source": {
+                        "web": "https://www.entsoe.eu/data/data-portal/consumption/Pages/default.aspx",
+                        "name": "ENTSO-E Data Portal"
+                    },
+                    "opsd-properties": {
+                        "Region": "UA_west",
+                        "Variable": "load",
+                        "Attribute": null
+                    },
+                    "type": "number (float)",
+                    "description": "Consumption in UA_west balancing area in MW",
+                    "name": "UA_west_load_"
+                }
+            ],
+            "primaryKey": "utc_timestamp",
+            "missingValue": ""
+        },
+        "15min": {
+            "fields": [
+                {
+                    "name": "utc_timestamp",
+                    "description": "Start of timeperiod in Coordinated Universal Time",
+                    "opsd-contentfilter": true,
+                    "format": "fmt:%Y-%m-%dT%H%M%SZ",
+                    "type": "datetime"
+                },
+                {
+                    "description": "Start of timeperiod in Central European (Summer-) Time",
+                    "type": "datetime",
+                    "format": "fmt:%Y-%m-%dT%H%M%S%z",
+                    "name": "cet_cest_timestamp"
+                },
+                {
+                    "type": "string",
+                    "description": "marker to indicate which columns are missing data in source data and has been interpolated (e.g. DE_transnetbw_solar_generation;)",
+                    "name": "interpolated_values"
+                },
+                {
+                    "source": {
+                        "web": "http://www.ceps.cz/ENG/Data/Vsechna-data/Pages/odhad-vyroby-obnovitelnych-zdroju.aspx",
+                        "name": "CEPS"
+                    },
+                    "opsd-properties": {
+                        "Region": "CZ",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in Czechia in MW",
+                    "name": "CZ_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.ceps.cz/ENG/Data/Vsechna-data/Pages/odhad-vyroby-obnovitelnych-zdroju.aspx",
+                        "name": "CEPS"
+                    },
+                    "opsd-properties": {
+                        "Region": "CZ",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in Czechia in MW",
+                    "name": "CZ_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://data.open-power-system-data.org/renewable_power_plants/",
+                        "name": "BNetzA and Netztransparenz.de"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "solar",
+                        "Attribute": "capacity"
+                    },
+                    "type": "number (float)",
+                    "description": "Electrical capacity of solar in Germany in MW",
+                    "name": "DE_solar_capacity"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in Germany in MW",
+                    "name": "DE_solar_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "solar",
+                        "Attribute": "profile"
+                    },
+                    "type": "number (float)",
+                    "description": "Share of solar capacity producing in Germany",
+                    "name": "DE_solar_profile"
+                },
+                {
+                    "source": {
+                        "web": "http://data.open-power-system-data.org/renewable_power_plants",
+                        "name": "BNetzA and Netztransparenz.de"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind",
+                        "Attribute": "capacity"
+                    },
+                    "type": "number (float)",
+                    "description": "Electrical capacity of wind in Germany in MW",
+                    "name": "DE_wind_capacity"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in Germany in MW",
+                    "name": "DE_wind_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind",
+                        "Attribute": "profile"
+                    },
+                    "type": "number (float)",
+                    "description": "Share of wind capacity producing in Germany",
+                    "name": "DE_wind_profile"
+                },
+                {
+                    "source": {
+                        "web": "http://data.open-power-system-data.org/renewable_power_plants/",
+                        "name": "BNetzA and Netztransparenz.de"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_offshore",
+                        "Attribute": "capacity"
+                    },
+                    "type": "number (float)",
+                    "description": "Electrical capacity of wind_offshore in Germany in MW",
+                    "name": "DE_wind_offshore_capacity"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_offshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_offshore generation in Germany in MW",
+                    "name": "DE_wind_offshore_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_offshore",
+                        "Attribute": "profile"
+                    },
+                    "type": "number (float)",
+                    "description": "Share of wind_offshore capacity producing in Germany",
+                    "name": "DE_wind_offshore_profile"
+                },
+                {
+                    "source": {
+                        "web": "http://data.open-power-system-data.org/renewable_power_plants/",
+                        "name": "BNetzA and Netztransparenz.de"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_onshore",
+                        "Attribute": "capacity"
+                    },
+                    "type": "number (float)",
+                    "description": "Electrical capacity of wind_onshore in Germany in MW",
+                    "name": "DE_wind_onshore_capacity"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in Germany in MW",
+                    "name": "DE_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE",
+                        "Variable": "wind_onshore",
+                        "Attribute": "profile"
+                    },
+                    "type": "number (float)",
+                    "description": "Share of wind_onshore capacity producing in Germany",
+                    "name": "DE_wind_onshore_profile"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Photovoltaics/Archive-Photovoltaics",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "solar",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted solar generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_solar_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Photovoltaics/Archive-Photovoltaics",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind_offshore",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind_offshore generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_offshore_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind_offshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_offshore generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_offshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind_onshore",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind_onshore generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_onshore_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.50hertz.com/en/Grid-Data/Wind-power/Archive-Wind-power",
+                        "name": "50Hertz"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_50hertz",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in DE_50hertz balancing area in MW",
+                    "name": "DE_50hertz_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.amprion.net/en/photovoltaic-infeed",
+                        "name": "Amprion"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "solar",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted solar generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_solar_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.amprion.net/en/photovoltaic-infeed",
+                        "name": "Amprion"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.amprion.net/en/wind-feed-in",
+                        "name": "Amprion"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "wind",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_wind_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.amprion.net/en/wind-feed-in",
+                        "name": "Amprion"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_wind_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_amprion",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in DE_amprion balancing area in MW",
+                    "name": "DE_amprion_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-photovoltaic-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "solar",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted solar generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_solar_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-photovoltaic-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-wind-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "wind",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_wind_forecast"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-wind-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_wind_generation"
+                },
+                {
+                    "source": {
+                        "web": "http://www.tennettso.de/site/en/Transparency/publications/network-figures/actual-and-forecast-wind-energy-feed-in",
+                        "name": "TenneT"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "wind_offshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_offshore generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_wind_offshore_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_tennet",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in DE_tennet balancing area in MW",
+                    "name": "DE_tennet_wind_onshore_generation"
+                },
+                {
+                    "source": {
+                        "web": "https://www.transnetbw.com/en/transparency/market-data/key-figures",
+                        "name": "TransnetBW"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "solar",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted solar generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_solar_forecast"
+                },
+                {
+                    "source": {
+                        "web": "https://www.transnetbw.com/en/transparency/market-data/key-figures",
+                        "name": "TransnetBW"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "solar",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual solar generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_solar_generation"
+                },
+                {
+                    "source": {
+                        "web": "https://www.transnetbw.com/en/transparency/market-data/key-figures",
+                        "name": "TransnetBW"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "wind",
+                        "Attribute": "forecast"
+                    },
+                    "type": "number (float)",
+                    "description": "Forecasted wind generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_wind_forecast"
+                },
+                {
+                    "source": {
+                        "web": "https://www.transnetbw.com/en/transparency/market-data/key-figures",
+                        "name": "TransnetBW"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "wind",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_wind_generation"
+                },
+                {
+                    "source": {
+                        "name": "own calculation"
+                    },
+                    "opsd-properties": {
+                        "Region": "DE_transnetbw",
+                        "Variable": "wind_onshore",
+                        "Attribute": "generation"
+                    },
+                    "type": "number (float)",
+                    "description": "Actual wind_onshore generation in DE_transnetbw balancing area in MW",
+                    "name": "DE_transnetbw_wind_onshore_generation"
+                }
+            ],
+            "primaryKey": "utc_timestamp",
+            "missingValue": ""
+        }
+    }
+}
