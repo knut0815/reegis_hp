@@ -31,9 +31,7 @@ import requests
 import logging
 import warnings
 import pyproj
-
-
-from oemof.tools import logger
+import oemof.tools.logger as logger
 
 
 logger.define_logging()
@@ -101,13 +99,13 @@ def convert_utm_code(df):
     return df
 
 
-def guess_coordinates_by_postcode(df):
+def guess_coordinates_by_postcode(c, df):
     # *** Use postcode ***
     if 'postcode' in df:
         df_pstc = df.loc[(df.lon.isnull() & df.postcode.notnull())]
         if len(df_pstc) > 0:
-            pstc = pd.read_csv(os.path.join('data', 'geometries',
-                                            'postcode.csv'),
+            pstc = pd.read_csv(os.path.join(c.paths['geometry'],
+                                            c.files['postcode']),
                                index_col='zip_code')
         for idx, val in df_pstc.iterrows():
             try:
@@ -154,8 +152,6 @@ def guess_coordinates_by_spatial_names(c, df, fs_column, cap_col,
             stat.loc[state, 'undefined_capacity'] = capacity
 
         # A simple table with the centroid of each federal state.
-        print(os.path.join(c.paths['geometry'],
-                           c.files['federal_states_centroid']))
         f2c = pd.read_csv(os.path.join(c.paths['geometry'],
                                        c.files['federal_states_centroid']),
                           index_col='name')
@@ -171,7 +167,7 @@ def guess_coordinates_by_spatial_names(c, df, fs_column, cap_col,
     return df
 
 
-def log_undefined_capcity(df, cap_col, total_cap, msg):
+def log_undefined_capacity(df, cap_col, total_cap, msg):
     logging.debug(msg)
     undefined_cap = df.loc[df.lon.isnull()][cap_col].sum()
     logging.debug("{0} percent of capacity is undefined.".format(
@@ -195,22 +191,22 @@ def complete_geometries(c, df, cap_col, category, time=None,
 
     # Calculate total capacity
     total_capacity = df[cap_col].sum()
-    statistics.loc['original', 'undefined_capacity'] = log_undefined_capcity(
+    statistics.loc['original', 'undefined_capacity'] = log_undefined_capacity(
         df, cap_col, total_capacity,
         "IDs without coordinates found. Trying to fill the gaps.")
 
     df = convert_utm_code(df)
-    statistics.loc['utm', 'undefined_capacity'] = log_undefined_capcity(
+    statistics.loc['utm', 'undefined_capacity'] = log_undefined_capacity(
         df, cap_col, total_capacity,
         "Reduced undefined plants by utm conversion.")
 
-    df = guess_coordinates_by_postcode(df)
-    statistics.loc['postcode', 'undefined_capacity'] = log_undefined_capcity(
+    df = guess_coordinates_by_postcode(c, df)
+    statistics.loc['postcode', 'undefined_capacity'] = log_undefined_capacity(
         df, cap_col, total_capacity, "Reduced undefined plants by postcode.")
 
     df = guess_coordinates_by_spatial_names(c, df, fs_column,
                                             cap_col, total_capacity, statistics)
-    statistics.loc['name', 'undefined_capacity'] = log_undefined_capcity(
+    statistics.loc['name', 'undefined_capacity'] = log_undefined_capacity(
         df, cap_col, total_capacity,
         "Reduced undefined plants by federal_state centroid.")
 
@@ -655,8 +651,9 @@ def prepare_re_power_plants(c, overwrite=False):
         gee['coastdat_id'] = gee['coastdat_id'].apply(int)
 
         # Write new table to shape-file
-        gee.to_file(os.path.join('data', 'powerplants', 'prepared',
-                                 '{0}_powerplants.shp'.format(category)))
+        gee.to_file(
+            os.path.join(c.paths['renewables'],
+                         c.pattern['shp_file_pattern'].format(cat=category)))
 
         # Write new table to csv file
         ee = remove_cols(ee, ['geom', 'lat', 'lon'])
@@ -696,7 +693,10 @@ class PowerPlantsDE21:
 
 
 if __name__ == "__main__":
-    pass
+    import configuration as config
+    cfg = config.get_configuration()
+    prepare_re_power_plants(cfg, overwrite=False)
+    exit(0)
     # prepare_conventional_power_plants('conventional', overwrite=False)
     # prepare_re_power_plants('renewable', overwrite=False)
     # logging_source = os.path.join(os.path.expanduser('~'), '.oemof',

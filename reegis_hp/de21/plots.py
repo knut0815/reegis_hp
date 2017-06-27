@@ -9,7 +9,7 @@ import configuration as config
 
 
 def add_grid_labels(data, plotter, label=None,
-                    coord_file='data/geometries/coord_lines.csv'):
+                    coord_file=None):
     p = pd.read_csv(coord_file, index_col='name')
 
     data['point'] = p.geom
@@ -41,13 +41,12 @@ def de21_region():
     """
     Plot of the de21 regions (offshore=blue, onshore=green).
     """
+    c = config.get_configuration()
     my_df = pd.read_csv(
-        os.path.join(os.path.dirname(__file__), 'data', 'geometries',
-                     'polygons_de21.csv'),
-        index_col='gid')
+        os.path.join(c.paths['geometry'], c.files['region_polygons']),
+        index_col='gid').sort_index()
 
-    label_coord = os.path.join(os.path.dirname(__file__),
-                               'data', 'geometries', 'coord_region.csv')
+    label_coord = os.path.join(c.paths['geometry'], c.files['region_labels'])
 
     offshore = geoplot.postgis2shapely(my_df.iloc[18:21].geom)
     onshore = geoplot.postgis2shapely(my_df.iloc[0:18].geom)
@@ -64,29 +63,34 @@ def de21_region():
 
 
 def de21_grid():
+    c = config.get_configuration()
+
     plt.figure(figsize=(7, 8))
     plt.rc('legend', **{'fontsize': 16})
     plt.rcParams.update({'font.size': 16})
     plt.style.use('grayscale')
 
-    data = pd.read_csv(os.path.join('data', 'grid', 'de21_transmission.csv'),
+    data = pd.read_csv(os.path.join(c.paths['reegis'],
+                                    c.files['data_electricity_grid']),
                        index_col='Unnamed: 0')
 
-    geo = pd.read_csv('data/geometries/lines_de21.csv', index_col='name')
+    geo = pd.read_csv(os.path.join(c.paths['geometry'],
+                                   c.files['powerlines_lines']),
+                      index_col='name')
 
     lines = pd.DataFrame(pd.concat([data, geo], axis=1, join='inner'))
-    print(lines)
 
-    background = pd.read_csv('data/geometries/polygons_de21_simple.csv',
-                             index_col='gid')
+    background = pd.read_csv(os.path.join(c.paths['geometry'],
+                                          c.files['region_polygons']),
+                             index_col='gid').sort_index()
 
     onshore = geoplot.postgis2shapely(
-        background[background['Unnamed: 0'] > 2].geom)
+        background.iloc[0:18].geom)
     plotter_poly = geoplot.GeoPlotter(onshore, (3, 16, 47, 56))
     plotter_poly.plot(facecolor='#d5ddc2', edgecolor='#7b987b')
 
     onshore = geoplot.postgis2shapely(
-        background[background['Unnamed: 0'] < 3].geom)
+        background.iloc[18:21].geom)
     plotter_poly = geoplot.GeoPlotter(onshore, (3, 16, 47, 56))
     plotter_poly.plot(facecolor='#ccd4dd', edgecolor='#98a7b5')
 
@@ -97,7 +101,8 @@ def de21_grid():
                                                            (1, '#3a3a48')])
     plotter_lines.data = lines.capacity
     plotter_lines.plot(edgecolor='data', linewidth=2, cmap=my_cmap)
-    add_grid_labels(lines, plotter_lines, 'capacity')
+    filename = os.path.join(c.paths['geometry'], c.files['powerlines_labels'])
+    add_grid_labels(lines, plotter_lines, 'capacity', coord_file=filename)
     plt.tight_layout()
     plt.box(on=None)
     plt.show()
@@ -218,9 +223,9 @@ def coastdat_plot(data, data_col=None, lmin=0, lmax=1, n=5, digits=50,
 def heatmap_pv_orientation():
     # import seaborn as sns
     from mpl_toolkits.axes_grid1 import make_axes_locatable
-    paths, pattern, files, general = config.get_configuration()
-    df = pd.read_csv(os.path.join(paths['analyses'],
-                                  'orientation_feedin_ac.csv'),
+    c = config.get_configuration()
+    df = pd.read_csv(os.path.join(c.paths['analyses'],
+                                  'sun.csv'),
                      index_col='Unnamed: 0')
     df = df.transpose()
     df.index = df.index.map(int)
@@ -376,18 +381,16 @@ def plot_full_load_hours(year):
 
 
 if __name__ == "__main__":
-    # heatmap_pv_orientation()
+    heatmap_pv_orientation()
     # plot_full_load_hours(0)
     # plot_module_comparison()
-    de21_region()
+    # de21_grid()
+    # de21_region()
     # plot_inverter_comparison()
-    exit(0)
-    de21_grid()
-    de21_region()
-    plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_simple.csv'),
-                idx_col='gid',
-                # coord_file=os.path.join('data_basic', 'centroid_region.csv')
-                )
+    # plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_simple.csv'),
+    #             idx_col='gid',
+    #             # coord_file=os.path.join('data_basic', 'centroid_region.csv')
+    #             )
     # plot_geocsv(os.path.join('geometries', 'federal_states.csv'),
     #             idx_col='iso',
     #             coord_file='data_basic/label_federal_state.csv')

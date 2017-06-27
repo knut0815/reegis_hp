@@ -80,7 +80,6 @@ def get_configuration():
     c.paths['weather'] = extend_path(
         c.paths[cfg.get('weather', 'path')], cfg.get('weather', 'dir'))
     c.files['grid_geometry'] = cfg.get('weather', 'grid_polygons')
-    c.files['grid_centroid'] = cfg.get('weather', 'grid_centroid')
     c.files['region_geometry'] = cfg.get('weather', 'clip_geometry')
     c.pattern['weather'] = cfg.get('weather', 'file_pattern')
     c.files['average_wind_speed'] = cfg.get('weather', 'avg_wind_speed_file')
@@ -89,10 +88,19 @@ def get_configuration():
     c.paths['geometry'] = extend_path(
         c.paths[cfg.get('geometry', 'path')], cfg.get('geometry', 'dir'))
     c.files['federal_states_centroid'] = cfg.get('geometry',
-                                                 'federal_states_centroid')
+                                                 'federalstates_centroid')
     c.files['federal_states_polygon'] = cfg.get('geometry',
-                                                'federal_states_polygon')
-    c.files['polygons_de21'] = cfg.get('geometry', 'polygons_de21')
+                                                'federalstates_polygon')
+    c.files['region_polygons'] = cfg.get('geometry',
+                                         'region_polygons')
+    c.files['region_polygons_simple'] = cfg.get('geometry',
+                                                'region_polygons_simple')
+    c.files['region_labels'] = cfg.get('geometry', 'region_labels')
+    c.files['powerlines_lines'] = cfg.get('geometry', 'powerlines_lines')
+    c.files['powerlines_labels'] = cfg.get('geometry', 'powerlines_labels')
+    c.files['coastdatgrid_centroids'] = cfg.get('geometry',
+                                                'coastdatgrid_centroids')
+    c.files['postcode'] = cfg.get('geometry', 'postcode_polygons')
 
     # ********* power plants *************************************************
     c.paths['powerplants'] = extend_path(
@@ -129,6 +137,8 @@ def get_configuration():
         c.paths[cfg.get('reegis', 'path')],
         cfg.get('reegis', 'dir'))
     c.files['demand_share'] = cfg.get('reegis', 'demand_share')
+    c.files['data_electricity_grid'] = cfg.get('reegis',
+                                               'data_electricity_grid')
 
     # ********* demand ********************************************************
     c.paths['demand'] = extend_path(
@@ -145,12 +155,23 @@ def get_configuration():
     c.general['solar_set'] = cfg.get('solar', 'solar_set')
 
     # ********* analyses ******************************************************
-    c.paths['analyses'] = extend_path(
-        c.paths[cfg.get('analyses', 'path')],
-        cfg.get('analyses', 'dir'))
+    c.paths['analysis'] = extend_path(
+        c.paths[cfg.get('analysis', 'path')],
+        cfg.get('analysis', 'dir'))
+
+    # ********* external ******************************************************
+    c.paths['external'] = extend_path(
+        c.paths[cfg.get('external', 'path')],
+        cfg.get('external', 'dir'))
 
     # ********* plots *********************************************************
     c.paths['plots'] = extend_path(
         c.paths[cfg.get('plots', 'path')],
         cfg.get('plots', 'dir'))
+
+    # ********* scenario_data *************************************************
+    c.paths['scenario_data'] = extend_path(
+        c.paths[cfg.get('scenario_data', 'path')],
+        cfg.get('scenario_data', 'dir'))
+
     return c
