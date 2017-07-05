@@ -273,13 +273,14 @@ def create_geo_df(df, time=None):
     """Convert pandas.DataFrame to geopandas.geoDataFrame"""
     if time is None:
         time = datetime.datetime.now()
-    df['geom'] = df.apply(lat_lon2point, axis=1)
+    if 'geom' not in df:
+        df['geom'] = df.apply(lat_lon2point, axis=1)
     logging.info("Geom: {0}".format(str(datetime.datetime.now() - time)))
 
     return gpd.GeoDataFrame(df, crs='epsg:4326', geometry='geom')
 
 
-def add_spatial_name(gdf, path_spatial_file, name, category, icol='gid',
+def add_spatial_name(c, gdf, path_spatial_file, name, category, icol='gid',
                      time=None, ignore_invalid=False):
     """Add name of containing region to new column for all points."""
     logging.info("Add spatial name for column: {0}".format(name))
@@ -296,7 +297,7 @@ def add_spatial_name(gdf, path_spatial_file, name, category, icol='gid',
     gdf_invalid = gdf.loc[~gdf.is_valid].copy()
 
     if len(gdf_invalid) > 0 and not ignore_invalid:
-        path = os.path.join('data', 'powerplants', 'messages',
+        path = os.path.join(c.paths['messages'],
                             '{0}_{1}_invalid.csv'.format(category, name))
         gdf_invalid.to_csv(path)
         logging.warning("Power plants with invalid geometries present.")
@@ -372,6 +373,12 @@ def group_conventional_power_plants(c, overwrite=False):
     cpp.fuel.fillna('unknown', inplace=True)
     cpp.shutdown.fillna(2050, inplace=True)
 
+    # remove storages and foreign countries from table
+    cpp = cpp[cpp.technology != 'Pumped storage']
+    cpp = cpp[cpp.region != 'AT']
+    cpp = cpp[cpp.region != 'LU']
+    cpp = cpp[cpp.region != 'CH']
+
     # Create an empty MultiIndex DataFrame to take the values.
     my_idx = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []],
                            names=['fuel', 'year', 'region'])
@@ -393,7 +400,7 @@ def group_conventional_power_plants(c, overwrite=False):
         logging.warning(
             "File exists. Skip grouping of conventional power plants.")
         logging.warning("Will not overwrite existing file: {0}".format(
-            c.pattern['prepared'].format(cat='conventional')))
+            c.pattern['grouped'].format(cat='conventional')))
         logging.warning("Set overwrite to True to change this behaviour.")
     else:
         type_fuel = cpp_g.index.get_level_values(0).unique()
@@ -451,6 +458,7 @@ def group_re_powerplants(c, overwrite=False, keep_files=False):
     # Get all possible types
     re_source = repp.energy_source_level_2.unique()
     repp.energy_source_level_2.fillna('nan', inplace=True)
+    repp = repp.loc[repp.comment.isnull()]
 
     # Create an empty MultiIndex DataFrame to take the values.
     my_idx = pd.MultiIndex(levels=[[], [], [], []], labels=[[], [], [], []],
@@ -468,8 +476,8 @@ def group_re_powerplants(c, overwrite=False, keep_files=False):
          'decommissioning_date']).sum().electrical_capacity
 
     # Sort index for faster indexing.
-    repp_gc = repp_gc.sortlevel()
-    repp_g = repp_g.sortlevel()
+    repp_gc = repp_gc.sort_index()
+    repp_g = repp_g.sort_index()
 
     # Create lists with existing and non-existing files.
     if overwrite:
@@ -501,10 +509,10 @@ def group_re_powerplants(c, overwrite=False, keep_files=False):
                     0).unique()
             else:
                 coastdat_ids = list(('0000000',))
-            for c in coastdat_ids:
-                logging.debug('{0}: {1} - {2}'.format(t, r, c))
+            for ci in coastdat_ids:
+                logging.debug('{0}: {1} - {2}'.format(t, r, ci))
                 if t in ['Wind', 'Solar']:
-                    sub = repp_gc.loc[(t, r, c)]
+                    sub = repp_gc.loc[(t, r, ci)]
                 else:
                     sub = repp_g.loc[(t, r,)]
                 for y in years:
@@ -519,7 +527,7 @@ def group_re_powerplants(c, overwrite=False, keep_files=False):
                                                                      1))
                         ].sum()
                     if next_y == start:
-                        df.loc[(t, y, r, c)] = next_y
+                        df.loc[(t, y, r, ci)] = next_y
                     else:
                         cap = start
                         for m in range(11):
@@ -530,10 +538,10 @@ def group_re_powerplants(c, overwrite=False, keep_files=False):
                                          pd.datetime(y, m + 2,
                                                      1))].sum() - cap) * (
                                        (11 - m) / 12)
-                        df.loc[(t, y, r, c)] = cap
+                        df.loc[(t, y, r, ci)] = cap
 
         # Store DataFrame to csv-file
-        df = df.sortlevel()
+        df = df.sort_index()
         filepath = filepath_pattern.format(cat=t.lower())
         df.to_csv(filepath)
 
@@ -548,7 +556,7 @@ def group_re_powerplants(c, overwrite=False, keep_files=False):
             df = pd.concat([df, pd.read_csv(filepath, index_col=[0, 1, 2, 3])])
             if not keep_files:
                 os.remove(filepath)
-        df = df.sortlevel()
+        df = df.sort_index()
         df.to_csv(filepath_all)
     else:
         logging.warning(
@@ -582,14 +590,21 @@ def prepare_conventional_power_plants(c, overwrite=False):
         gcpp = create_geo_df(cpp, start)
 
         # Add region column (DE01 - DE21)
-        geo_file = os.path.join(c.paths['geometry'], c.files['polygons_de21'])
-        gcpp = add_spatial_name(gcpp, geo_file, 'region', category, time=start)
+        geo_file = os.path.join(c.paths['geometry'], c.files['region_polygons'])
+        gcpp = add_spatial_name(c, gcpp, geo_file, 'region', category,
+                                time=start)
 
         # Add column with name of the federal state (Bayern, Berlin,...)
         geo_file = os.path.join(c.paths['geometry'],
                                 c.files['federal_states_polygon'])
-        gcpp = add_spatial_name(gcpp, geo_file, 'federal_state', category,
+        gcpp = add_spatial_name(c, gcpp, geo_file, 'federal_state', category,
                                 time=start, icol='iso')
+
+        # fix region by country code
+        country_codes = list(gcpp.country_code.unique())
+        country_codes.remove('DE')
+        for c_code in country_codes:
+            gcpp.loc[gcpp.country_code == c_code, 'region'] = c_code
 
         # Write new table to shape-file
         gcpp['region'] = gcpp['region'].apply(str)
@@ -602,7 +617,7 @@ def prepare_conventional_power_plants(c, overwrite=False):
         cpp.to_csv(os.path.join(c.paths[category],
                                 c.pattern['prepared'].format(cat=category)))
 
-    group_conventional_power_plants(c)
+    group_conventional_power_plants(c, overwrite=overwrite)
 
 
 def prepare_re_power_plants(c, overwrite=False):
@@ -618,7 +633,7 @@ def prepare_re_power_plants(c, overwrite=False):
         remove_list = ['tso', 'dso', 'dso_id', 'eeg_id', 'bnetza_id',
                        'federal_state', 'postcode', 'municipality_code',
                        'municipality', 'address', 'address_number', 'utm_zone',
-                       'utm_east', 'utm_north', 'data_source', 'comment']
+                       'utm_east', 'utm_north', 'data_source']
 
         start = datetime.datetime.now()
 
@@ -637,23 +652,20 @@ def prepare_re_power_plants(c, overwrite=False):
         gee = create_geo_df(ee, start)
 
         # Add region column (DE01 - DE21)
-        gee = add_spatial_name(gee, os.path.join(
-            'data', 'geometries', 'polygons_de21_vg.csv'), 'region', category,
-              time=start)
+        gee = add_spatial_name(
+            c, gee, os.path.join(c.paths['geometry'],
+                                 c.files['region_polygons']),
+            'region', category, time=start)
 
         # Add column with coastdat id
-        gee = add_spatial_name(gee, os.path.join(
-            'data', 'geometries', 'coastdat_grid.csv'), 'coastdat_id', category,
-                               time=start)
+        gee = add_spatial_name(
+            c, gee, os.path.join(c.paths['geometry'],
+                                 c.files['coastdatgrid_polygons']),
+            'coastdat_id', category, time=start)
 
         # Fix type of columns
         gee['region'] = gee['region'].apply(str)
         gee['coastdat_id'] = gee['coastdat_id'].apply(int)
-
-        # Write new table to shape-file
-        gee.to_file(
-            os.path.join(c.paths['renewables'],
-                         c.pattern['shp_file_pattern'].format(cat=category)))
 
         # Write new table to csv file
         ee = remove_cols(ee, ['geom', 'lat', 'lon'])
@@ -661,6 +673,11 @@ def prepare_re_power_plants(c, overwrite=False):
         ee['coastdat_id'] = gee['coastdat_id']
         ee.to_csv(os.path.join(c.paths[category],
                                c.pattern['prepared'].format(cat=category)))
+
+        # Write new table to shape-file
+        gee.to_file(
+            os.path.join(c.paths[category],
+                         c.pattern['shp'].format(cat=category)))
 
     # Grouping the plants by type, year, region (and coastdat for Wind/Solar)
     renewables_grouped_file = os.path.join(
@@ -672,6 +689,123 @@ def prepare_re_power_plants(c, overwrite=False):
                         "{0} power plants".format(category))
         logging.warning("Will not overwrite existing file: {0}".format(
             c.pattern['grouped'].format(cat=category)))
+
+
+def lonlat2wkt(s1, s2):
+    return 'POINT({0} {1})'.format(s1, s2)
+
+
+def create_patch_offshore_wind(c):
+    offsh = pd.read_csv(os.path.join(c.paths['static'],
+                                     c.files['patch_offshore_wind']),
+                        header=[0, 1], index_col=[0])
+
+    # Filter
+    offsh['Wikipedia', 'commissioning'] = pd.to_datetime(
+        offsh['Wikipedia', 'commissioning'])
+
+    # Create GeoDataFrame
+    offsh.columns = offsh.columns.droplevel()
+    offsh.loc[:, 'geom'] = offsh.geom.apply(wkt_loads)
+    gee = create_geo_df(offsh)
+    gee['commissioning'] = gee['commissioning'].apply(str)
+    gee['capacity'] = pd.to_numeric(gee['capacity'])
+    gee['commissioning (planned)'] = gee['commissioning (planned)'].apply(str)
+
+    # Add column with region id
+    gee = add_spatial_name(
+        c, gee, os.path.join(c.paths['geometry'],
+                             c.files['region_polygons']),
+        'region', 'offshore')
+
+    # Add column with coastdat id
+    gee = add_spatial_name(
+        c, gee, os.path.join(c.paths['geometry'],
+                             c.files['coastdatgrid_polygons']),
+        'coastdat_id', 'offshore')
+
+    # gee.to_file('/home/uwe/gee.shp')
+
+    # Get year from commissioning date
+    gee['commissioning'] = pd.to_datetime(gee['commissioning'])
+    gee['year'] = gee.commissioning.map(lambda x: int(x.year))
+
+    # Create DataFrame for grouping
+    my_idx = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []],
+                           names=['year', 'region', 'coastdat'])
+    df = pd.DataFrame(index=my_idx, columns=['capacity'])
+
+    gee['year'] = gee.commissioning.map(lambda x: int(x.year))
+    repp = gee.groupby(
+        ['region', 'coastdat_id', 'commissioning']).sum()['capacity [MW]']
+
+    # group power plants
+    for r in gee.region.unique():
+        logging.info('{0}'.format(r))
+        coastdat_ids = repp.loc[r].index.get_level_values(
+                    0).unique()
+        for ci in coastdat_ids:
+            logging.debug('{0}: {1}'.format(r, ci))
+            sub = repp.loc[(r, ci)]
+            for y in range(1998, 2018):
+                start = sub[
+                    (sub.index.get_level_values(0) < pd.datetime(y, 1, 1))
+                    ].sum()
+                next_y = sub[
+                    (sub.index.get_level_values(0) < pd.datetime(y + 1, 1,
+                                                                 1))
+                    ].sum()
+                if next_y == start:
+                    df.loc[(y, r, ci)] = next_y
+                else:
+                    cap = start
+                    for m in range(11):
+                        cap += (sub[
+                                    (sub.index.get_level_values(0) <
+                                     pd.datetime(y, m + 2, 1))].sum() - cap) * (
+                                   (11 - m) / 12)
+                    df.loc[(y, r, ci)] = cap
+
+    # Write file
+    filepath_pattern = os.path.join(c.paths['renewable'], c.pattern['grouped'])
+    df = df.sort_index()
+    filepath = filepath_pattern.format(cat='patch_offshore')
+    df.to_csv(filepath)
+
+
+def patch_offshore_wind(c):
+    """
+    A patch file is used to replace the wind capacity of the regions DE19-DE21
+    in the grouped-file.
+
+    The old file will be stored with '.old'. The grouped-file will be replaced.
+
+    """
+    filepath_pattern = os.path.join(c.paths['renewable'], c.pattern['grouped'])
+    repp = pd.read_csv(filepath_pattern.format(cat='renewable'),
+                       index_col=[0, 1, 2, 3])
+    # repp.to_csv(filepath_pattern.format(cat='renewable') + '.old')
+    offsh = pd.read_csv(filepath_pattern.format(cat='patch_offshore'),
+                        index_col=[0, 1, 2])
+
+    repp = repp.drop('DE21', level='region')
+    repp = repp.drop('DE20', level='region')
+    repp = repp.drop('DE19', level='region')
+
+    for y in range(1990, 2018):
+        try:
+            regions = offsh.loc[y].index.get_level_values(0).unique()
+        except KeyError:
+            regions = []
+        for r in regions:
+            coastdat_ids = offsh.loc[y, r].index.get_level_values(0).unique()
+            for cid in coastdat_ids:
+                if offsh.loc[(y, r, cid), 'capacity'] > 0:
+                    print(y, r, cid)
+                    repp.loc[('Wind', y, r, cid), 'capacity'] = (
+                        offsh.loc[(y, r, cid), 'capacity'])
+    repp.sort_index(inplace=True)
+    repp.to_csv(filepath_pattern.format(cat='renewable'))
 
 
 class PowerPlantsDE21:
@@ -695,7 +829,10 @@ class PowerPlantsDE21:
 if __name__ == "__main__":
     import configuration as config
     cfg = config.get_configuration()
-    prepare_re_power_plants(cfg, overwrite=False)
+    # patch_offshore_wind(cfg)
+    # prepare_re_power_plants(cfg, overwrite=True)
+    prepare_conventional_power_plants(cfg, overwrite=True)
+
     exit(0)
     # prepare_conventional_power_plants('conventional', overwrite=False)
     # prepare_re_power_plants('renewable', overwrite=False)

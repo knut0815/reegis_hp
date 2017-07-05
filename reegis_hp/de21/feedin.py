@@ -17,15 +17,7 @@ except ImportError:
     db = None
 import logging
 from oemof.tools import logger
-import config as cfg
-
-
-def get_list(section, parameter):
-    try:
-        my_list = cfg.get(section, parameter).replace(' ', '').split(',')
-    except AttributeError:
-        my_list = list((cfg.get(section, parameter),))
-    return my_list
+import configuration as config
 
 
 def normalised_feedin_by_region_wind(pp, feedin_de21, feedin_coastdat,
@@ -91,10 +83,10 @@ def normalised_feedin_by_region_solar(pp, feedin_de21, feedin_coastdat,
     if not os.path.isdir(de21_dir):
         os.mkdir(de21_dir)
 
-    set_list = get_list('solar', 'solar_sets_list')
+    set_list = config.get_list('solar', 'solar_sets_list')
     set_names = list()
     for my_set in set_list:
-        set_names.append(cfg.get(my_set, 'pv_set_name'))
+        set_names.append(config.get_single_value(my_set, 'pv_set_name'))
 
     # Check for existing output and input files
     # Only years with all sets will be used
@@ -274,13 +266,13 @@ def create_pv_sets(set_name):
     sandia_modules = pvlib.pvsystem.retrieve_sam('sandiamod')
     sapm_inverters = pvlib.pvsystem.retrieve_sam('sandiainverter')
 
-    module_names = get_list(set_name, 'module_name')
-    module_keys = get_list(set_name, 'module_key')
+    module_names = config.get_list(set_name, 'module_name')
+    module_keys = config.get_list(set_name, 'module_key')
     modules = {module_keys[n]: module_names[n] for n in range(len(module_keys))}
-    inverters = get_list(set_name, 'inverter_name')
-    azimuth_angles = get_list(set_name, 'surface_azimuth')
-    tilt_angles = get_list(set_name, 'surface_tilt')
-    albedo_values = get_list(set_name, 'albedo')
+    inverters = config.get_list(set_name, 'inverter_name')
+    azimuth_angles = config.get_list(set_name, 'surface_azimuth')
+    tilt_angles = config.get_list(set_name, 'surface_tilt')
+    albedo_values = config.get_list(set_name, 'albedo')
 
     set_number = 0
     pv_systems = dict()
@@ -396,7 +388,7 @@ def normalised_feedin_one_year(c, year, overwrite):
     start = time.now()
     weather = None
     fileopen = False
-    set_name = cfg.get(c.general['solar_set'], 'pv_set_name')
+    set_name = config.get_single_value(c.general['solar_set'], 'pv_set_name')
     feedin_pattern = os.path.join(c.paths['feedin'], '{type}', '{sub}',
                                   c.pattern['feedin'])
 

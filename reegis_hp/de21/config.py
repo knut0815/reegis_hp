@@ -143,10 +143,10 @@ def get(section, key):
     if not _loaded:
         init(FILE)
     try:
-        return cfg.getfloat(section, key)
+        return cfg.getint(section, key)
     except Exception:
         try:
-            return cfg.getint(section, key)
+            return cfg.getfloat(section, key)
         except:
             try:
                 return cfg.getboolean(section, key)

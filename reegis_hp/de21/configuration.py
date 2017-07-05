@@ -9,17 +9,29 @@ from shutil import copyfile
 
 
 class ConfigurationDe21:
-    def __init__(self):
-        self.default_ini = os.path.join(
-            os.path.dirname(__file__), 'de21_default.ini')
-        self.target_ini = os.path.join(
-            os.path.expanduser("~"), '.oemof', 'de21.ini')
+    def __init__(self, filename, default_file):
         self.paths = dict()
         self.pattern = dict()
         self.files = dict()
         self.general = dict()
         self.url = dict()
-        load_ini_file(self.default_ini, self.target_ini)
+
+        default_ini = os.path.join(os.path.dirname(__file__), default_file)
+        target_ini = os.path.join(os.path.expanduser("~"), '.oemof', filename)
+        load_ini_file(default_ini, target_ini)
+
+
+class ScenarioConfigDe21():
+    def __init__(self, filename, default_file):
+        self.general = dict()
+        self.paths = dict()
+        self.pattern = dict()
+        self.files = dict()
+        self.pv = dict()
+
+        default_ini = os.path.join(os.path.dirname(__file__), default_file)
+        target_ini = os.path.join(os.path.expanduser("~"), '.oemof', filename)
+        load_ini_file(default_ini, target_ini)
 
 
 def load_ini_file(default_ini, target_ini):
@@ -42,9 +54,68 @@ def extend_path(ex_path, name):
     return check_path(os.path.join(ex_path, name))
 
 
-def get_configuration():
+def get_single_value(section, value, kind='basic', filename=None):
+    if kind == 'basic':
+        ConfigurationDe21('de21.ini', 'de21_default.ini')
+        return cfg.get(section, value)
+    elif kind == 'scenario':
+        ScenarioConfigDe21(filename, 'de21_scenario_default.ini')
+        return cfg.get(section, value)
+    else:
+        return None
+
+
+def get_list(section, parameter):
+    try:
+        my_list = cfg.get(section, parameter).replace(' ', '').split(',')
+    except AttributeError:
+        my_list = list((cfg.get(section, parameter),))
+    return my_list
+
+
+def get_configuration(kind='basic', filename=None):
+    if kind == 'basic':
+        conf = get_configuration_basic()
+    elif kind == 'scenario':
+        conf = get_configuration_scenario(filename)
+    else:
+        conf = None
+    return conf
+
+
+def create_entries_from_list(dc, section, list_name):
+    names = get_list(section, list_name)
+    dc[list_name] = names
+    for name in names:
+        dc[name] = cfg.get(section, name)
+
+
+def get_configuration_scenario(filename):
+    if filename is None:
+        filename = 'de21_scenario.ini'
+    basic_conf = get_configuration_basic()
+    c = ScenarioConfigDe21(filename, 'de21_scenario_default.ini')
+
+    # copy parts from basic configuration
+    c.paths = basic_conf.paths
+    c.files = basic_conf.files
+    c.pattern = basic_conf.pattern
+
+    # define configurations
+    c.general['name'] = cfg.get('general', 'name')
+    c.general['year'] = cfg.get('general', 'year')
+    c.general['weather_year'] = cfg.get('general', 'year')
+
+    c.files['renewable_capacities'] = cfg.get('files', 'renewable_capacities')
+
+    create_entries_from_list(c.pv, 'pv', 'module_inverter_types')
+    create_entries_from_list(c.pv, 'pv', 'orientation_types')
+    return c
+
+
+def get_configuration_basic():
     # initialise class
-    c = ConfigurationDe21()
+    c = ConfigurationDe21('de21.ini', 'de21_default.ini')
 
     # set variables from ini file
     #  ********* general ******************************************************
@@ -100,6 +171,8 @@ def get_configuration():
     c.files['powerlines_labels'] = cfg.get('geometry', 'powerlines_labels')
     c.files['coastdatgrid_centroids'] = cfg.get('geometry',
                                                 'coastdatgrid_centroids')
+    c.files['coastdatgrid_polygons'] = cfg.get('geometry',
+                                               'coastdatgrid_polygons')
     c.files['postcode'] = cfg.get('geometry', 'postcode_polygons')
 
     # ********* power plants *************************************************
@@ -132,13 +205,15 @@ def get_configuration():
     c.files['time_series_readme'] = cfg.get('time_series', 'readme_file')
     c.files['time_series_json'] = cfg.get('time_series', 'json_file')
 
-    # ********* reegis ********************************************************
-    c.paths['reegis'] = extend_path(
-        c.paths[cfg.get('reegis', 'path')],
-        cfg.get('reegis', 'dir'))
-    c.files['demand_share'] = cfg.get('reegis', 'demand_share')
-    c.files['data_electricity_grid'] = cfg.get('reegis',
+    # ********* static ********************************************************
+    c.paths['static'] = extend_path(
+        c.paths[cfg.get('static', 'path')],
+        cfg.get('static', 'dir'))
+    c.files['demand_share'] = cfg.get('static', 'demand_share')
+    c.files['data_electricity_grid'] = cfg.get('static',
                                                'data_electricity_grid')
+    c.files['patch_offshore_wind'] = cfg.get('static',
+                                             'patch_offshore_wind')
 
     # ********* demand ********************************************************
     c.paths['demand'] = extend_path(

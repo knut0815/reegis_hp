@@ -156,7 +156,8 @@ def add_labels(data, plot_obj, column=None, coord_file=None, textcolour='blue'):
 def plot_geocsv(filepath, idx_col, facecolor=None, edgecolor='#aaaaaa',
                 bbox=(3, 16, 47, 56), labels=True, **kwargs):
     df = pd.read_csv(filepath, index_col=idx_col)
-
+    # print(df.geom)
+    df = df[df['geom'].notnull()]
     plotter = geoplot.GeoPlotter(geoplot.postgis2shapely(df.geom), bbox)
     plotter.plot(facecolor=facecolor, edgecolor=edgecolor)
 

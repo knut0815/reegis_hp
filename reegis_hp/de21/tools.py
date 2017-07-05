@@ -61,7 +61,69 @@ def sorter():
             f.close()
             new_lg.close()
             new_sf.close()
-    
+
+
+def plz2ireg():
+    geopath = '/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/geometries/'
+    geofile = 'postcode_polygons.csv'
+    plzgeo = pd.read_csv(os.path.join(geopath, geofile), index_col='zip_code',
+                         squeeze=True)
+    iregpath = '/home/uwe/'
+    iregfile = 'plzIreg.csv'
+    plzireg = pd.read_csv(os.path.join(iregpath, iregfile), index_col='plz',
+                          squeeze=True)
+    plzireg = plzireg.groupby(plzireg.index).first()
+    ireggeo = pd.DataFrame(pd.concat([plzgeo, plzireg], axis=1))
+    ireggeo.to_csv(os.path.join(iregpath, 'ireg_geo.csv'))
+    import geopandas as gpd
+    import geoplot
+    ireggeo = ireggeo[ireggeo['geom'].notnull()]
+    ireggeo['geom'] = geoplot.postgis2shapely(ireggeo.geom)
+    geoireg = gpd.GeoDataFrame(ireggeo, crs='epsg:4326', geometry='geom')
+    geoireg.to_file(os.path.join(iregpath, 'ireg_geo.shp'))
+    # import plots
+    # plots.plot_geocsv('/home/uwe/ireg_geo.csv', [0], labels=False)
+    exit(0)
+
+
+def testerich():
+    spath = '/home/uwe/chiba/Promotion/Kraftwerke und Speicher/'
+    sfile = 'Pumpspeicher_in_Deutschland.csv'
+    storage = pd.read_csv(os.path.join(spath, sfile), header=[0, 1])
+    storage.sort_index(1, inplace=True)
+    print(storage)
+    print(storage['ZFES', 'energy'].sum())
+    print(storage['Wikipedia', 'energy'].sum())
+
+
+def decode_wiki_geo_string(gstr):
+    replist = [('°', ';'), ('′', ';'), ('″', ';'), ('N.', ''), ('O', ''),
+               ('\xa0', ''), (' ', '')]
+    if isinstance(gstr, str):
+        for rep in replist:
+            gstr = gstr.replace(rep[0], rep[1])
+        gstr = gstr.split(';')
+        lat = float(gstr[0]) + float(gstr[1]) / 60 + float(gstr[2]) / 3600
+        lon = float(gstr[3]) + float(gstr[4]) / 60 + float(gstr[5]) / 3600
+    else:
+        lat = None
+        lon = None
+    return lat, lon
+
+
+def offshore():
+    spath = '/home/uwe/chiba/Promotion/Kraftwerke und Speicher/'
+    sfile = 'offshore_windparks_prepared.csv'
+    offsh = pd.read_csv(os.path.join(spath, sfile), header=[0, 1],
+                        index_col=[0])
+    print(offsh)
+    # offsh['Wikipedia', 'geom'] = offsh['Wikipedia', 'geom_str'].apply(
+    #     decode_wiki_geo_string)
+    # offsh[[('Wikipedia', 'latitude'), ('Wikipedia', 'longitude')]] = offsh[
+    #     'Wikipedia', 'geom'].apply(pd.Series)
+    # offsh.to_csv(os.path.join(spath, 'offshore_windparks_prepared.csv'))
+
+
 
 if __name__ == "__main__":
     # plot_geocsv(os.path.join('geometries', 'federal_states.csv'),
@@ -69,5 +131,8 @@ if __name__ == "__main__":
     #             coord_file='data_basic/label_federal_state.csv')
     # plot_geocsv('/home/uwe/geo.csv', idx_col='gid')
     logger.define_logging()
+    offshore()
+    exit(0)
+    plz2ireg()
     # sorter()
     # fetch_coastdat2_year_from_db()
