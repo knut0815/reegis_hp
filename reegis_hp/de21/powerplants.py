@@ -808,6 +808,63 @@ def patch_offshore_wind(c):
     repp.to_csv(filepath_pattern.format(cat='renewable'))
 
 
+def combine_power_plants(c):
+    rpp = pd.read_csv(
+        os.path.join(c.paths['renewable'],
+                     c.pattern['grouped'].format(cat='renewable')),
+        index_col=[0, 1, 2, 3])
+
+    cpp = pd.read_csv(
+        os.path.join(c.paths['conventional'],
+                     c.pattern['grouped'].format(cat='conventional')),
+        index_col=[0, 1, 2])
+
+    rpp.sort_index(inplace=True)
+    cpp.sort_index(inplace=True)
+
+    r2c_list = [('Bioenergy', 'Biomass and biogas'),
+                ('Other fossil fuels', 'Other fossil fuels')]
+    for rtype, ctype in r2c_list:
+        logging.info("{0} into {1}".format(rtype, ctype))
+        years = rpp.loc[rtype].index.get_level_values(0).unique()
+        for y in years:
+            regions = rpp.loc[rtype, y].index.get_level_values(0).unique()
+            for r in regions:
+                value = rpp.loc[rtype, y, r].capacity[0]
+                if value > 0:
+                    try:
+                        if np.isnan(cpp.loc[(ctype, float(y), r), 'capacity']):
+                            cpp.loc[(ctype, float(y), r), 'capacity'] = 0
+                    except KeyError:
+                        cpp.loc[(ctype, float(y), r), 'capacity'] = 0
+                    cpp.loc[(ctype, float(y), r), 'capacity'] += value
+            cpp.sort_index(inplace=True)
+        rpp.drop(rtype, level=0, axis=0, inplace=True)
+        rpp.sort_index(inplace=True)
+
+    c2r_list = [('Hydro', 'Hydro')]
+    for ctype, rtype in c2r_list:
+        logging.info("{0} into {1}".format(ctype, rtype))
+        years = cpp.loc[ctype].index.get_level_values(0).unique()
+        for y in years:
+            regions = cpp.loc[ctype, y].index.get_level_values(0).unique()
+            for r in regions:
+                value = cpp.loc[ctype, y, r].capacity
+                if value > 0:
+                    try:
+                        if np.isnan(rpp.loc[(rtype, y, r)].capacity[0]):
+                            rpp.loc[rtype, y, r] = 0
+                    except KeyError:
+                        rpp.loc[rtype, y, r] = 0
+                    rpp.loc[(rtype, y, r, slice(None)), 'capacity'] += value
+            rpp.sort_index(inplace=True)
+        cpp.drop(rtype, level=0, axis=0, inplace=True)
+        cpp.sort_index(inplace=True)
+
+    cpp.to_csv(os.path.join(c.paths['powerplants'], c.files['transformer']))
+    rpp.to_csv(os.path.join(c.paths['powerplants'], c.files['sources']))
+
+
 class PowerPlantsDE21:
 
     def __init__(self):
@@ -829,9 +886,10 @@ class PowerPlantsDE21:
 if __name__ == "__main__":
     import configuration as config
     cfg = config.get_configuration()
+    combine_power_plants(cfg)
     # patch_offshore_wind(cfg)
     # prepare_re_power_plants(cfg, overwrite=True)
-    prepare_conventional_power_plants(cfg, overwrite=True)
+    # prepare_conventional_power_plants(cfg, overwrite=True)
 
     exit(0)
     # prepare_conventional_power_plants('conventional', overwrite=False)
