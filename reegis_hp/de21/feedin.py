@@ -160,6 +160,47 @@ def normalised_feedin_by_region_solar(pp, feedin_de21, feedin_coastdat,
             pwr[name_of_set].close()
 
 
+def normalised_feedin_by_region_hydro(c, feedin_de21, regions, overwrite=False):
+    hydro_energy = pd.read_csv(
+        os.path.join(c.paths['static'], 'energy_capacity_bmwi.csv'),
+        header=[0, 1], index_col=[0])['Wasserkraft']['energy']
+
+    hydro_capacity = pd.read_csv(
+        os.path.join(c.paths['powerplants'], c.files['sources']),
+        index_col=[0, 1, 2, 3]).loc['Hydro'].groupby(
+            'year').sum().loc[hydro_energy.index].capacity
+
+    full_load_hours = (hydro_energy / hydro_capacity).multiply(1000)
+
+    hydro_path = os.path.abspath(os.path.join(
+        *feedin_de21.format(year=0, type='hydro').split('/')[:-1]))
+    print(hydro_path)
+    if not os.path.isdir(hydro_path):
+        os.makedirs(hydro_path)
+
+    skipped = list()
+    for year in full_load_hours.index:
+        filename = feedin_de21.format(year=year, type='hydro')
+        if not os.path.isfile(filename) or overwrite:
+            idx = pd.date_range(start="{0}-01-01 00:00".format(year),
+                                end="{0}-12-31 23:00".format(year),
+                                freq='H')
+            feedin = pd.DataFrame(columns=regions, index=idx)
+            feedin[feedin.columns] = full_load_hours.loc[year] / len(feedin)
+            feedin.to_csv(filename)
+        else:
+            skipped.append(year)
+
+    if len(skipped) > 0:
+        logging.warning("Hydro feedin. Skipped the following years:\n" +
+                        "{0}.\n".format(skipped) +
+                        " Use overwrite=True to replace the files.")
+
+    # https://shop.dena.de/fileadmin/denashop/media/Downloads_Dateien/esd/
+    # 9112_Pumpspeicherstudie.pdf
+    # S. 110ff
+
+
 def normalised_feedin_by_region(c, overwrite=False):
     feedin_de21 = os.path.join(c.paths['feedin'], '{type}', 'de21',
                                c.pattern['feedin_de21'])
@@ -171,8 +212,13 @@ def normalised_feedin_by_region(c, overwrite=False):
 
     pp = pd.read_csv(powerplants, index_col=[0, 1, 2, 3])
 
+    regions = pp.index.get_level_values(2).unique().sort_values()
+
     normalised_feedin_by_region_solar(pp, feedin_de21, feedin_coastdat,
                                       overwrite)
+    normalised_feedin_by_region_wind(pp, feedin_de21, feedin_coastdat,
+                                     overwrite)
+    normalised_feedin_by_region_hydro(c, feedin_de21, regions, overwrite)
 
 
 def normalised_feedin_wind_single(polygons, key, weather):
@@ -438,3 +484,5 @@ def normalised_feedin_by_weather(c, years=None, overwrite=False):
 
 if __name__ == "__main__":
     logger.define_logging()
+    cfg = config.get_configuration()
+    normalised_feedin_by_region(cfg, overwrite=False)

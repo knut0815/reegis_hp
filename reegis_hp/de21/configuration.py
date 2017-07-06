@@ -104,7 +104,7 @@ def get_configuration_scenario(filename):
     # define configurations
     c.general['name'] = cfg.get('general', 'name')
     c.general['year'] = cfg.get('general', 'year')
-    c.general['weather_year'] = cfg.get('general', 'year')
+    c.general['weather_year'] = cfg.get('general', 'weather_year')
 
     c.files['renewable_capacities'] = cfg.get('files', 'renewable_capacities')
 
@@ -192,6 +192,8 @@ def get_configuration_basic():
     c.pattern['readme'] = cfg.get('powerplants', 'readme_file_pattern')
     c.pattern['json'] = cfg.get('powerplants', 'json_file_pattern')
     c.pattern['shp'] = cfg.get('powerplants', 'shp_file_pattern')
+    c.files['transformer'] = cfg.get('powerplants', 'transformer_file')
+    c.files['sources'] = cfg.get('powerplants', 'sources_file')
 
     # ********* time series ***************************************************
     c.paths['time_series'] = extend_path(

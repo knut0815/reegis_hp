@@ -8,7 +8,7 @@ setup(name='reegis_hp',
       author_email='uwe.krien@rl-institut.de',
       description='A local heat and power system',
       package_dir={'reegis_hp': 'reegis_hp'},
-      install_requires=['oemof >= 0.0.6',
+      install_requires=['oemof >= 0.1.0',
                         'pandas >= 0.17.0',
                         'demandlib',
                         'tables',
@@ -16,5 +16,7 @@ setup(name='reegis_hp',
                         'shapely',
                         'windpowerlib',
                         'pvlib',
-                        'tables', 'geopandas', 'requests']
+                        'tables',
+                        'geopandas',
+                        'requests']
       )
