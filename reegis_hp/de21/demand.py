@@ -38,14 +38,15 @@ def get_demand_by_region(year, c, overwrite=False):
         load_profile[region] = get_time_period(c, entsoe, region, start, end)
 
     del load_profile['DE_load_']
-    logging.info("Retrieving load profiles for Germany ({0}).".format(year))
     return load_profile
 
 
 if __name__ == "__main__":
     logger.define_logging()
     conf = config.get_configuration()
+    my_year = 2013
     from matplotlib import pyplot as plt
-    get_demand_by_region(2013, conf).plot()
+    logging.info("Retrieving load profiles for Germany ({0}).".format(my_year))
+    get_demand_by_region(my_year, conf).plot()
     plt.plot()
     plt.show()

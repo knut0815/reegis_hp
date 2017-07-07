@@ -6,6 +6,7 @@ import numpy as np
 import logging
 import configuration as config
 import demand
+from oemof.tools import logger
 
 
 def check_fraction(dic):
@@ -34,6 +35,7 @@ def initialise_scenario():
 
 
 def prepare_transformer(c):
+    logging.info('Prepare transformer...({0})'.format(c.general['year']))
     tpp = pd.read_csv(os.path.join(c.paths['powerplants'],
                                    c.files['transformer']),
                       index_col=[0, 1, 2])
@@ -42,23 +44,28 @@ def prepare_transformer(c):
     idx = tpp.index.get_level_values(2).unique().sort_values()
     transformer = pd.DataFrame(columns=cols, index=idx)
 
-    for col in tpp.index.get_level_values(0).unique().sort_values():
-        # get values for the given year
-        df = tpp.loc[col, c.general['year']]
+    try:
+        for col in tpp.index.get_level_values(0).unique().sort_values():
+            # get values for the given year
+            df = tpp.loc[col, c.general['year']]
 
-        # write values into new DataFrame
-        transformer[(col, 'capacity')] = df.capacity
-        transformer[(col, 'capacity')].fillna(0, inplace=True)
-        transformer[(col, 'efficiency')] = df.efficiency
-        idx = df.efficiency.notnull()
-        w_avg = np.average(df[idx].efficiency, weights=df[idx].capacity)
-        transformer[(col, 'efficiency')].fillna(w_avg, inplace=True)
-
-    transformer.to_csv(os.path.join(c.paths['scenario_path'],
-                                    'transformer.csv'))
+            # write values into new DataFrame
+            transformer[(col, 'capacity')] = df.capacity
+            transformer[(col, 'capacity')].fillna(0, inplace=True)
+            transformer[(col, 'efficiency')] = df.efficiency
+            idx = df.efficiency.notnull()
+            w_avg = np.average(df[idx].efficiency, weights=df[idx].capacity)
+            transformer[(col, 'efficiency')].fillna(w_avg, inplace=True)
+            transformer.to_csv(os.path.join(c.paths['scenario_path'],
+                                            'transformer.csv'))
+    except TypeError:
+        logging.error("Cannot prepare transformer for {0}".format(
+            c.general['year']))
 
 
 def prepare_sources(c):
+    logging.info('Prepare sources...({0}, weather: {1})'.format(
+        c.general['year'], c.general['weather_year']))
     spp = pd.read_csv(os.path.join(c.paths['powerplants'],
                                    c.files['sources']),
                       index_col=[0, 1, 2])
@@ -67,50 +74,69 @@ def prepare_sources(c):
     idx = spp.index.get_level_values(2).unique().sort_values()
     sources = pd.DataFrame(columns=cols, index=idx)
 
-    for col in cols:
-        sources[col] = spp.loc[col, c.general['year']]
-        sources[col].fillna(0, inplace=True)
+    try:
+        for col in cols:
+            sources[col] = spp.loc[col, c.general['year']]
+            sources[col].fillna(0, inplace=True)
 
-    sources.to_csv(os.path.join(c.paths['scenario_path'],
-                                'sources_capacity.csv'))
+        sources.to_csv(os.path.join(c.paths['scenario_path'],
+                                    'sources_capacity.csv'))
+    except TypeError:
+        logging.error("Cannot prepare sources for {0}".format(
+            c.general['year']))
 
     # ************ wind ******
     # read wind feedin time series (feedin_wind)
-    feedin_wind = pd.read_csv(
-        os.path.join(c.paths['feedin'], 'wind', 'de21',
-                     c.pattern['feedin_de21'].format(
-                         year=c.general['weather_year'], type='wind')),
-        index_col=0)
+    try:
+        feedin_wind = pd.read_csv(
+            os.path.join(c.paths['feedin'], 'wind', 'de21',
+                         c.pattern['feedin_de21'].format(
+                             year=c.general['weather_year'], type='wind')),
+            index_col=0)
 
-    # add type level to wind DataFrame
-    feedin_wind.columns = pd.MultiIndex.from_product(
-        [feedin_wind.columns, ['wind']])
+        # add type level to wind DataFrame
+        feedin_wind.columns = pd.MultiIndex.from_product(
+            [feedin_wind.columns, ['wind']])
+    except FileNotFoundError:
+        feedin_wind = pd.DataFrame()
+        logging.error("Cannot prepare wind feedin for {0}".format(
+            c.general['year']))
 
     # ************ hydro ******
     # read hydro feedin time series (feedin_hydro)
-    feedin_hydro = pd.read_csv(
-        os.path.join(c.paths['feedin'], 'hydro', 'de21',
-                     c.pattern['feedin_de21'].format(
-                        year=c.general['weather_year'], type='hydro')),
-        index_col=0)
+    try:
+        feedin_hydro = pd.read_csv(
+            os.path.join(c.paths['feedin'], 'hydro', 'de21',
+                         c.pattern['feedin_de21'].format(
+                            year=c.general['weather_year'], type='hydro')),
+            index_col=0)
 
-    # add type level to hydro DataFrame
-    feedin_hydro.columns = pd.MultiIndex.from_product(
-        [feedin_hydro.columns, ['hydro']])
+        # add type level to hydro DataFrame
+        feedin_hydro.columns = pd.MultiIndex.from_product(
+            [feedin_hydro.columns, ['hydro']])
+    except FileNotFoundError:
+        feedin_hydro = pd.DataFrame()
+        logging.error("Cannot prepare hydro feedin for {0}".format(
+            c.general['year']))
 
     # ************ geotherm ******
     # read hydro feedin time series to get the structure and overwrite it
     # with geotherm value
-    feedin_geotherm = pd.read_csv(
-        os.path.join(c.paths['feedin'], 'hydro', 'de21',
-                     c.pattern['feedin_de21'].format(
-                         year=c.general['weather_year'], type='hydro')),
-        index_col=0)
-    feedin_geotherm[feedin_geotherm.columns] = 0.5
+    try:
+        feedin_geotherm = pd.read_csv(
+            os.path.join(c.paths['feedin'], 'hydro', 'de21',
+                         c.pattern['feedin_de21'].format(
+                             year=c.general['weather_year'], type='hydro')),
+            index_col=0)
+        feedin_geotherm[feedin_geotherm.columns] = 0.5
 
-    # add type level to geotherm DataFrame
-    feedin_geotherm.columns = pd.MultiIndex.from_product(
-        [feedin_geotherm.columns, ['geotherm']])
+        # add type level to geotherm DataFrame
+        feedin_geotherm.columns = pd.MultiIndex.from_product(
+            [feedin_geotherm.columns, ['geotherm']])
+    except FileNotFoundError:
+        feedin_geotherm = pd.DataFrame()
+        logging.error("Cannot prepare geothermal feedin for {0}".format(
+            c.general['year']))
 
     # ************ combine wind, hydro, geotherm ******
     feedin = pd.DataFrame(
@@ -118,40 +144,45 @@ def prepare_sources(c):
 
     # ************ pv ******
     # read solar feedin time series (feedin_solar)
-    feedin_solar = pd.read_csv(
-        os.path.join(
-            c.paths['feedin'], 'solar', 'de21',
-            c.pattern['feedin_de21'].format(year=c.general['weather_year'],
-                                            type='solar')),
-        index_col=0, header=[0, 1, 2])
+    try:
+        feedin_solar = pd.read_csv(
+            os.path.join(
+                c.paths['feedin'], 'solar', 'de21',
+                c.pattern['feedin_de21'].format(year=c.general['weather_year'],
+                                                type='solar')),
+            index_col=0, header=[0, 1, 2])
 
-    # combine different pv-sets to one feedin time series
-    module_inverter_sets = create_subdict_from_config_dict(
-        c.pv, c.pv['module_inverter_types'])
-    orientation_sets = create_subdict_from_config_dict(
-        c.pv, c.pv['orientation_types'])
+        # combine different pv-sets to one feedin time series
+        module_inverter_sets = create_subdict_from_config_dict(
+            c.pv, c.pv['module_inverter_types'])
+        orientation_sets = create_subdict_from_config_dict(
+            c.pv, c.pv['orientation_types'])
 
-    orientation_fraction = pd.Series(orientation_sets)
+        orientation_fraction = pd.Series(orientation_sets)
 
-    feedin_solar.sort_index(1, inplace=True)
-    orientation_fraction.sort_index(inplace=True)
+        feedin_solar.sort_index(1, inplace=True)
+        orientation_fraction.sort_index(inplace=True)
 
-    for reg in feedin_solar.columns.levels[0]:
-        feedin[reg, 'solar'] = 0
-        for mset in module_inverter_sets.keys():
-            feedin[reg, 'solar'] += feedin_solar[reg, mset].multiply(
-                orientation_fraction).sum(1).multiply(
-                    module_inverter_sets[mset])
+        for reg in feedin_solar.columns.levels[0]:
+            feedin[reg, 'solar'] = 0
+            for mset in module_inverter_sets.keys():
+                feedin[reg, 'solar'] += feedin_solar[reg, mset].multiply(
+                    orientation_fraction).sum(1).multiply(
+                        module_inverter_sets[mset])
 
-    feedin.sort_index(1).to_csv(os.path.join(c.paths['scenario_path'],
-                                             'sources_timeseries.csv'))
+        feedin.sort_index(1).to_csv(os.path.join(c.paths['scenario_path'],
+                                                 'sources_timeseries.csv'))
+    except FileNotFoundError:
+        logging.error("Cannot prepare solar feedin for {0}".format(
+            c.general['year']))
 
 
 def prepare_storages(c):
+    logging.info('Prepare storages...(no year!)')
     phes = pd.read_csv(os.path.join(c.paths['storages'],
                                     c.files['hydro_storages_de21']),
                        index_col='region')
-    print(phes.columns)
+
     rename_columns = {
         'energy': 'capacity',
         'pump': 'max_in',
@@ -163,6 +194,7 @@ def prepare_storages(c):
 
 
 def prepare_transmission_lines(c):
+    logging.info('Prepare transmission lines...(no year!)')
     grid = pd.read_csv(os.path.join(c.paths['transmission'],
                                     c.files['transmission_de21']))
 
@@ -179,20 +211,19 @@ def prepare_transmission_lines(c):
 
 
 def prepare_demand(c):
-    elec_demand = demand.get_demand_by_region(c.general['weather_year'], c)
+    logging.info('Prepare demand...({0})'.format(c.general['demand_year']))
+    elec_demand = demand.get_demand_by_region(c.general['demand_year'], c)
+    if len(elec_demand) < 8760:
+        logging.error("Cannot prepare electrical demand for {0}".format(
+            c.general['year']))
     elec_demand.to_csv(os.path.join(c.paths['scenario_path'], 'demand.csv'))
 
 
 if __name__ == "__main__":
+    logger.define_logging()
     cfg = initialise_scenario()
-    prepare_demand(cfg)
-    exit(0)
     prepare_transformer(cfg)
     prepare_sources(cfg)
     prepare_storages(cfg)
     prepare_demand(cfg)
-    prepare_transmission_lines()
-    # combine_power_plants(cfg)
-    # src = ['Geothermal', 'Hydro', 'Solar', 'Wind']
-    # prepare_capacities(cfg, src)
-    # prepare_time_series(cfg, src)
+    prepare_transmission_lines(cfg)

@@ -105,6 +105,7 @@ def get_configuration_scenario(filename):
     c.general['name'] = cfg.get('general', 'name')
     c.general['year'] = cfg.get('general', 'year')
     c.general['weather_year'] = cfg.get('general', 'weather_year')
+    c.general['demand_year'] = cfg.get('general', 'demand_year')
 
     c.files['renewable_capacities'] = cfg.get('files', 'renewable_capacities')
 
