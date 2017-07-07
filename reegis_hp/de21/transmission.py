@@ -1,21 +1,10 @@
 import pandas as pd
 import os
 import math
-try:
-    import geoplot
-except ImportError:
-    geoplot = None
-from matplotlib import pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
+import configuration as config
 
 
-grid = pd.read_csv(os.path.join('data', 'basic', 'de21_grid_data.csv'))
-
-f_security = 0.7
-current_max = 2720
-
-
-def get_grid_capacity(plus, minus):
+def get_grid_capacity(grid, plus, minus):
     tmp_grid = grid.query("plus_region_id == {:0d} & ".format(plus) +
                           "minus_region_id == {:1d} & ".format(minus) +
                           "scenario_name == 'status_quo_2012_distance'")
@@ -29,40 +18,19 @@ def get_grid_capacity(plus, minus):
     return capacity, distance
 
 
-def add_labels(data, plotter, label=None,
-               coord_file='data/geometries/coord_lines.csv'):
-    p = pd.read_csv(coord_file, index_col='name')
+def get_transmission_lines(c):
+    f_security = c.general['security_factor']
+    current_max = c.general['current_max']
 
-    data['point'] = p.geom
-    data['rotation'] = p.rotation
+    grid = pd.read_csv(os.path.join(c.paths['static'],
+                                    c.files['transmission_data']))
 
-    for row in data.iterrows():
-        point = geoplot.postgis2shapely([row[1].point, ])[0]
-        (x, y) = plotter.basemap(point.x, point.y)
-        textcolour = 'black'
-
-        if label is None:
-            text = row[0][2:4] + row[0][7:9]
-        else:
-            try:
-                text = '  ' + str(round(row[1][label] / 1000, 1)) + '  '
-            except TypeError:
-                text = str(row[1][label])
-
-            if row[1][label] == 0:
-                    textcolour = 'red'
-
-        plotter.ax.text(x, y, text, color=textcolour, fontsize=11,
-                        rotation=row[1].rotation)
-
-
-def get_transmission_lines():
     # renpass F.Wiese (page 49)
     grid['capacity_calc'] = (grid.circuits * current_max * grid.voltage *
                              f_security * math.sqrt(3) / 1000)
 
-    pwr_lines = pd.read_csv(os.path.join('data', 'geometries',
-                                         'lines_de21.csv'),
+    pwr_lines = pd.read_csv(os.path.join(c.paths['geometry'],
+                                         c.files['powerlines_lines']),
                             index_col='name')
 
     for l in pwr_lines.index:
@@ -70,8 +38,8 @@ def get_transmission_lines():
         a = ('110{0}'.format(split[0][2:]))
         b = ('110{0}'.format(split[1][2:]))
         # print(a, b)
-        cap1, dist1 = get_grid_capacity(int(a), int(b))
-        cap2, dist2 = get_grid_capacity(int(b), int(a))
+        cap1, dist1 = get_grid_capacity(grid, int(a), int(b))
+        cap2, dist2 = get_grid_capacity(grid, int(b), int(a))
 
         if cap1 == 0 and cap2 == 0:
             pwr_lines.loc[l, 'capacity'] = 0
@@ -93,10 +61,10 @@ def get_transmission_lines():
         return '-'.join([name.split('-')[1], name.split('-')[0]])
 
     tmp.index = tmp.index.map(id_inverter)
-    df = pd.concat([values, tmp])
-    if not os.path.isdir(os.path.join('data', 'grid')):
-        os.makedirs(os.path.isdir(os.path.join('data', 'grid')))
-    df.to_csv(os.path.join('data', 'grid', 'de21_transmission.csv'))
+
+    df = pd.DataFrame(pd.concat([values, tmp]))
+    df.to_csv(os.path.join(c.paths['transmission'],
+                           c.files['transmission_de21']))
     return df
 
 
@@ -106,5 +74,6 @@ def get_grid():
 
 
 if __name__ == "__main__":
-    # lines = get_transmission_lines()
-    plot_grid()
+    cfg = config.get_configuration()
+    lines = get_transmission_lines(cfg)
+    print(lines)
