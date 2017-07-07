@@ -7,7 +7,7 @@ import feedin as feed
 import logging
 from oemof.tools import logger
 import powerplants as pwrp
-import grid
+import transmission
 from oemof.solph import OperationalModel
 from oemof.outputlib import ResultsDataFrame
 
@@ -192,7 +192,7 @@ renewable_sources(pp.repp_region_fuel(year), feed.feedin_source_region(year))
 demand_sinks(demand.get_demand_by_region(year))
 shortage_sources(regions)
 excess_sinks(regions)
-powerlines(grid.get_grid())  # Todo: year?
+powerlines(transmission.get_grid())  # Todo: year?
 
 # Sort table and store it.
 logging.info("Sort and store files.")

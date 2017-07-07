@@ -28,7 +28,8 @@ def normalised_feedin_by_region_wind(pp, feedin_de21, feedin_coastdat,
     years = list()
     for y in range(1990, 2025):
         outfile = feedin_de21.format(year=y, type=vtype.lower())
-        infile = feedin_coastdat.format(year=y, type=vtype.lower())
+        infile = feedin_coastdat.format(year=y, type=vtype.lower(),
+                                        sub='coastdat')
         if not os.path.isfile(outfile) or overwrite:
             if os.path.isfile(infile):
                 years.append(y)
@@ -44,7 +45,8 @@ def normalised_feedin_by_region_wind(pp, feedin_de21, feedin_coastdat,
     for year in years:
         logging.info("Processing {0}...".format(year))
         pwr = pd.HDFStore(feedin_coastdat.format(year=year,
-                                                 type=vtype.lower()))
+                                                 type=vtype.lower(),
+                                                 sub='coastdat'))
         my_index = pwr[pwr.keys()[0]].index
         feedin = pd.DataFrame(index=my_index)
 
@@ -167,14 +169,14 @@ def normalised_feedin_by_region_hydro(c, feedin_de21, regions, overwrite=False):
 
     hydro_capacity = pd.read_csv(
         os.path.join(c.paths['powerplants'], c.files['sources']),
-        index_col=[0, 1, 2, 3]).loc['Hydro'].groupby(
+        index_col=[0, 1, 2]).loc['Hydro'].groupby(
             'year').sum().loc[hydro_energy.index].capacity
 
     full_load_hours = (hydro_energy / hydro_capacity).multiply(1000)
 
     hydro_path = os.path.abspath(os.path.join(
         *feedin_de21.format(year=0, type='hydro').split('/')[:-1]))
-    print(hydro_path)
+
     if not os.path.isdir(hydro_path):
         os.makedirs(hydro_path)
 
@@ -184,7 +186,7 @@ def normalised_feedin_by_region_hydro(c, feedin_de21, regions, overwrite=False):
         if not os.path.isfile(filename) or overwrite:
             idx = pd.date_range(start="{0}-01-01 00:00".format(year),
                                 end="{0}-12-31 23:00".format(year),
-                                freq='H')
+                                freq='H',tz='Europe/Berlin')
             feedin = pd.DataFrame(columns=regions, index=idx)
             feedin[feedin.columns] = full_load_hours.loc[year] / len(feedin)
             feedin.to_csv(filename)
@@ -214,10 +216,10 @@ def normalised_feedin_by_region(c, overwrite=False):
 
     regions = pp.index.get_level_values(2).unique().sort_values()
 
-    normalised_feedin_by_region_solar(pp, feedin_de21, feedin_coastdat,
-                                      overwrite)
-    normalised_feedin_by_region_wind(pp, feedin_de21, feedin_coastdat,
-                                     overwrite)
+    # normalised_feedin_by_region_solar(pp, feedin_de21, feedin_coastdat,
+    #                                   overwrite)
+    # normalised_feedin_by_region_wind(pp, feedin_de21, feedin_coastdat,
+    #                                  overwrite)
     normalised_feedin_by_region_hydro(c, feedin_de21, regions, overwrite)
 
 
@@ -485,4 +487,4 @@ def normalised_feedin_by_weather(c, years=None, overwrite=False):
 if __name__ == "__main__":
     logger.define_logging()
     cfg = config.get_configuration()
-    normalised_feedin_by_region(cfg, overwrite=False)
+    normalised_feedin_by_region(cfg, overwrite=True)

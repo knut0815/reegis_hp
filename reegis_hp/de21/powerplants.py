@@ -862,7 +862,8 @@ def combine_power_plants(c):
         cpp.sort_index(inplace=True)
 
     cpp.to_csv(os.path.join(c.paths['powerplants'], c.files['transformer']))
-    rpp.to_csv(os.path.join(c.paths['powerplants'], c.files['sources']))
+    rpp.groupby(level=[0, 1, 2]).sum().to_csv(
+        os.path.join(c.paths['powerplants'], c.files['sources']))
 
 
 class PowerPlantsDE21:

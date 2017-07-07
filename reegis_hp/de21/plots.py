@@ -70,7 +70,7 @@ def de21_grid():
     plt.rcParams.update({'font.size': 16})
     plt.style.use('grayscale')
 
-    data = pd.read_csv(os.path.join(c.paths['reegis'],
+    data = pd.read_csv(os.path.join(c.paths['static'],
                                     c.files['data_electricity_grid']),
                        index_col='Unnamed: 0')
 
@@ -382,10 +382,10 @@ def plot_full_load_hours(year):
 
 
 if __name__ == "__main__":
-    heatmap_pv_orientation()
+    # heatmap_pv_orientation()
     # plot_full_load_hours(0)
     # plot_module_comparison()
-    # de21_grid()
+    de21_grid()
     # de21_region()
     # plot_inverter_comparison()
     # plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_simple.csv'),

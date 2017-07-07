@@ -21,7 +21,7 @@ class ConfigurationDe21:
         load_ini_file(default_ini, target_ini)
 
 
-class ScenarioConfigDe21():
+class ScenarioConfigDe21:
     def __init__(self, filename, default_file):
         self.general = dict()
         self.paths = dict()
@@ -194,6 +194,25 @@ def get_configuration_basic():
     c.pattern['shp'] = cfg.get('powerplants', 'shp_file_pattern')
     c.files['transformer'] = cfg.get('powerplants', 'transformer_file')
     c.files['sources'] = cfg.get('powerplants', 'sources_file')
+
+    # ********* storages ******************************************************
+    c.paths['storages'] = extend_path(
+        c.paths[cfg.get('storages', 'path')],
+        cfg.get('storages', 'dir'))
+    c.files['hydro_storages'] = cfg.get('storages', 'hydro_storages_file')
+    c.files['hydro_storages_de21'] = cfg.get(
+        'storages', 'grouped_storages_file')
+
+    # ********* transmission **************************************************
+    c.paths['transmission'] = extend_path(
+        c.paths[cfg.get('transmission', 'path')],
+        cfg.get('transmission', 'dir'))
+    c.files['transmission_data'] = cfg.get('transmission',
+                                           'transmission_data_file')
+    c.files['transmission_de21'] = cfg.get('transmission',
+                                           'transmission_de21_file')
+    c.general['security_factor'] = cfg.get('transmission', 'security_factor')
+    c.general['current_max'] = cfg.get('transmission', 'current_max')
 
     # ********* time series ***************************************************
     c.paths['time_series'] = extend_path(

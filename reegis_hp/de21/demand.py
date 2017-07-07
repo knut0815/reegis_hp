@@ -10,7 +10,7 @@ from oemof.tools import logger
 
 
 def get_time_period(c, load, region_code, start_cet, end_cet):
-    demand_share = os.path.join(c.paths['reegis'], c.files['demand_share'])
+    demand_share = os.path.join(c.paths['static'], c.files['demand_share'])
     if region_code == 'DE':
         share = 1
     else:
@@ -23,6 +23,7 @@ def get_time_period(c, load, region_code, start_cet, end_cet):
 def get_demand_by_region(year, c, overwrite=False):
     load_file = os.path.join(c.paths['time_series'],
                              c.files['load_time_series'])
+
     if not os.path.isfile(load_file) or overwrite:
         time_series.split_timeseries_file(c, overwrite)
 

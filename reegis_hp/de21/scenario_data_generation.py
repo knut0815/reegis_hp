@@ -2,7 +2,10 @@
 import os
 import pprint
 import pandas as pd
+import numpy as np
+import logging
 import configuration as config
+import demand
 
 
 def check_fraction(dic):
@@ -23,123 +26,106 @@ def create_subdict_from_config_dict(conf, names):
 def initialise_scenario():
     c = config.get_configuration('scenario')
 
-    subpath = os.path.join(c.paths['scenario_data'],
-                           c.general['name']).replace(' ', '_').lower()
-    if not os.path.isdir(subpath):
-        os.mkdir(subpath)
+    c.paths['scenario_path'] = os.path.join(
+        c.paths['scenario_data'], c.general['name']).replace(' ', '_').lower()
+    if not os.path.isdir(c.paths['scenario_path']):
+        os.mkdir(c.paths['scenario_path'])
     return c
 
 
-def prepare_capacities(c):
-    # read renewable powerplants data
-    re2conv = {
-        'Biomass and biogas': 'Bioenergy',
-        'Other fossil fuels': 'Other fossil fuels'}
+def prepare_transformer(c):
+    tpp = pd.read_csv(os.path.join(c.paths['powerplants'],
+                                   c.files['transformer']),
+                      index_col=[0, 1, 2])
 
-    transformers = ['Biomass and biogas', 'Hard coal', 'Lignite', 'Natural gas',
-                    'Nuclear', 'Oil', 'Other fossil fuels', 'Waste']
+    cols = pd.MultiIndex(levels=[[], []], labels=[[], []], names=['', ''])
+    idx = tpp.index.get_level_values(2).unique().sort_values()
+    transformer = pd.DataFrame(columns=cols, index=idx)
 
-    sources = ['Geothermal', 'Hydro', 'Solar', 'Wind']
+    for col in tpp.index.get_level_values(0).unique().sort_values():
+        # get values for the given year
+        df = tpp.loc[col, c.general['year']]
 
-    pp = pd.read_csv(os.path.join(c.paths['renewable'],
-                                  c.pattern['grouped'].format(cat='renewable')),
-                     index_col=[0, 1, 2, 3])
-    print(pp.index.get_level_values(0).unique())
-    # prepare one year (rows: regions, columns: types)
-    my_index = pp.index.get_level_values(2).unique()
-    powerplants_renewable = pd.DataFrame(index=my_index)
-    for pptype in pp.index.levels[0]:
-        powerplants_renewable[pptype] = (
-            pp.loc[pptype, c.general['year']].groupby(level=0).sum())
+        # write values into new DataFrame
+        transformer[(col, 'capacity')] = df.capacity
+        transformer[(col, 'capacity')].fillna(0, inplace=True)
+        transformer[(col, 'efficiency')] = df.efficiency
+        idx = df.efficiency.notnull()
+        w_avg = np.average(df[idx].efficiency, weights=df[idx].capacity)
+        transformer[(col, 'efficiency')].fillna(w_avg, inplace=True)
 
-    # read conventional powerplants data
-    pp = pd.read_csv(
-        os.path.join(
-            c.paths['conventional'],
-            c.pattern['grouped'].format(cat='conventional')),
-        index_col=[0, 1, 2])
-    print(pp.index.get_level_values(0).unique())
-    # prepare one year (rows: regions, columns: (types, (capacity, efficiency)))
-    my_index = pp.index.get_level_values(2).unique()
-    my_cols = pd.MultiIndex(levels=[[], []], labels=[[], []],
-                            names=['fuel', 'value'])
-    powerplants_conventional = pd.DataFrame(index=my_index, columns=my_cols)
-    for fuel in pp.index.get_level_values(0).unique():
-        for col in pp.columns:
-            powerplants_conventional[fuel, col] = (
-                pp.loc[fuel, c.general['year']][col])
-
-    # fill gaps of efficiency columns with mean value
-    for fuel in pp.index.get_level_values(0).unique():
-        sum_out = powerplants_conventional[fuel, 'capacity'].sum()
-        sum_in = powerplants_conventional[fuel, 'capacity'].div(
-            powerplants_conventional[fuel, 'efficiency']).sum()
-        mean_eff = sum_out / sum_in
-        powerplants_conventional[fuel, 'efficiency'].fillna(mean_eff,
-                                                            inplace=True)
-
-    # sort DataFrames and fill nan-values (capacity) with 0
-    powerplants_conventional.sort_index(inplace=True)
-    powerplants_renewable.sort_index(inplace=True)
-    powerplants_conventional.fillna(0, inplace=True)
-    powerplants_renewable.fillna(0, inplace=True)
-
-    # add renewable data (transformer) to conventional data
-    for fuel, pptype in re2conv.items():
-        powerplants_conventional[fuel, 'capacity'] += (
-            powerplants_renewable[pptype])
-
-    powerplants_conventional[transformers].to_csv(
-        os.path.join(c.paths['scenario_data'],
-                     c.general['name'].replace(' ', '_').lower(),
-                     'transformer.csv'))
-
-    # add conventional data (sources) to renewable data: Hydro
-    powerplants_renewable['Hydro'] += powerplants_conventional[
-        'Hydro', 'capacity']
-
-    powerplants_renewable[sources].to_csv(
-        os.path.join(c.paths['scenario_data'],
-                     c.general['name'].replace(' ', '_').lower(),
-                     'sources_capacity.csv'))
+    transformer.to_csv(os.path.join(c.paths['scenario_path'],
+                                    'transformer.csv'))
 
 
-def model_sources(c):
-    subpath = os.path.join(c.paths['scenario_data'],
-                           c.general['name']).replace(' ', '_').lower()
-    if not os.path.isdir(subpath):
-        os.mkdir(subpath)
+def prepare_sources(c):
+    spp = pd.read_csv(os.path.join(c.paths['powerplants'],
+                                   c.files['sources']),
+                      index_col=[0, 1, 2])
 
-    # read renewable powerplants
-    pp = pd.read_csv(os.path.join(c.paths['renewable'],
-                                  c.pattern['grouped'].format(cat='renewable')),
-                     index_col=[0, 1, 2, 3])
+    cols = spp.index.get_level_values(0).unique().sort_values()
+    idx = spp.index.get_level_values(2).unique().sort_values()
+    sources = pd.DataFrame(columns=cols, index=idx)
 
-    # Store renewable powerplants
-    my_index = pp.loc['Wind', c.general['year']].groupby(level=0).sum().index
-    powerplants_renewable = pd.DataFrame(index=my_index)
-    for pptype in pp.index.levels[0]:
-        powerplants_renewable[pptype] = (
-            pp.loc[pptype, c.general['year']].groupby(level=0).sum())
-    powerplants_renewable.to_csv(os.path.join(subpath,
-                                              c.files['renewable_capacities']))
+    for col in cols:
+        sources[col] = spp.loc[col, c.general['year']]
+        sources[col].fillna(0, inplace=True)
 
+    sources.to_csv(os.path.join(c.paths['scenario_path'],
+                                'sources_capacity.csv'))
+
+    # ************ wind ******
     # read wind feedin time series (feedin_wind)
     feedin_wind = pd.read_csv(
         os.path.join(c.paths['feedin'], 'wind', 'de21',
-                     c.pattern['feedin_de21'].format(year=c.general['year'],
-                                                     type='wind')),
-        index_col=0, header=[0, 1])
-    feedin = feedin_wind.columns.set_levels(['wind'], level=1, inplace=True)
+                     c.pattern['feedin_de21'].format(
+                         year=c.general['weather_year'], type='wind')),
+        index_col=0)
 
+    # add type level to wind DataFrame
+    feedin_wind.columns = pd.MultiIndex.from_product(
+        [feedin_wind.columns, ['wind']])
+
+    # ************ hydro ******
+    # read hydro feedin time series (feedin_hydro)
+    feedin_hydro = pd.read_csv(
+        os.path.join(c.paths['feedin'], 'hydro', 'de21',
+                     c.pattern['feedin_de21'].format(
+                        year=c.general['weather_year'], type='hydro')),
+        index_col=0)
+
+    # add type level to hydro DataFrame
+    feedin_hydro.columns = pd.MultiIndex.from_product(
+        [feedin_hydro.columns, ['hydro']])
+
+    # ************ geotherm ******
+    # read hydro feedin time series to get the structure and overwrite it
+    # with geotherm value
+    feedin_geotherm = pd.read_csv(
+        os.path.join(c.paths['feedin'], 'hydro', 'de21',
+                     c.pattern['feedin_de21'].format(
+                         year=c.general['weather_year'], type='hydro')),
+        index_col=0)
+    feedin_geotherm[feedin_geotherm.columns] = 0.5
+
+    # add type level to geotherm DataFrame
+    feedin_geotherm.columns = pd.MultiIndex.from_product(
+        [feedin_geotherm.columns, ['geotherm']])
+
+    # ************ combine wind, hydro, geotherm ******
+    feedin = pd.DataFrame(
+        pd.concat([feedin_wind, feedin_hydro, feedin_geotherm], axis=1))
+
+    # ************ pv ******
     # read solar feedin time series (feedin_solar)
     feedin_solar = pd.read_csv(
         os.path.join(
             c.paths['feedin'], 'solar', 'de21',
-            c.pattern['feedin_de21'].format(year=c.general['year'],
+            c.pattern['feedin_de21'].format(year=c.general['weather_year'],
                                             type='solar')),
-        index_col=0, header=[0, 1, 2], parse_dates=True)
+        index_col=0, header=[0, 1, 2])
 
+    # combine different pv-sets to one feedin time series
     module_inverter_sets = create_subdict_from_config_dict(
         c.pv, c.pv['module_inverter_types'])
     orientation_sets = create_subdict_from_config_dict(
@@ -150,43 +136,63 @@ def model_sources(c):
     feedin_solar.sort_index(1, inplace=True)
     orientation_fraction.sort_index(inplace=True)
 
-    # print(orientation_fraction)
-    print(feedin_solar['DE01', 'M_STP280S__I_GEPVb_5000_NA_240'].multiply(
-        orientation_fraction))
-
-    exit(0)
-    solar = pd.DataFrame(index=feedin_solar.index)
     for reg in feedin_solar.columns.levels[0]:
-        solar[reg] = 0
-        for set in module_inverter_sets.keys():
-            for subset in orientation_sets.keys():
-                if reg in powerplants_renewable.index:
-                    solar[reg] += feedin_solar[reg, set, subset].multiply(
-                        powerplants_renewable.loc[reg, 'Solar']).multiply(
-                            set_name[set] * orientation[subset])
-    solar = solar.sum(1)
-    solar.to_csv(os.path.join(c.paths['analysis'], 'solar_de.csv'))
+        feedin[reg, 'solar'] = 0
+        for mset in module_inverter_sets.keys():
+            feedin[reg, 'solar'] += feedin_solar[reg, mset].multiply(
+                orientation_fraction).sum(1).multiply(
+                    module_inverter_sets[mset])
 
-    re_file = os.path.join(c.paths['time_series'],
-                           c.files['renewables_time_series'])
+    feedin.sort_index(1).to_csv(os.path.join(c.paths['scenario_path'],
+                                             'sources_timeseries.csv'))
 
-    start = datetime.datetime(year, 1, 1, 0, 0)
-    end = datetime.datetime(year, 12, 31, 23, 0)
 
-    ts = pd.read_csv(re_file, index_col='cet', parse_dates=True).loc[start:end]
-    print(ts['DE_solar_generation'].sum())
-    print(solar[:8760].sum())
-    print((solar[:8760].sum()) / (34.93 * 1000000))
-    new = pd.DataFrame()
-    new['own'] = solar[:8760]
-    new['other'] = ts['DE_solar_generation']
-    new.plot()
+def prepare_storages(c):
+    phes = pd.read_csv(os.path.join(c.paths['storages'],
+                                    c.files['hydro_storages_de21']),
+                       index_col='region')
+    print(phes.columns)
+    rename_columns = {
+        'energy': 'capacity',
+        'pump': 'max_in',
+        'turbine': 'max_out',
+        'pump_eff': 'efficiency_in',
+        'turbine_eff': 'efficiency_out'}
+    phes.rename(columns=rename_columns, inplace=True)
+    phes.to_csv(os.path.join(c.paths['scenario_path'], 'storages.csv'))
 
-    plt.show()
-    print('Done')
+
+def prepare_transmission_lines(c):
+    grid = pd.read_csv(os.path.join(c.paths['transmission'],
+                                    c.files['transmission_de21']))
+
+    mind = grid.distance[grid.distance > 0].min()
+    divd = (grid.distance.max() - mind) / 2 * 100
+
+    # vary grid efficiency between 0.98 and 0.96
+    grid['efficiency'] = 0.98 - (grid.distance - mind) / divd
+    grid.loc[grid.distance == 0, 'efficiency'] = 0
+
+    del grid['distance']
+
+    grid.to_csv(os.path.join(c.paths['scenario_path'], 'transmission.csv'))
+
+
+def prepare_demand(c):
+    elec_demand = demand.get_demand_by_region(c.general['weather_year'], c)
+    elec_demand.to_csv(os.path.join(c.paths['scenario_path'], 'demand.csv'))
 
 
 if __name__ == "__main__":
     cfg = initialise_scenario()
-    prepare_capacities(cfg)
-    model_sources(cfg)
+    prepare_demand(cfg)
+    exit(0)
+    prepare_transformer(cfg)
+    prepare_sources(cfg)
+    prepare_storages(cfg)
+    prepare_demand(cfg)
+    prepare_transmission_lines()
+    # combine_power_plants(cfg)
+    # src = ['Geothermal', 'Hydro', 'Solar', 'Wind']
+    # prepare_capacities(cfg, src)
+    # prepare_time_series(cfg, src)

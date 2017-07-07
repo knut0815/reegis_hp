@@ -124,6 +124,22 @@ def offshore():
     # offsh.to_csv(os.path.join(spath, 'offshore_windparks_prepared.csv'))
 
 
+def bmwe():
+    spath = '/home/uwe/chiba/Promotion/Kraftwerke und Speicher/'
+    sfile1 = 'installation_bmwe.csv'
+    sfile2 = 'strom_bmwe.csv'
+    sfile3 = 'hydro.csv'
+    inst = pd.read_csv(os.path.join(spath, sfile1), index_col=[0]).astype(float)
+    strom = pd.read_csv(os.path.join(spath, sfile2), index_col=[0]).astype(float)
+    # hydro = pd.read_csv(os.path.join(spath, sfile3), index_col=[0], squeeze=True).astype(float)
+    cols = pd.MultiIndex(levels=[[], []], labels=[[], []],
+                         names=['type', 'value'])
+    df = pd.DataFrame(index=inst.index, columns=cols)
+    for col in inst.columns:
+        df[col, 'capacity'] = inst[col]
+        df[col, 'energy'] = strom[col]
+    df.to_csv('/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/static/energy_capacity_bmwi_readme.csv')
+
 
 if __name__ == "__main__":
     # plot_geocsv(os.path.join('geometries', 'federal_states.csv'),
@@ -131,7 +147,8 @@ if __name__ == "__main__":
     #             coord_file='data_basic/label_federal_state.csv')
     # plot_geocsv('/home/uwe/geo.csv', idx_col='gid')
     logger.define_logging()
-    offshore()
+    # offshore()
+    bmwe()
     exit(0)
     plz2ireg()
     # sorter()
