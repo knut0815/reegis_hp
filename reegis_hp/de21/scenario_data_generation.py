@@ -219,6 +219,42 @@ def prepare_demand(c):
     elec_demand.to_csv(os.path.join(c.paths['scenario_path'], 'demand.csv'))
 
 
+def prepare_commodity_sources(c):
+    logging.info('Prepare commodity sources...({})'.format(
+        c.general['year']))
+    transformer = pd.read_csv(
+        os.path.join(c.paths['scenario_path'], 'transformer.csv'),
+        index_col=[0], header=[0, 1])
+
+    # create empty DataFrame for local sources
+    cols = pd.MultiIndex(levels=[[], []], labels=[[], []], names=['', ''])
+    local_sources = pd.DataFrame(columns=cols, index=transformer.index)
+
+    # get list of transformer that will have a local commodity source
+    local = c.general['local_sources']
+
+    # get commodity sources
+    com_src = pd.read_csv(os.path.join(c.paths['commodity'],
+                                       c.files['commodity_sources']),
+                          header=[0, 1], index_col=[0])
+
+    # create DataFrame for global sources with all data sets from com_src
+    global_sources = com_src.loc[c.general['year']].unstack()[
+        [c.general['optimisation_target'], 'limit']]
+
+    for l in local:
+        s = transformer[l, 'capacity'].sum()
+        local_sources[l, 'limit'] = (transformer[l, 'capacity'] / s *
+                                     global_sources.loc[l, 'limit'])
+        local_sources[l, 'costs'] = global_sources.loc[l, 'costs']
+        global_sources.drop(l, inplace=True)
+
+    local_sources.to_csv(
+        os.path.join(c.paths['scenario_path'], 'commodity_sources_local.csv'))
+    global_sources.to_csv(
+        os.path.join(c.paths['scenario_path'], 'commodity_sources_global.csv'))
+
+
 if __name__ == "__main__":
     logger.define_logging()
     cfg = initialise_scenario()
@@ -227,3 +263,14 @@ if __name__ == "__main__":
     prepare_storages(cfg)
     prepare_demand(cfg)
     prepare_transmission_lines(cfg)
+    prepare_commodity_sources(cfg)
+
+    # fossil_sources(cfg)
+    # TODO suche nach Wert falls Wert nan
+    # year = 2000
+    # ary = src.loc[src.index >= year, ('biomass', 'costs')]
+    # mask = np.isnan(ary)
+    # print(mask)
+    # ary[mask] = np.interp(np.flatnonzero(mask),
+    #                       np.flatnonzero(~mask), ary[~mask])
+    # print(ary)

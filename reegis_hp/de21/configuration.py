@@ -67,7 +67,9 @@ def get_single_value(section, value, kind='basic', filename=None):
 
 def get_list(section, parameter):
     try:
-        my_list = cfg.get(section, parameter).replace(' ', '').split(',')
+        my_list = cfg.get(section, parameter).split(',')
+        my_list = [x.strip() for x in my_list]
+
     except AttributeError:
         my_list = list((cfg.get(section, parameter),))
     return my_list
@@ -106,6 +108,8 @@ def get_configuration_scenario(filename):
     c.general['year'] = cfg.get('general', 'year')
     c.general['weather_year'] = cfg.get('general', 'weather_year')
     c.general['demand_year'] = cfg.get('general', 'demand_year')
+    c.general['optimisation_target'] = cfg.get('general', 'optimisation_target')
+    c.general['local_sources'] = get_list('general', 'local_commodity_sources')
 
     c.files['renewable_capacities'] = cfg.get('files', 'renewable_capacities')
 
@@ -141,12 +145,31 @@ def get_configuration_basic():
     c.url['time_series_data'] = cfg.get('download', 'url_timeseries_data')
     c.url['time_series_readme'] = cfg.get('download', 'url_timeseries_readme')
     c.url['time_series_json'] = cfg.get('download', 'url_timeseries_json')
+    c.url['bmwi_energiedaten'] = cfg.get('download', 'url_bmwi_energiedaten')
 
     # ********* paths ********************************************************
     c.paths['basic'] = check_path(cfg.get('paths', 'basic'))
     c.paths['data'] = check_path(cfg.get('paths', 'data'))
     c.paths['messages'] = extend_path(
         c.paths[cfg.get('paths', 'msg_path')], cfg.get('paths', 'msg_dir'))
+
+    # ********* general sources **********************************************
+    c.paths['general'] = extend_path(
+        c.paths[cfg.get('general_sources', 'path')],
+        cfg.get('general_sources', 'dir'))
+    c.files['bmwi_energiedaten'] = cfg.get(
+        'general_sources', 'bmwi_energiedaten')
+
+    # ********* static sources ************************************************
+    c.paths['static'] = extend_path(
+        c.paths[cfg.get('static_sources', 'path')],
+        cfg.get('static_sources', 'dir'))
+    c.files['demand_share'] = cfg.get('static_sources', 'demand_share')
+    c.files['data_electricity_grid'] = cfg.get('static_sources',
+                                               'data_electricity_grid')
+    c.files['patch_offshore_wind'] = cfg.get('static_sources',
+                                             'patch_offshore_wind')
+    c.files['znes_flens'] = cfg.get('static_sources', 'znes_flens_data')
 
     # ********* weather ******************************************************
     c.paths['weather'] = extend_path(
@@ -215,6 +238,13 @@ def get_configuration_basic():
     c.general['security_factor'] = cfg.get('transmission', 'security_factor')
     c.general['current_max'] = cfg.get('transmission', 'current_max')
 
+    # ********* commodity sources *********************************************
+    c.paths['commodity'] = extend_path(
+        c.paths[cfg.get('commodity_sources', 'path')],
+        cfg.get('commodity_sources', 'dir'))
+    c.files['commodity_sources'] = cfg.get('commodity_sources',
+                                           'commodity_sources_file')
+
     # ********* time series ***************************************************
     c.paths['time_series'] = extend_path(
         c.paths[cfg.get('time_series', 'path')],
@@ -226,16 +256,6 @@ def get_configuration_basic():
     c.files['load_time_series'] = cfg.get('time_series', 'load_file')
     c.files['time_series_readme'] = cfg.get('time_series', 'readme_file')
     c.files['time_series_json'] = cfg.get('time_series', 'json_file')
-
-    # ********* static ********************************************************
-    c.paths['static'] = extend_path(
-        c.paths[cfg.get('static', 'path')],
-        cfg.get('static', 'dir'))
-    c.files['demand_share'] = cfg.get('static', 'demand_share')
-    c.files['data_electricity_grid'] = cfg.get('static',
-                                               'data_electricity_grid')
-    c.files['patch_offshore_wind'] = cfg.get('static',
-                                             'patch_offshore_wind')
 
     # ********* demand ********************************************************
     c.paths['demand'] = extend_path(

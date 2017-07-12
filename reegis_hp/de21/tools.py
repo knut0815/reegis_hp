@@ -4,6 +4,8 @@ from oemof.tools import logger
 from shapely.wkt import loads as wkt_loads
 import os
 import calendar
+import logging
+import requests
 
 
 def read_seq_file():
@@ -22,6 +24,28 @@ def postgis2shapely(postgis):
     for geo in postgis:
         geometries.append(wkt_loads(geo))
     return geometries
+
+
+def download_file(filename, url, overwrite=False):
+    """
+    Check if file exist and download it if necessary.
+
+    Parameters
+    ----------
+    filename : str
+        Full filename with path.
+    url : str
+        Full URL to the file to download.
+    overwrite : boolean (default False)
+        If set to True the file will be downloaded even though the file exits.
+    """
+    if not os.path.isfile(filename) or overwrite:
+        logging.warning("File not found. Try to download it from server.")
+        req = requests.get(url)
+        with open(filename, 'wb') as fout:
+            fout.write(req.content)
+        logging.info("Downloaded from {0} and copied to '{1}'.".format(
+            url, filename))
 
 
 def sorter():
@@ -141,6 +165,16 @@ def bmwe():
     df.to_csv('/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/static/energy_capacity_bmwi_readme.csv')
 
 
+def prices():
+    # from matplotlib import pyplot as plt
+    spath = '/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/static/'
+    sfile = 'commodity_sources_prices.csv'
+    price = pd.read_csv(os.path.join(spath, sfile), index_col=[0], header=[0, 1])
+    print(price)
+    price['Erdgas'].plot()
+    plt.show()
+
+
 if __name__ == "__main__":
     # plot_geocsv(os.path.join('geometries', 'federal_states.csv'),
     #             idx_col='iso',
@@ -148,7 +182,7 @@ if __name__ == "__main__":
     # plot_geocsv('/home/uwe/geo.csv', idx_col='gid')
     logger.define_logging()
     # offshore()
-    bmwe()
+    prices()
     exit(0)
     plz2ireg()
     # sorter()
