@@ -46,6 +46,10 @@ def download_file(filename, url, overwrite=False):
             fout.write(req.content)
         logging.info("Downloaded from {0} and copied to '{1}'.".format(
             url, filename))
+        r = req.status_code
+    else:
+        r = 1
+    return r
 
 
 def sorter():
@@ -175,6 +179,29 @@ def prices():
     plt.show()
 
 
+def load_energiebilanzen():
+    spath = '/home/uwe/chiba/Promotion/Energiebilanzen/2014/'
+    sfile = 'Energiebilanz RheinlandPfalz 2014.xlsx'
+    sfile = 'Energiebilanz BadenWuerttemberg2014.xls'
+    filename = os.path.join(spath, sfile)
+    header = pd.read_excel(filename, 0, index=[0, 1, 2, 3, 4], header=None
+                           ).iloc[:3, 5:].ffill(axis=1)
+
+    eb = pd.read_excel(filename, 0, skiprows=3, index_col=[0, 1, 2, 3, 4], skip_footer=2)
+    eb.columns = pd.MultiIndex.from_arrays(header.values)
+    # print(eb)
+    # print(eb.loc[pd.IndexSlice[
+    #     'ENDENERGIEVERBRAUCH',
+    #     :,
+    #     :,
+    #     84]].transpose())
+    eb.sort_index(0, inplace=True)
+    eb.sort_index(1, inplace=True)
+    #
+    print(eb.loc[(slice(None), slice(None), slice(None), 84), 'Braunkohlen'])
+    # print(eb.columns)
+
+
 if __name__ == "__main__":
     # plot_geocsv(os.path.join('geometries', 'federal_states.csv'),
     #             idx_col='iso',
@@ -182,7 +209,8 @@ if __name__ == "__main__":
     # plot_geocsv('/home/uwe/geo.csv', idx_col='gid')
     logger.define_logging()
     # offshore()
-    prices()
+    load_energiebilanzen()
+    # prices()
     exit(0)
     plz2ireg()
     # sorter()
