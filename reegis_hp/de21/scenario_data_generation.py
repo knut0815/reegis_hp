@@ -25,7 +25,7 @@ def create_subdict_from_config_dict(conf, names):
 
 
 def initialise_scenario():
-    c = config.get_configuration('scenario')
+    c = config.get_configuration()
 
     c.paths['scenario_path'] = os.path.join(
         c.paths['scenario_data'], c.general['name']).replace(' ', '_').lower()
