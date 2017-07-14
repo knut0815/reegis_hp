@@ -1,6 +1,5 @@
 import pandas as pd
 import scenario_tools as sc
-import os.path as path
 import os
 import demand
 import feedin as feed
@@ -8,35 +7,57 @@ import logging
 from oemof.tools import logger
 import powerplants as pwrp
 import transmission
+import configuration as config
 from oemof.solph import OperationalModel
 from oemof.outputlib import ResultsDataFrame
 
 
-def global_resources(fuel_list):
+def commodity_sources(c):
     """Add unlimited global resources."""
-    variable_costs = {
-        'biomass_and_biogas': 27.73476,
-        'hard_coal': 45.86634,
-        'hydro': 0.0000,
-        'lignite': 27.5949,
-        'natural_gas': 54.05328,
-        'nuclear': 5.961744,
-        'oil': 86.86674,
-        'other_fossil_fuels': 27.24696,
-        'waste': 30.0000,
-    }
-    for fuel in fuel_list:
+    # variable_costs = {
+    #     'biomass_and_biogas': 27.73476,
+    #     'hard_coal': 45.86634,
+    #     'hydro': 0.0000,
+    #     'lignite': 27.5949,
+    #     'natural_gas': 54.05328,
+    #     'nuclear': 5.961744,
+    #     'oil': 86.86674,
+    #     'other_fossil_fuels': 27.24696,
+    #     'waste': 30.0000,
+    # }
+    global_sources = pd.read_csv(
+        os.path.join(c.paths['scenario_path'], 'commodity_sources_global.csv'),
+        index_col=[0])
+    for fuel, value in global_sources.iterrows():
         fuel_type = fuel.lower().replace(" ", "_")
         label = 'GL_resource_{0}'.format(fuel_type)
         source = 'GL_resource_{0}'.format(fuel_type)
         target_bus = 'GL_bus_{0}'.format(fuel_type)
         idx = ('Source', label, source, target_bus)
         columns = ['variable_costs', 'sort_index']
-        values = [variable_costs[fuel_type], '0000_1']
+        values = [value.costs, '0000_1']
         de21.add_parameters(idx, columns, values)
 
+    local_sources = pd.read_csv(
+        os.path.join(c.paths['scenario_path'], 'commodity_sources_local.csv'),
+        index_col=[0], header=[0, 1])
+    local_bus = list()
+    for fuel in local_sources.columns.get_level_values(0).unique():
+        for region, value in global_sources.iterrows():
+            fuel_type = fuel.lower().replace(" ", "_")
+            label = '{0}_resource_{1}'.format(region, fuel_type)
+            source = '{0}_resource_{1}'.format(region, fuel_type)
+            target_bus = '{0}_bus_{1}'.format(region, fuel_type)
+            idx = ('Source', label, source, target_bus)
+            columns = ['variable_costs', 'sort_index']
+            values = [value.costs, '{0}_1'.format(region)]
+            de21.add_parameters(idx, columns, values)
+            local_bus.append(fuel)
 
-def transformer(df, local_bus=False):
+    return local_bus
+
+
+def transformer(c, local_bus):
     """
     Add transformer and connect them to their source bus.
 
@@ -45,13 +66,16 @@ def transformer(df, local_bus=False):
     you have to call this function twice with different subsets of your
     DataFrame.
     """
+    transf = pd.read_csv(os.path.join(c.paths['scenario_path'],
+                                      'transformer.csv'),
+                         index_col=[0], header=[0, 1])
+
     busid = 'GL'
-    for reg in df.index.get_level_values(0).unique():
-        if local_bus:
-            busid = reg
-        sub = df.loc[reg]
-        for fuel, values in sub.iterrows():
+    for fuel in transf.columns.get_level_values(0).unique():
+        for reg, values in transf[fuel].iterrows():
             fuel_type = fuel.lower().replace(" ", "_")
+            if fuel_type in local_bus:
+                busid = reg
             label = '{0}_pp_{1}'.format(reg, fuel_type)
             source_bus = '{0}_bus_{1}'.format(busid, fuel_type)
             target_bus = '{0}_bus_el'.format(reg)
@@ -156,9 +180,14 @@ def powerlines(df, efficiency=0.97):
 
 # Define default logger
 logger.define_logging()
+cfg = config.get_configuration()
+cfg.paths['scenario_path'] = os.path.join(
+    cfg.paths['scenario_data'], cfg.general['name']).replace(' ', '_').lower()
 
 # Set path name and year for the basic scenario
-my_path = path.join(path.dirname(path.realpath(__file__)), 'my_scenarios')
+my_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                       'my_scenarios')
+
 my_name = 'de21_basic_uwe'
 year = 2013
 datetime_index = pd.date_range('{0}-01-01 00:00:00'.format(year),
@@ -167,15 +196,20 @@ logging.info("Creating basic scenario '{0}' for {1} in {2}".format(
     my_name, year, my_path))
 
 # Get list of regions from csv-file
-regions = pd.read_csv(path.join(
-    my_path, path.pardir, 'data', 'geometries', 'polygons_de21_simple.csv')).gid
+regions = pd.read_csv(os.path.join(cfg.paths['geometry'],
+                                   cfg.files['region_polygons_simple'])).gid
 
 # Initialise scenario add empty tables
 de21 = sc.SolphScenario(path=my_path, name=my_name, timeindex=datetime_index)
 de21.create_tables()
 
-# Initialise power plants
-pp = pwrp.PowerPlantsDE21()
+files = [file for root, dirs, file in os.walk(cfg.paths['scenario_path'])]
+
+# for file in files[0]:
+#     print(file)
+# exit(0)
+# # Initialise power plants
+# pp = pwrp.PowerPlantsDE21()
 
 # Add objects to scenario tables
 logging.info("Add objects to scenario tables.")
@@ -186,8 +220,9 @@ for r in regions:  # One comment line for every region
     de21.add_comment_line('{0}'.format(r), '{0}_0'.format(r))
 
 # Add objects
-global_resources(pp.fuels())  # Todo: year?
-transformer(pp.cpp_region_fuel(year), local_bus=False)
+global_buses = commodity_sources(cfg)
+transformer(cfg, global_buses)
+exit(0)
 renewable_sources(pp.repp_region_fuel(year), feed.feedin_source_region(year))
 demand_sinks(demand.get_demand_by_region(year))
 shortage_sources(regions)
