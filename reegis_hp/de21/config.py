@@ -41,7 +41,7 @@ cfg = cp.RawConfigParser()
 _loaded = False
 
 
-def load_config(filename):
+def load_config(filename=None):
     """
     Load data from config file to `cfg` that can be accessed by get, set
     afterwards.
@@ -49,59 +49,15 @@ def load_config(filename):
     Specify absolute or relative path to your config file.
 
     :param filename: Relative or absolute path
-    :type filename: str
+    :type filename: str or list
     """
-
-    if filename is None:
-        filename = ''
-
-    abs_filename = os.path.join(os.getcwd(), filename)
+    # load config
 
     global FILE
 
-    # find the config file
-    if os.path.isfile(filename):
+    if filename is not None:
         FILE = filename
-    elif os.path.isfile(abs_filename):
-        FILE = abs_filename
-    elif os.path.isfile(FILE):
-        pass
-    else:
-        if os.path.dirname(filename):
-            file_not_found = filename
-        else:
-            file_not_found = abs_filename
-        file_not_found_message(file_not_found)
-
-    # load config
     init(FILE)
-
-
-def file_not_found_message(file_not_found):
-    """
-    Show error message incl. help if file not found
-
-    Parameters
-    ----------
-    file_not_found : str
-        Name and path of the file
-    """
-
-    logging.error(
-        """
-        Config file {file} cannot be found.  Make sure this file exists!
-
-        An exemplary section in the config file looks as follows
-
-        [database]
-        username = username under which to connect to the database
-        database = name of the database from which to read
-        host     = host to connect to
-        port     = port to connect to
-
-        For further advice, see in the docs (https://oemofdb.readthedocs.io)
-        how to format the config.
-        """.format(file=file_not_found))
 
 
 def main():
@@ -114,15 +70,12 @@ def init(file):
 
     Parameters
     ----------
-    file : str
+    file : str or list
         Absolute path to config file (incl. filename)
     """
-    try:
-        cfg.read(file)
-        global _loaded
-        _loaded = True
-    except:
-        file_not_found_message(file)
+    cfg.read(file)
+    global _loaded
+    _loaded = True
 
 
 def get(section, key):
@@ -140,52 +93,28 @@ def get(section, key):
 
     """
     # FILE = 'config_misc'
+
     if not _loaded:
         init(FILE)
     try:
         return cfg.getint(section, key)
-    except Exception:
+    except ValueError:
         try:
             return cfg.getfloat(section, key)
-        except:
+        except ValueError:
             try:
                 return cfg.getboolean(section, key)
-            except:
+            except ValueError:
                 try:
                     value = cfg.get(section, key)
                     if value == 'None':
                         value = None
                     return value
-                except:
+                except ValueError:
                     logging.error(
                         "section {0} with key {1} not found in {2}".format(
                             section, key, FILE))
                     return cfg.get(section, key)
-
-
-def set(section, key, value):
-    """
-    sets a value to a [section] key - pair.
-    if the section doesn't exist yet, it will be created.
-
-    :param section: the section.
-    :type section: str.
-    :param key: the key.
-    :type key: str.
-    :param value: the value.
-    :type value: float, int, str.
-    """
-
-    if not _loaded:
-        init(FILE)
-
-    if not cfg.has_section(section):
-        cfg.add_section(section)
-
-    cfg.set(section, key, value)
-
-    with open(FILE, 'w') as configfile:
-        cfg.write(configfile)
 
 if __name__ == "__main__":
     main()

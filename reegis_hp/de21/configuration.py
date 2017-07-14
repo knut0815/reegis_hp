@@ -4,42 +4,27 @@ __license__ = "GPLv3"
 
 import config as cfg
 import os
-import logging
-from shutil import copyfile
 
 
 class ConfigurationDe21:
-    def __init__(self, filename, default_file):
+    def __init__(self):
         self.paths = dict()
         self.pattern = dict()
         self.files = dict()
         self.general = dict()
         self.url = dict()
-
-        default_ini = os.path.join(os.path.dirname(__file__), default_file)
-        target_ini = os.path.join(os.path.expanduser("~"), '.oemof', filename)
-        load_ini_file(default_ini, target_ini)
-
-
-class ScenarioConfigDe21:
-    def __init__(self, filename, default_file):
-        self.general = dict()
-        self.paths = dict()
-        self.pattern = dict()
-        self.files = dict()
         self.pv = dict()
 
-        default_ini = os.path.join(os.path.dirname(__file__), default_file)
-        target_ini = os.path.join(os.path.expanduser("~"), '.oemof', filename)
-        load_ini_file(default_ini, target_ini)
-
-
-def load_ini_file(default_ini, target_ini):
-    if not os.path.isfile(target_ini):
-        copyfile(default_ini, target_ini)
-        logging.info("Default ini file copied to {0}".format(target_ini))
-        logging.info("Adapt it to your needs.")
-    cfg.load_config(target_ini)
+        target_ini = list()
+        target_ini.append(os.path.join(os.path.dirname(__file__),
+                                       'de21_default.ini'))
+        target_ini.append(os.path.join(os.path.dirname(__file__),
+                                       'de21_scenario_default.ini'))
+        target_ini.append(os.path.join(os.path.expanduser("~"),
+                                       '.oemof', 'de21.ini'))
+        target_ini.append(os.path.join(os.path.expanduser("~"),
+                                       '.oemof', 'de21_scenario.ini'))
+        cfg.load_config(target_ini)
 
 
 def check_path(pathname):
@@ -54,15 +39,9 @@ def extend_path(ex_path, name):
     return check_path(os.path.join(ex_path, name))
 
 
-def get_single_value(section, value, kind='basic', filename=None):
-    if kind == 'basic':
-        ConfigurationDe21('de21.ini', 'de21_default.ini')
-        return cfg.get(section, value)
-    elif kind == 'scenario':
-        ScenarioConfigDe21(filename, 'de21_scenario_default.ini')
-        return cfg.get(section, value)
-    else:
-        return None
+def get_single_value(section, value):
+    ConfigurationDe21()
+    return cfg.get(section, value)
 
 
 def get_list(section, parameter):
@@ -75,16 +54,6 @@ def get_list(section, parameter):
     return my_list
 
 
-def get_configuration(kind='basic', filename=None):
-    if kind == 'basic':
-        conf = get_configuration_basic()
-    elif kind == 'scenario':
-        conf = get_configuration_scenario(filename)
-    else:
-        conf = None
-    return conf
-
-
 def create_entries_from_list(dc, section, list_name):
     names = get_list(section, list_name)
     dc[list_name] = names
@@ -92,35 +61,9 @@ def create_entries_from_list(dc, section, list_name):
         dc[name] = cfg.get(section, name)
 
 
-def get_configuration_scenario(filename):
-    if filename is None:
-        filename = 'de21_scenario.ini'
-    basic_conf = get_configuration_basic()
-    c = ScenarioConfigDe21(filename, 'de21_scenario_default.ini')
-
-    # copy parts from basic configuration
-    c.paths = basic_conf.paths
-    c.files = basic_conf.files
-    c.pattern = basic_conf.pattern
-
-    # define configurations
-    c.general['name'] = cfg.get('general', 'name')
-    c.general['year'] = cfg.get('general', 'year')
-    c.general['weather_year'] = cfg.get('general', 'weather_year')
-    c.general['demand_year'] = cfg.get('general', 'demand_year')
-    c.general['optimisation_target'] = cfg.get('general', 'optimisation_target')
-    c.general['local_sources'] = get_list('general', 'local_commodity_sources')
-
-    c.files['renewable_capacities'] = cfg.get('files', 'renewable_capacities')
-
-    create_entries_from_list(c.pv, 'pv', 'module_inverter_types')
-    create_entries_from_list(c.pv, 'pv', 'orientation_types')
-    return c
-
-
-def get_configuration_basic():
+def get_configuration():
     # initialise class
-    c = ConfigurationDe21('de21.ini', 'de21_default.ini')
+    c = ConfigurationDe21()
 
     # set variables from ini file
     #  ********* general ******************************************************
@@ -159,6 +102,8 @@ def get_configuration_basic():
         cfg.get('general_sources', 'dir'))
     c.files['bmwi_energiedaten'] = cfg.get(
         'general_sources', 'bmwi_energiedaten')
+    c.files['vg250_ew_shp'] = cfg.get('general_sources', 'vg250_ew_shp')
+    c.files['vg250_ew_zip'] = cfg.get('general_sources', 'vg250_ew_zip')
 
     # ********* static sources ************************************************
     c.paths['static'] = extend_path(
@@ -290,5 +235,17 @@ def get_configuration_basic():
     c.paths['scenario_data'] = extend_path(
         c.paths[cfg.get('scenario_data', 'path')],
         cfg.get('scenario_data', 'dir'))
+
+    c.general['name'] = cfg.get('general', 'name')
+    c.general['year'] = cfg.get('general', 'year')
+    c.general['weather_year'] = cfg.get('general', 'weather_year')
+    c.general['demand_year'] = cfg.get('general', 'demand_year')
+    c.general['optimisation_target'] = cfg.get('general', 'optimisation_target')
+    c.general['local_sources'] = get_list('general', 'local_commodity_sources')
+
+    c.files['renewable_capacities'] = cfg.get('files', 'renewable_capacities')
+
+    create_entries_from_list(c.pv, 'pv', 'module_inverter_types')
+    create_entries_from_list(c.pv, 'pv', 'orientation_types')
 
     return c
