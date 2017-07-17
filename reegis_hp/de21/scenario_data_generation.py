@@ -72,12 +72,13 @@ def prepare_sources(c):
 
     cols = spp.index.get_level_values(0).unique().sort_values()
     idx = spp.index.get_level_values(2).unique().sort_values()
-    sources = pd.DataFrame(columns=cols, index=idx)
+    sources = pd.DataFrame(index=idx)
 
     try:
         for col in cols:
-            sources[col] = spp.loc[col, c.general['year']]
-            sources[col].fillna(0, inplace=True)
+            sources[col.lower().replace(" ", "_")] = spp.loc[col,
+                                                             c.general['year']]
+            sources[col.lower().replace(" ", "_")].fillna(0, inplace=True)
 
         sources.to_csv(os.path.join(c.paths['scenario_path'],
                                     'sources_capacity.csv'))
@@ -132,7 +133,7 @@ def prepare_sources(c):
 
         # add type level to geotherm DataFrame
         feedin_geotherm.columns = pd.MultiIndex.from_product(
-            [feedin_geotherm.columns, ['geotherm']])
+            [feedin_geotherm.columns, ['geothermal']])
     except FileNotFoundError:
         feedin_geotherm = pd.DataFrame()
         logging.error("Cannot prepare geothermal feedin for {0}".format(
@@ -197,6 +198,11 @@ def prepare_transmission_lines(c):
     logging.info('Prepare transmission lines...(no year!)')
     grid = pd.read_csv(os.path.join(c.paths['transmission'],
                                     c.files['transmission_de21']))
+
+    # Remove duplicate lines (keep only one direction)
+    grid['name'] = grid.name.apply(lambda x: '-'.join(sorted(x.split('-'))))
+    grid.drop_duplicates('name', inplace=True)
+    grid.set_index('name', drop=True, inplace=True)
 
     mind = grid.distance[grid.distance > 0].min()
     divd = (grid.distance.max() - mind) / 2 * 100
