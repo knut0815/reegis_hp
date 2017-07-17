@@ -16,9 +16,9 @@ logger.define_logging()
 conn = db.connection()
 start = time.time()
 
-filename = "/home/uwe/data.csv"
+filename = "/home/uwe/chiba/RLI/data/kraftwerke_vattenfall_zentral.csv"
 
-sql = "SELECT DISTINCT gebaeude_1 FROM berlin.alkis_gebaeude"
+sql = "SELECT * FROM berlin.kraftwerke_vattenfall_zentral;"
 
 logging.info("SQL query: {0}".format(sql))
 logging.info("Retrieving data from db...")

@@ -1,0 +1,2 @@
+de21_demand_share, db: renpass, table: demand_distribution, url: renpass.eu, type: sql (mysql)
+de21_grid_data, db: pathways, table: grid_scenario, url: renpass.eu, type: sql (mysql)

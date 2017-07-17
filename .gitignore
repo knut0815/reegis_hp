@@ -56,3 +56,24 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# IDEs
+.idea/
+.spyderproject
+
+# reegis
+results/
+weather/
+feedin/
+my_scenarios/
+/reegis_hp/de21/data_old/
+/reegis_hp/de21/save/
+
+
+# shape files
+*.shp
+*.cpg
+*.dbf
+*.prj
+*.shx
+
