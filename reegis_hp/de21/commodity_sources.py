@@ -77,7 +77,7 @@ def set_limit_by_energy_production(c, src):
     filename = os.path.join(c.paths['general'], c.files['bmwi_energiedaten'])
     t.download_file(filename, c.url['bmwi_energiedaten'])
 
-    # get prices for commodity source from sheet 26
+    # get energy production from renewable source from sheet 20
     repp = pd.read_excel(filename, '20', skiprows=22).ix[:23]
     repp = repp.drop(repp.index[[0, 4, 8, 12, 16, 20]])
     repp['type'] = (['water'] * 3 + ['wind'] * 3 + ['Biomass and biogas'] * 3 +
