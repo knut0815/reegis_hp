@@ -32,7 +32,9 @@ def read_original_timeseries_file(c, overwrite=False):
         with open(json, 'wb') as fout:
             fout.write(req.content)
 
-    return pd.read_csv(orig_csv_file)
+    orig = pd.read_csv(orig_csv_file, index_col=[0], parse_dates=True)
+    orig = orig.tz_localize('UTC').tz_convert('Europe/Berlin')
+    return orig
 
 
 def prepare_de_file(c, overwrite=False):
@@ -40,12 +42,6 @@ def prepare_de_file(c, overwrite=False):
     de_file = os.path.join(c.paths['time_series'], c.files['time_series_de'])
     if not os.path.isfile(de_file) or overwrite:
         ts = read_original_timeseries_file(c, overwrite)
-        ts['cet'] = (
-            pd.to_datetime(ts.cet_cest_timestamp) +
-            datetime.timedelta(hours=1))
-
-        ts = ts.set_index('cet')
-
         for col in ts.columns:
             if 'DE' not in col:
                 ts.drop(col, 1, inplace=True)

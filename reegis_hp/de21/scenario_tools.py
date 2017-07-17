@@ -47,11 +47,10 @@ class SolphScenario(EnergySystem):
             datetime_index = self.timeindex
 
         my_index = pd.MultiIndex(
-            levels=[[1], [2], [3], [4], [5]], labels=[[0], [0], [0], [0], [0]],
+            levels=[[], [], [], [], []], labels=[[], [], [], [], []],
             names=INDEX + ('attributes',))
 
         df = pd.DataFrame(index=datetime_index, columns=my_index)
-        del df[1, 2, 3, 4, 5]
         self.s = df
 
     def create_tables(self, **kwargs):

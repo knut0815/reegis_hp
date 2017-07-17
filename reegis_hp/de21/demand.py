@@ -31,7 +31,7 @@ def get_demand_by_region(year, c, overwrite=False):
     end = datetime.datetime(year, 12, 31, 23, 0)
 
     entsoe = pd.read_csv(load_file, index_col='cet', parse_dates=True)
-
+    entsoe = entsoe.tz_localize('UTC').tz_convert('Europe/Berlin')
     load_profile = pd.DataFrame(get_time_period(c, entsoe, 'DE', start, end))
     for i in range(21):
         region = 'DE{:02.0f}'.format(i + 1)
