@@ -7,6 +7,8 @@ import configuration as config
 from oemof.solph import OperationalModel
 from oemof.outputlib import ResultsDataFrame
 import config as cfg
+from shapely.wkt import loads as wkt_loads
+import powerplants as pp
 
 
 def commodity_sources(round_nominal_value=True):
@@ -182,13 +184,40 @@ def demand_sinks(round_nominal_value=True):
             de21.add_sequences(idx, df[reg] / max_demand)
 
 
+def storages(round_nominal_value=True):
+    """Storages """
+    df = pd.read_csv(os.path.join(c.paths['scenario_path'], 'storages.csv'),
+                     index_col=[0], parse_dates=True)
+    for reg, values in df.iterrows():
+        label = '{0}_storage'.format(reg)
+        bus = '{0}_bus_el'.format(reg)
+        idx1 = ('Storage', label, label, bus)
+        idx2 = ('Storage', label, bus, label)
+        cols1 = ['nominal_value', 'nominal_capacity',
+                 'inflow_conversion_factor',
+                 'outflow_conversion_factor', 'sort_index']
+        cols2 = ['nominal_value', 'sort_index']
+        if round_nominal_value:
+            values['capacity'] = round(values['capacity'])
+            values['max_in'] = round(values['max_in'])
+            values['max_out'] = round(values['max_out'])
+        values1 = [values.max_in, values.capacity,
+                   round(values.efficiency_in, 2),
+                   round(values.efficiency_out, 2),
+                   '{0}_4a'.format(reg)]
+        values2 = [values.max_out, '{0}_4b'.format(reg)]
+        if values.capacity > 0:
+            de21.add_parameters(idx1, cols1, values1)
+            de21.add_parameters(idx2, cols2, values2)
+
+
 def shortage_sources(shortage_regions, var_costs=1000):
     """Shortage sources"""
     for reg in shortage_regions:
         label = '{0}_{1}'.format(reg, 'shortage')
         idx = ('Source', label, label, '{0}_bus_el'.format(reg))
         cols = ['variable_costs', 'sort_index']
-        values = [var_costs, '{0}_4'.format(reg)]
+        values = [var_costs, '{0}_5a'.format(reg)]
         de21.add_parameters(idx, cols, values)
 
 
@@ -198,7 +227,7 @@ def excess_sinks(excess_regions):
         label = '{0}_{1}'.format(reg, 'excess')
         idx = ('Sink', label, '{0}_bus_el'.format(reg), label)
         cols = ['sort_index']
-        values = '{0}_5'.format(reg)
+        values = '{0}_5b'.format(reg)
         de21.add_parameters(idx, cols, values)
 
 
@@ -247,10 +276,10 @@ def create_objects_from_dataframe_collection():
     transformer(commodity_buses)
     renewable_sources()
     demand_sinks()
+    storages()
     shortage_sources(regions)
     excess_sinks(regions)
     powerlines()
-
     # Sort table and store it.
     logging.info("Sort and store files.")
     if write_table:
@@ -264,6 +293,135 @@ read_only = cfg.get('csv', 'read_only')
 write_table = cfg.get('csv', 'write_table')
 solver = cfg.get('general', 'solver')
 
+# neu = pd.read_csv('/home/uwe/express/reegis/oep_demand.ego_dp_loadarea_v0.2.10.csv',
+#                   index_col=[0])
+# print(len(neu))
+# exit(0)
+# del neu['geom_centre']
+# del neu['geom']
+# neu = neu.groupby('rs_0').sum()
+# neu.to_csv('/home/uwe/express/reegis/oep_demand.ego_dp_loadarea_v0.2.10b.csv')
+f = ('/home/uwe/express/reegis/' +
+     'oedb.demand.ego_dp_loadarea_v0.2.10_WGS84_170721.csv')
+# neu = pd.read_csv(f, index_col=[0])
+# print(neu.sum())
+# neu['consumption_per_ha'] = neu['sector_consumption_sum'] / neu['area_ha']
+# neu['consumption_per_ew'] = neu['sector_consumption_sum'] / neu['zensus_sum']
+#
+# neu['geom'] = neu.st_astext.apply(wkt_loads)
+# gneu = pp.create_geo_df(neu)
+#
+# # Add column with region id
+# gneu = pp.add_spatial_name(
+#     c, gneu, os.path.join(c.paths['geometry'],
+#                           c.files['region_polygons']),
+#     'region', 'ego_load')
+# gneu.to_file('/home/uwe/test2.shp')
+# neu['region'] = gneu['region']
+# del neu['geom']
+# neu.to_csv('/home/uwe/express/reegis/oep_demand_de21.csv')
+bla = pd.read_csv('/home/uwe/express/reegis/oep_demand_de21.csv',
+                  index_col=[0])
+# del bla['st_astext']
+# bla.to_csv('/home/uwe/express/reegis/oep_demand_de21.csv')
+
+print(bla.groupby('region').sum())
+
+# print(neu)
+exit(0)
+# neu['rs_0_str'] = neu['rs_0'].apply(lambda x: str(x).zfill(12))
+# neu.to_csv('/home/uwe/express/reegis/oep_demand.ego_dp_loadarea_v0.2.10b.csv')
+print(neu.sum())
+
+exit(0)
+eb = pd.read_excel(os.path.join(c.paths['static'],
+                                'energybalance_states_2012_to_2014.xlsx'),
+                   index_col=[0, 1, 2])
+
+column_translation = {
+    'Steinkohle, roh': 'hard coal, raw',
+    'Steinkohle, Briketts': 'hard coal, brick',
+    'Steinkohle, Koks': 'hard coal, coke',
+    'Steinkohle, andere': 'hard coal, other',
+    'Braunkohle, roh': 'lignite, raw',
+    'Braunkohle, Briketts': 'lignite, brick',
+    'Braunkohle, andere': 'lignite, other',
+    'Erdöl': 'oil, raw',
+    'Rohbenzin': 'petroleum',
+    'Ottokraftstoffe': 'gasoline',
+    'Dieselkraftstoffe': 'diesel',
+    'Flugturbinenkraftstoffe': 'jet fuel',
+    'Heizöl leicht': 'light heating oil',
+    'Heizöl schwer': 'heavy heating oil',
+    'Petrolkoks': 'petroleum coke',
+    'Mineralölprodukte, andere': 'mineral oil products',
+    'Flüssiggas': 'liquid gas',
+    'Raffineriegas': 'refinery gas',
+    'Kokereigas, Stadtgas': 'coke oven gas',
+    'Gichtgas, Konvertergas': 'furnace/converter gas',
+    'Erdgas': 'natural gas',
+    'Grubengas': 'mine gas',
+    'Klärgas, Deponiegas': 'sewer/landfill gas',
+    'Wasserkraft': 'hydro power',
+    'Windkraft': 'wind power',
+    'Solarenergie': 'solar power',
+    'Biomasse': 'biomass',
+    'Biotreibstoff': 'biofuel',
+    'sonstige': 'other renewable',
+    'Strom': 'electricity',
+    'Kernenergie': 'nuclear energy',
+    'Fernwärme': 'district heating',
+    'Abfälle nicht biogen': 'waste, fossil',
+    'andere Energieträger': 'other',
+    'Insgesamt': 'total'}
+
+fuel_groups = {
+    'hard coal raw': 'hard coal',
+    'hard coal brick': 'hard coal',
+    'hard coal coke': 'hard coal',
+    'hard coal other': 'hard coal',
+    'lignite, raw': 'lignite',
+    'lignite, brick': 'lignite',
+    'lignite, other': 'lignite',
+    'oil, raw': 'oil',
+    'petroleum': 'oil',
+    'gasoline': 'oil',
+    'diesel': 'oil',
+    'jet fuel': 'oil',
+    'light heating oil': 'oil',
+    'heavy heating oil': 'oil',
+    'petroleum coke': 'oil',
+    'mineral oil products': 'oil',
+    'liquid gas': 'gas',
+    'refinery gas': 'gas',
+    'coke oven gas': 'gas',
+    'furnace/converter gas': 'gas',
+    'natural gas': 'gas',
+    'mine gas': 'gas',
+    'sewer/landfill gas': 'gas',
+    'hydro power': 're',
+    'wind power': 're',
+    'solar power': 're',
+    'biomass': 're',
+    'biofuel': 're',
+    'other renewable': 're',
+    'electricity': 'electricity',
+    'district heating': 'district heating',
+    'waste, fossil': 'other',
+    'other': 'other',
+    'total': 'total'
+}
+
+eb.sort_index(0, inplace=True)
+eb.rename(columns=column_translation, inplace=True)
+print(eb.columns)
+eb = eb.apply(lambda x: pd.to_numeric(x, errors='coerce')).fillna(0)
+eb_grp = eb.groupby(by=fuel_groups, axis=1).sum()
+# print(eb_grp.loc[2014, :, 'Endenergieverbrauch']['hard coal'])
+# exit(0)
+eb_grp.loc[2014, :, 'Endenergieverbrauch'].to_excel('/home/uwe/test.xls')
+
+exit(0)
 c.paths['scenario_path'] = os.path.join(
     c.paths['scenario_data'], c.general['name']).replace(' ', '_').lower()
 
