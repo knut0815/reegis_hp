@@ -355,7 +355,7 @@ def find_intersection_with_buffer(gdf, spatial_df, column):
         else:
             warnings.warn(
                 "{0} does not intersect with any region. Please check".format(
-                    row[1].id))
+                    row[1]))
     logging.warning("Some points needed buffering to fit. " +
                     "See debug file for more information.")
     return gdf
@@ -642,6 +642,9 @@ def prepare_re_power_plants(c, overwrite=False):
         logging.info("File read: {0}".format(
             str(datetime.datetime.now() - start)))
 
+        # Remove power plants with no capacity:
+        ee = ee[ee.electrical_capacity.notnull()]
+
         # Trying to supplement missing coordinates
         ee = complete_geometries(c, ee, 'electrical_capacity', category, start)
 
@@ -866,48 +869,12 @@ def combine_power_plants(c):
         os.path.join(c.paths['powerplants'], c.files['sources']))
 
 
-class PowerPlantsDE21:
-
-    def __init__(self):
-        self.cpp = None  # pd.read_csv(GROUPED.format('conventional'),
-        #                              index_col=[0, 1, 2])
-        self.repp = None  # pd.read_csv(GROUPED.format('renewable'),
-        #                               index_col=[0, 1, 2, 3])
-
-    def fuels(self):
-        return list(self.cpp.index.get_level_values(0).unique())
-
-    def cpp_region_fuel(self, year):
-        return self.cpp.groupby(level=(1, 2, 0)).sum().loc[year]
-
-    def repp_region_fuel(self, year):
-        return self.repp.groupby(level=(1, 2, 0)).sum().loc[year]
-
-
 if __name__ == "__main__":
     import configuration as config
     cfg = config.get_configuration()
-    combine_power_plants(cfg)
+    # combine_power_plants(cfg)
     # patch_offshore_wind(cfg)
     # prepare_re_power_plants(cfg, overwrite=True)
     # prepare_conventional_power_plants(cfg, overwrite=True)
-
-    exit(0)
-    # prepare_conventional_power_plants('conventional', overwrite=False)
-    # prepare_re_power_plants('renewable', overwrite=False)
-    # logging_source = os.path.join(os.path.expanduser('~'), '.oemof',
-    #                               'log_files', 'oemof.log')
-    #
-    # logging_target = os.path.join('data', 'powerplants', 'messages',
-    #                               '{0}_prepare_open_data.log')
-    # dtstring = datetime.datetime.now().strftime('%Y%m%d_%H%M')
-    # shutil.copyfile(logging_source, logging_target.format(dtstring))
-    # pp = PowerPlantsDE21()
-    # print(pp.cpp_region_fuel(2016))
-    # print(pp.repp_region_fuel(2016))
-    # copp = pd.read_csv('/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/powerplants/prepared/conventional_power_plants_DE_prepared.csv')
-    # copp.loc[copp.fuel == 'Biomass and biogas'].to_csv('cpp_bio.csv')
-    # renpp = pd.read_csv('/home/uwe/git_local/reegis-hp/reegis_hp/de21/data/powerplants/prepared/renewable_power_plants_DE_prepared.csv')
-    # renpp.loc[
-    #     (renpp.energy_source_level_2 == 'Bioenergy') &
-    #     (renpp.electrical_capacity > 1)].to_csv('repp_bio.csv')
+    # prepare_conventional_power_plants(cfg)
+    prepare_re_power_plants(cfg)
