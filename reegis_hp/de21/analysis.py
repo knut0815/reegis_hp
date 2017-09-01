@@ -4,6 +4,7 @@ __license__ = "GPLv3"
 
 import pandas as pd
 # import geopandas as gpd
+import numpy as np
 import config as cfg
 import configuration as config
 import logging
@@ -214,7 +215,7 @@ def analyse_pv_orientation_region():
     for n in range(22):
         key += 1
         key -= 1000
-        for year in [1998, 2003, 2008]:
+        for year in [2008]:
             weather = pd.read_hdf(weatherpath.format(year=year), 'A' + str(key))
             latlon = pd.read_csv(
                 os.path.join(c.paths['geometry'],
@@ -228,19 +229,19 @@ def analyse_pv_orientation_region():
             sapm_inverters = pvlib.pvsystem.retrieve_sam('sandiainverter')
 
             systems = {
-                1: {'m': 'LG_LG290N1C_G3__2013_',
-                    'i': 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_'},
+                # 1: {'m': 'LG_LG290N1C_G3__2013_',
+                #     'i': 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_'},
                 2: {'m': 'BP_Solar_BP2150S__2000__E__',
                     'i':
                         'SolarBridge_Technologies__P235HV_240_240V__CEC_2011_'},
-                3: {'m': 'Solar_Frontier_SF_160S__2013_',
-                    'i': 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_'}
+                # 3: {'m': 'Solar_Frontier_SF_160S__2013_',
+                #     'i': 'ABB__MICRO_0_25_I_OUTD_US_208_208V__CEC_2014_'}
                 }
             for system in systems.values():
                 name = system['m'][:2].replace('o', 'F')
                 logging.info("{0} - {1} - {2}".format(key, year, name))
-                azimuth = range(175, 201)
-                tilt = range(30, 41)
+                azimuth = np.arange(190, 201, 0.5)
+                tilt = np.arange(32, 39, 0.5)
                 dc = pd.DataFrame()
                 ac = pd.DataFrame()
                 ir = pd.DataFrame()
@@ -272,7 +273,7 @@ def analyse_pv_orientation_region():
                 df.loc[(key, year, name), ('ir', 'tilt')] = ir_max[0]
                 df.loc[(key, year, name), ('ir', 'azimuth')] = ir_max[1]
         df.to_csv(os.path.join(c.paths['analysis'],
-                               'optimal_orientation_multi.csv'))
+                               'optimal_orientation_multi_BP.csv'))
     logging.info('Done')
 
 
@@ -436,7 +437,7 @@ def analyse_feedin_de(year):
     # multiply time series with installed capacity
     wind = pd.DataFrame()
     for reg in feedin_wind.columns.levels[0]:
-        wind[reg] = feedin_wind[reg, 'feedin_wind_turbine'].multiply(
+        wind[reg] = feedin_wind[reg].multiply(
             powerplants_renewable.loc[reg, 'Wind'])
     wind = wind.sum(1)
     wind.to_csv(os.path.join(c.paths['analysis'], 'wind_de.csv'))
@@ -468,12 +469,12 @@ def analyse_feedin_de(year):
     solar = pd.DataFrame(index=feedin_solar.index)
     for reg in feedin_solar.columns.levels[0]:
         solar[reg] = 0
-        for set in set_name.keys():
+        for pvset in set_name.keys():
             for subset in orientation.keys():
                 if reg in powerplants_renewable.index:
-                    solar[reg] += feedin_solar[reg, set, subset].multiply(
+                    solar[reg] += feedin_solar[reg, pvset, subset].multiply(
                         powerplants_renewable.loc[reg, 'Solar']).multiply(
-                            set_name[set] * orientation[subset])
+                            set_name[pvset] * orientation[subset])
     solar = solar.sum(1)
     solar.to_csv(os.path.join(c.paths['analysis'], 'solar_de.csv'))
 
@@ -586,8 +587,6 @@ def analyse_pv_capacity():
 
 def weather_statistics():
     c = config.get_configuration()
-    from matplotlib import pyplot as plt
-    import numpy as np
     years = list()
     for y in range(1970, 2020):
         if os.path.isfile(os.path.join(c.paths['weather'],
@@ -634,12 +633,19 @@ def weather_statistics():
     neu1['DWD (min)'] = dwd['dwd_min']
     neu1['DWD (mean)'] = dwd['dwd_mean'] - dwd['dwd_min']
     neu1['DWD (max)'] = dwd['dwd_max'] - dwd['dwd_mean']
+    neu1['dif'] = ((dwd['dwd_mean'] - dwd['coastdat_mean']) /
+                   dwd['coastdat_mean'])
     print(neu1)
     neu2 = pd.DataFrame()
     neu2['coastdat_min'] = dwd['coastdat_min']
     neu2['coastdat_mean'] = dwd['coastdat_mean'] - dwd['coastdat_min']
     neu2['coastDat-2 (max)'] = dwd['coastdat_max'] - dwd['coastdat_mean']
-    axe = plt.subplot(111)
+    fig = plt.figure(figsize=(18, 9))
+    plt.rc('legend', **{'fontsize': 26})
+    plt.rcParams.update({'font.size': 26})
+    fig.subplots_adjust(left=0.09, bottom=0.1, right=0.88, top=0.98,
+                        wspace=0.03, hspace=0.2)
+    axe = fig.add_subplot(111)
     axe = neu1.plot(kind='bar', stacked=True, ax=axe, color=['#ffffff',
                                                              'green',
                                                              'green'])
@@ -653,18 +659,18 @@ def weather_statistics():
                 rect.set_x(
                     rect.get_x() + 1 / float(n_df + 1) * i / float(n_col))
                 rect.set_width(1 / float(n_df + 5))
-    axe.set_xticks((np.arange(0, 2 * n_ind, 2) + 1 / float(n_df + 1)) / 2.)
-    axe.set_xticklabels(neu1.index, rotation = 0)
-    axe.set_title('Deutschlandweites Jahresmittel im Vergleich '
-                  '(DWD - coastDat-2) Quelle:' +
-                  'http://www.dwd.de/DE/leistungen/solarenergie/' +
-                  'lstrahlungskarten_su.html')
+    axe.set_xticks((np.arange(0, 2 * n_ind, 4) - 0.5 / float(n_df + 1)) / 2.)
+    axe.set_xticklabels(np.arange(1998, 2015, 2), rotation=0)
+    # axe.set_title('Deutschlandweites Jahresmittel im Vergleich '
+    #               '(DWD - coastDat-2) Quelle:' +
+    #               'http://www.dwd.de/DE/leistungen/solarenergie/' +
+    #               'lstrahlungskarten_su.html')
     box = axe.get_position()
     axe.set_position([box.x0, box.y0, box.width * 0.9, box.height])
     h = h[1:2] + h[4:5]
     l = ['DWD', 'coastDat-2']
     l1 = axe.legend(h, l, loc='center left', bbox_to_anchor=(1, 0.5))
-    axe.set_ylabel('Globalstrahlung (horizontal) [kWh/m2]')
+    axe.set_ylabel('Globalstrahlung (horizontal) in $\mathrm{kWh/m^2}$')
     axe.set_xlabel('Jahr')
     axe.add_artist(l1)
     x = np.arange(-0.19, 16.3, 1)
@@ -695,14 +701,15 @@ def something():
 if __name__ == "__main__":
     # initialise logger
     logger.define_logging()
-    weather_statistics()
-    something()
+    # analyse_pv_orientation_region()
+    # weather_statistics()
+    # something()
     # analyse_optimal_orientation_file()
     # get_maximum_value('performance_ratio.csv', icol=[0, 1, 2])
     # get_maximum_value('orientation_feedin_dc_high_resolution.csv')
     # analyse_performance_ratio(2003, 1129087)
     # analyse_pv_capacity()
-    # analyse_feedin_de(2014)
+    analyse_feedin_de(2014)
     # get_full_load_hours()
     # analyse_pv_types(2003, 1129087, orientation={'azimuth': 180, 'tilt': 32})
     # analyse_pv_orientation(2003, 1129087, 'LG_LG290N1C_G3__2013_')

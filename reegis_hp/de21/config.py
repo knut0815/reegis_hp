@@ -32,6 +32,7 @@ Option2 = value2 \n
 import os
 import logging
 import configparser as cp
+import configuration
 
 
 FILENAME = 'config.ini'
@@ -115,6 +116,23 @@ def get(section, key):
                         "section {0} with key {1} not found in {2}".format(
                             section, key, FILE))
                     return cfg.get(section, key)
+
+
+def get_list(section, parameter):
+    try:
+        my_list = cfg.get(section, parameter).split(',')
+        my_list = [x.strip() for x in my_list]
+
+    except AttributeError:
+        my_list = list((cfg.get(section, parameter),))
+    return my_list
+
+
+def set(section, key, value):
+    return cfg.set(section, key, value)
+
+print('Loading de21 configuration....')
+configuration.de21_configuration()
 
 if __name__ == "__main__":
     main()

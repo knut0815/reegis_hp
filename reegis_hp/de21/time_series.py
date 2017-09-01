@@ -4,31 +4,37 @@ import os
 import logging
 import requests
 import pandas as pd
-import datetime
+import config as cfg
 import configuration as config
 from oemof.tools import logger
 
 
-def read_original_timeseries_file(c, overwrite=False):
+def read_original_timeseries_file(overwrite=False):
     """Read file if exists."""
 
-    orig_csv_file = os.path.join(c.paths['time_series'],
-                                 c.files['time_series_original'])
-    readme = os.path.join(c.paths['time_series'], c.files['time_series_readme'])
-    json = os.path.join(c.paths['time_series'], c.files['time_series_json'])
+    orig_csv_file = os.path.join(cfg.get('paths', 'time_series'),
+                                 cfg.get('time_series', 'original_file'))
+    readme = os.path.join(cfg.get('paths', 'time_series'),
+                          cfg.get('time_series', 'readme_file'))
+    json = os.path.join(cfg.get('paths', 'time_series'),
+                        cfg.get('time_series', 'json_file'))
 
     if not os.path.isfile(orig_csv_file) or overwrite:
-        req = requests.get(c.url['time_series_data'])
-        logging.warning("File not found. Try to download it from server.")
+        req = requests.get(cfg.get('download', 'url_timeseries_data'))
+        if not overwrite:
+            logging.warning("File not found. Try to download it from server.")
+        else:
+            logging.warning("Will download file from server and overwrite"
+                            "existing ones")
         logging.warning("Check URL if download does not work.")
         with open(orig_csv_file, 'wb') as fout:
             fout.write(req.content)
         logging.warning("Downloaded from {0} and copied to '{1}'.".format(
-            c.url['time_series_data'], orig_csv_file))
-        req = requests.get(c.url['time_series_readme'])
+            cfg.get('download', 'url_timeseries_data'), orig_csv_file))
+        req = requests.get(cfg.get('download', 'url_timeseries_readme'))
         with open(readme, 'wb') as fout:
             fout.write(req.content)
-        req = requests.get(c.url['time_series_json'])
+        req = requests.get(cfg.get('download', 'url_timeseries_json'))
         with open(json, 'wb') as fout:
             fout.write(req.content)
 
@@ -37,11 +43,12 @@ def read_original_timeseries_file(c, overwrite=False):
     return orig
 
 
-def prepare_de_file(c, overwrite=False):
+def prepare_de_file(overwrite=False):
     """Convert demand file. CET index and Germany's load only."""
-    de_file = os.path.join(c.paths['time_series'], c.files['time_series_de'])
+    de_file = os.path.join(cfg.get('paths', 'time_series'),
+                           cfg.get('time_series', 'de_file'))
     if not os.path.isfile(de_file) or overwrite:
-        ts = read_original_timeseries_file(c, overwrite)
+        ts = read_original_timeseries_file(overwrite)
         for col in ts.columns:
             if 'DE' not in col:
                 ts.drop(col, 1, inplace=True)
@@ -49,12 +56,12 @@ def prepare_de_file(c, overwrite=False):
         ts.to_csv(de_file)
 
 
-def split_timeseries_file(c, overwrite=False):
-    path_pattern = os.path.join(c.paths['time_series'], '{0}')
-    de_file = path_pattern.format(c.files['time_series_de'])
+def split_timeseries_file(overwrite=False):
+    path_pattern = os.path.join(cfg.get('paths', 'time_series'), '{0}')
+    de_file = path_pattern.format(cfg.get('time_series', 'de_file'))
 
     if not os.path.isfile(de_file) or overwrite:
-        prepare_de_file(c, overwrite)
+        prepare_de_file(overwrite)
     de_ts = pd.read_csv(de_file, index_col='cet')
 
     load = pd.DataFrame(de_ts[pd.notnull(de_ts['DE_load_'])]['DE_load_'],
@@ -72,20 +79,20 @@ def split_timeseries_file(c, overwrite=False):
 
     renewables = de_ts.dropna(subset=re_subset, how='any')[re_columns]
 
-    load_file = path_pattern.format(c.files['load_time_series'])
+    load_file = path_pattern.format(cfg.get('time_series', 'load_file'))
     if not os.path.isfile(load_file) or overwrite:
         load.to_csv(load_file)
 
-    re_file = path_pattern.format(c.files['renewables_time_series'])
+    re_file = path_pattern.format(cfg.get('time_series', 'renewables_file'))
     if not os.path.isfile(re_file) or overwrite:
         renewables.to_csv(re_file)
 
 
-def get_timeseries(c, overwrite=False):
-    split_timeseries_file(c, overwrite)
+def get_timeseries(overwrite=False):
+    split_timeseries_file(overwrite)
 
 
 if __name__ == "__main__":
     logger.define_logging()
     conf = config.get_configuration()
-    split_timeseries_file(conf)
+    split_timeseries_file()

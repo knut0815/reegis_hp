@@ -41,7 +41,7 @@ def run():
     if not c.general['skip_feedin_region']:
         feedin.normalised_feedin_by_region(c, overwrite=c.general['overwrite'])
     if not c.general['skip_time_series']:
-        time_series.get_timeseries(c, overwrite=c.general['overwrite'])
+        time_series.get_timeseries(overwrite=c.general['overwrite'])
 
 
 if __name__ == "__main__":

@@ -1,11 +1,16 @@
 import pandas as pd
 from matplotlib import pyplot as plt
 from oemof.tools import logger
-from shapely.wkt import loads as wkt_loads
 import os
 import calendar
 import logging
 import requests
+from shapely.geometry import Point
+import datetime
+from shapely.wkt import loads as wkt_loads
+import geopandas as gpd
+import warnings
+import config as cfg
 
 
 def read_seq_file():
@@ -50,6 +55,107 @@ def download_file(filename, url, overwrite=False):
     else:
         r = 1
     return r
+
+
+def lat_lon2point(df):
+    """Create shapely point object of latitude and longitude."""
+    return Point(df['lon'], df['lat'])
+
+
+def create_geo_df(df, wkt_column=None, time=None, keep_wkt=False):
+    """Convert pandas.DataFrame to geopandas.geoDataFrame"""
+    if time is None:
+        time = datetime.datetime.now()
+    if wkt_column is not None:
+        df['geom'] = df[wkt_column].apply(wkt_loads)
+        if not keep_wkt:
+            del df[wkt_column]
+    if 'geom' not in df:
+        df['geom'] = df.apply(lat_lon2point, axis=1)
+    logging.info("Geom: {0}".format(str(datetime.datetime.now() - time)))
+
+    return gpd.GeoDataFrame(df, crs='epsg:4326', geometry='geom')
+
+
+def add_spatial_name(gdf, path_spatial_file, name, category, icol='gid',
+                     time=None, ignore_invalid=False):
+    """Add name of containing region to new column for all points."""
+    logging.info("Add spatial name for column: {0}".format(name))
+    if time is None:
+        time = datetime.datetime.now()
+
+    # Read spatial file (with polygons).
+    spatial_df = pd.read_csv(path_spatial_file, index_col=icol)
+
+    # Use the length to create an output.
+    length = len(spatial_df.index)
+
+    # Write datasets without coordinates to a file for later analyses.
+    gdf_invalid = gdf.loc[~gdf.is_valid].copy()
+
+    if len(gdf_invalid) > 0 and not ignore_invalid:
+        path = os.path.join(cfg.get('paths', 'messages'),
+                            '{0}_{1}_invalid.csv'.format(category, name))
+        gdf_invalid.to_csv(path)
+        logging.warning("Power plants with invalid geometries present.")
+        logging.warning("See '{0}' file for more information.".format(path))
+        logging.warning("It is possible to fix the original file manually.")
+        logging.warning("Repair file and rename it from '...something.csv'" +
+                        " to 'something_fixed.csv' to skip this message.")
+        logging.warning(
+            "Or set ignore_invalid=True to ignore invalid geometries.")
+
+    # Find points that intersect with polygon and pass name of the polygon to
+    # a new column (name of the new column is defined by 'name' parameter.
+    gdf_valid = gdf.loc[gdf.is_valid].copy()
+    for i, v in spatial_df.geom.iteritems():
+        length -= 1
+        logging.info("Remains: {0}".format(str(length)))
+        gdf_valid.loc[gdf_valid.intersects(wkt_loads(v)), name] = i
+    logging.info("Spatial name added to {0}: {1}".format(name,
+                 str(datetime.datetime.now() - time)))
+
+    # If points do not intersect with any polygon, a buffer around the point is
+    # created.
+    if len(gdf_valid.loc[gdf_valid[name].isnull()]) > 0:
+        logging.info("Some points do not intersect. Buffering {0}...".format(
+            name
+        ))
+        gdf_valid = find_intersection_with_buffer(gdf_valid, spatial_df, name)
+    else:
+        logging.info("All points intersect. No buffering necessary.")
+    return gdf_valid
+
+
+def find_intersection_with_buffer(gdf, spatial_df, column):
+    """Find intersection of points outside the regions by buffering the point
+    until the buffered point intersects with a region.
+    """
+    for row in gdf.loc[gdf[column].isnull()].iterrows():
+        point = row[1].geom
+        intersec = False
+        reg = 0
+        buffer = 0
+        for n in range(500):
+            if not intersec:
+                for i, v in spatial_df.iterrows():
+                    if not intersec:
+                        my_poly = wkt_loads(v.geom)
+                        if my_poly.intersects(point.buffer(n / 100)):
+                            intersec = True
+                            reg = i
+                            buffer = n
+                            gdf.loc[gdf.id == row[1].id, column] = reg
+        if intersec:
+            logging.debug("Region found for {0}: {1}, Buffer: {2}".format(
+                row[1].id, reg, buffer))
+        else:
+            warnings.warn(
+                "{0} does not intersect with any region. Please check".format(
+                    row[1]))
+    logging.warning("Some points needed buffering to fit. " +
+                    "See debug file for more information.")
+    return gdf
 
 
 def sorter():

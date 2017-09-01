@@ -171,8 +171,9 @@ def plot_geocsv(filepath, idx_col, facecolor=None, edgecolor='#aaaaaa',
 
 def coastdat_plot(data, data_col=None, lmin=0, lmax=1, n=5, digits=50,
                   legendlabel=''):
-    paths, pattern, files, general = config.get_configuration()
-    polygons = pd.read_csv(os.path.join(paths['geometry'], 'coastdat_grid.csv'),
+    c = config.get_configuration()
+    polygons = pd.read_csv(os.path.join(c.paths['geometry'],
+                                        'coastdatgrid_polygons.csv'),
                            index_col='gid')
     polygons['geom'] = geoplot.postgis2shapely(polygons.geom)
 
@@ -214,7 +215,7 @@ def coastdat_plot(data, data_col=None, lmin=0, lmax=1, n=5, digits=50,
     coastdatplot.geometries = geoplot.postgis2shapely(
         pd.read_csv(os.path.join(os.path.dirname(__file__), 'data',
                                  'geometries',
-                                 'polygons_de21_simple.csv')).geom)
+                                 'region_polygons_de21_simple.csv')).geom)
     coastdatplot.plot(facecolor=None, edgecolor='white')
     plt.tight_layout()
     plt.box(on=None)
@@ -225,8 +226,8 @@ def heatmap_pv_orientation():
     # import seaborn as sns
     from mpl_toolkits.axes_grid1 import make_axes_locatable
     c = config.get_configuration()
-    df = pd.read_csv(os.path.join(c.paths['analyses'],
-                                  'sun.csv'),
+    df = pd.read_csv(os.path.join(c.paths['analysis'],
+                                  'orientation_feedin_dc_high_resolution.csv'),
                      index_col='Unnamed: 0')
     df = df.transpose()
     df.index = df.index.map(int)
@@ -252,7 +253,7 @@ def heatmap_pv_orientation():
 
 def plot_module_comparison():
     c = config.get_configuration()
-    df = pd.read_csv(os.path.join(c.paths['analyses'],
+    df = pd.read_csv(os.path.join(c.paths['analysis'],
                                   'module_feedin.csv'),
                      index_col=0)['dc_norm']
     print(df)
@@ -267,13 +268,27 @@ def plot_module_comparison():
     plt.plot((253, 253), (0,  df.max() + 20), 'k-')
     plt.plot((479, 479), (0,  df.max() + 20), 'r-')
     plt.plot((394, 394), (0,  df.max() + 20), 'r-')
+    plt.plot((253, 253), (0,  df.max() + 20), 'r-')
+    plt.plot((62, 62), (0,  df.max() + 20), 'r-')
+    plt.text(453, 500, 'SF 160S',
+             bbox={'facecolor': 'white', 'alpha': 0.8, 'pad': 5,
+                   'linewidth': 0})
+    plt.text(355, 500, 'LG290N1C',
+             bbox={'facecolor': 'white', 'alpha': 0.8, 'pad': 5,
+                   'linewidth': 0})
+    plt.text(220, 500, 'STP280S',
+             bbox={'facecolor': 'white', 'alpha': 0.8, 'pad': 5,
+                   'linewidth': 0})
+    plt.text(30, 500, 'BP2150S',
+             bbox={'facecolor': 'white', 'alpha': 0.8, 'pad': 5,
+                   'linewidth': 0})
     plt.xticks(np.arange(0, len(df), 20), range(0, len(df), 20))
     plt.show()
 
 
 def plot_module_comparison_ts():
     c = config.get_configuration()
-    df = pd.read_csv(os.path.join(c.paths['analyses'],
+    df = pd.read_csv(os.path.join(c.paths['analysis'],
                                   'module_feedin_ac_ts.csv'),
                      index_col='Unnamed: 0')
 
@@ -310,8 +325,8 @@ def plot_inverter_comparison():
 
 
 def plot_full_load_hours(year):
-    paths, pattern, files, general = config.get_configuration()
-    df = pd.read_csv(os.path.join(paths['analyses'], 'full_load_hours.csv'),
+    c = config.get_configuration()
+    df = pd.read_csv(os.path.join(c.paths['analysis'], 'full_load_hours.csv'),
                      index_col=[0, 1])
 
     plt.figure(figsize=(8, 10))
@@ -319,7 +334,7 @@ def plot_full_load_hours(year):
     plt.rcParams.update({'font.size': 19})
     title = "Full load hours for wind in the year {0}[h].".format(year)
     coastdat_plot(df.loc[year, :]['wind'], lmax=3500, n=8, legendlabel=title)
-    plt.savefig(os.path.join(paths['plots'],
+    plt.savefig(os.path.join(c.paths['plots'],
                              'full_load_hours_{0}_{1}.svg'.format(year,
                                                                   'wind')))
     columns = list(df.columns)
@@ -331,9 +346,9 @@ def plot_full_load_hours(year):
         plt.rc('legend', **{'fontsize': 19})
         plt.rcParams.update({'font.size': 19})
         title = "Full load hours for {0} [h].".format(col)
-        coastdat_plot(df.loc[year, :][col], lmax=1200, lmin=500, n=8,
+        coastdat_plot(df.loc[year, :][col], lmax=1200, lmin=900, n=7,
                       legendlabel=title)
-        plt.savefig(os.path.join(paths['plots'],
+        plt.savefig(os.path.join(c.paths['plots'],
                                  'full_load_hours_{0}_{1}.svg'.format(
                                      year, col)))
 
@@ -360,7 +375,7 @@ def plot_full_load_hours(year):
             int(round(maximum[n] / 10) * 10)))
         n += 1
     plt.tight_layout()
-    plt.savefig(os.path.join(paths['plots'],
+    plt.savefig(os.path.join(c.paths['plots'],
                              'full_load_hours_region_{0}.svg'.format(reg)))
 
     colors = ['#6e6ead', '#ed943c', '#da7411']
@@ -376,16 +391,49 @@ def plot_full_load_hours(year):
         plt.title(title)
         ax.plot((-1, 18), (avg, avg), 'r-')
         n += 1
-        plt.savefig(os.path.join(paths['plots'],
+        plt.savefig(os.path.join(c.paths['plots'],
                                  'full_load_hours_{0}_region_{1}.svg'.format(
                                     col, reg)))
 
 
+def plot_orientation_by_region():
+    c = config.get_configuration()
+    df = pd.read_csv(os.path.join(c.paths['analysis'],
+                                  'optimal_orientation_multi_BP.csv'),
+                     index_col=[0, 1, 2])
+    # print(df)
+    # print(df.index.lexsort_depth)
+    df = df.sort_index(0)
+    # df = df.sort_index(1)
+    # print(df)
+    neu = df[['ir_tilt', 'ir_azimuth']]
+    neu.columns = ['Aufstellwinkel (links)', 'Azimuthwinkel']
+    ax = neu.plot(style=['s', '^'], secondary_y=['Azimuthwinkel'],
+                  )
+    # h, l = ax.get_legend_handles_labels()
+    # print(l)
+    # l = ['neu', 'alt']
+    # ax.legend(labels=l)
+    # labels = [item.get_text() for item in ax.get_xticklabels()]
+    labels = ['Nord-West', '', '', '', 'Zentrum', '', '', '', 'Süd-Ost']
+    ax.set_xticklabels(labels)
+    ax.set_xlabel('')
+    print(neu['Aufstellwinkel (links)'].mean())
+    print(neu['Azimuthwinkel'].mean())
+    # import statsmodels.formula.api as sm
+    # regression = sm.ols(formula='coastdat ~ Azimuthwinkel', data=neu)
+    # # print(neu)
+    # print(regression.predict(neu))
+    # print(labels)
+    plt.show()
+
+
 if __name__ == "__main__":
     # heatmap_pv_orientation()
-    # plot_full_load_hours(0)
+    plot_full_load_hours(2008)
     # plot_module_comparison()
-    de21_grid()
+    # plot_orientation_by_region()
+    # de21_grid()
     # de21_region()
     # plot_inverter_comparison()
     # plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_simple.csv'),

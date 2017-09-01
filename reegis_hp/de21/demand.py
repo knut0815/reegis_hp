@@ -5,48 +5,152 @@ import logging
 import time_series
 import pandas as pd
 import datetime
-import configuration as config
 from oemof.tools import logger
+import config as cfg
+from reegis_hp.de21 import tools
+import demandlib.bdew as bdew
+import demandlib.particular_profiles as profiles
+from workalendar.europe import Germany
 
 
-def get_time_period(c, load, region_code, start_cet, end_cet):
-    demand_share = os.path.join(c.paths['static'], c.files['demand_share'])
-    if region_code == 'DE':
-        share = 1
-    else:
-        share = pd.read_csv(
-            demand_share, index_col='region_code', squeeze=True)[region_code]
-
-    return load.ix[start_cet:end_cet].DE_load_.multiply(float(share))
+def renpass_demand_share():
+    demand_share = os.path.join(cfg.get('paths', 'static'),
+                                cfg.get('static_sources',
+                                        'renpass_demand_share'))
+    return pd.read_csv(
+            demand_share, index_col='region_code', squeeze=True)
 
 
-def get_demand_by_region(year, c, overwrite=False):
-    load_file = os.path.join(c.paths['time_series'],
-                             c.files['load_time_series'])
+def openego_demand_share():
+    demand_reg = prepare_ego_demand()['sector_consumption_sum']
+    demand_sum = demand_reg.sum()
+    return demand_reg.div(demand_sum)
+
+
+def de21_profile_from_entsoe(year, share, annual_demand=None, overwrite=False):
+    load_file = os.path.join(cfg.get('paths', 'time_series'),
+                             cfg.get('time_series', 'load_file'))
 
     if not os.path.isfile(load_file) or overwrite:
-        time_series.split_timeseries_file(c, overwrite)
+        time_series.split_timeseries_file(overwrite)
 
     start = datetime.datetime(year, 1, 1, 0, 0)
     end = datetime.datetime(year, 12, 31, 23, 0)
 
     entsoe = pd.read_csv(load_file, index_col='cet', parse_dates=True)
     entsoe = entsoe.tz_localize('UTC').tz_convert('Europe/Berlin')
-    load_profile = pd.DataFrame(get_time_period(c, entsoe, 'DE', start, end))
+    de_load_profile = entsoe.ix[start:end].DE_load_
+    load_profile = pd.DataFrame(index=de_load_profile.index)
     for i in range(21):
         region = 'DE{:02.0f}'.format(i + 1)
-        load_profile[region] = get_time_period(c, entsoe, region, start, end)
+        print(region, share[region])
+        load_profile[region] = de_load_profile.multiply(float(share[region]))
 
-    del load_profile['DE_load_']
+    if annual_demand is not None:
+        load_profile.div(load_profile.sum().sum()).multiply(annual_demand)
+
     return load_profile
+
+
+def prepare_ego_demand(overwrite=False):
+    egofile = os.path.join(cfg.get('paths', 'demand'),
+                           cfg.get('demand', 'ego_file'))
+
+    if os.path.isfile(egofile) and not overwrite:
+        ego_demand = pd.read_csv(egofile, index_col=[0])
+    else:
+        # Read basic file (check oedb-API)
+        load_file = os.path.join(cfg.get('paths', 'static'),
+                                 cfg.get('demand', 'ego_input_file'))
+        ego_demand = pd.read_csv(load_file, index_col=[0])
+
+        # Create GeoDataFrame from DataFrame
+        ego_demand_geo = tools.create_geo_df(ego_demand, wkt_column='st_astext')
+
+        # Add column with region id
+        ego_demand_geo = tools.add_spatial_name(
+            ego_demand_geo,
+            os.path.join(cfg.get('paths', 'geometry'),
+                         cfg.get('geometry', 'region_polygons')),
+            'region', 'ego_load')
+
+        ego_demand['region'] = ego_demand_geo['region']
+        del ego_demand['geom']
+        ego_demand.to_csv(egofile)
+    return ego_demand.groupby('region').sum()
+
+
+def de21_profile_from_slp(year, annual_demand=None, overwrite=False):
+    outfile = os.path.join(cfg.get('paths', 'demand'),
+                           cfg.get('demand', 'ego_profile'))
+    if not os.path.isfile(outfile) or overwrite:
+        demand_de21 = prepare_ego_demand()
+
+        cal = Germany()
+        holidays = dict(cal.holidays(year))
+
+        de21_profile = pd.DataFrame()
+
+        for region in demand_de21.index:
+            annual_demand = demand_de21.loc[region]
+
+            annual_electrical_demand_per_sector = {
+                'g0': annual_demand.sector_consumption_retail,
+                'h0': annual_demand.sector_consumption_residential,
+                'l0': annual_demand.sector_consumption_agricultural,
+                'i0': annual_demand.sector_consumption_industrial}
+            e_slp = bdew.ElecSlp(year, holidays=holidays)
+            elec_demand = e_slp.get_profile(annual_electrical_demand_per_sector)
+
+            # Add the slp for the industrial group
+            ilp = profiles.IndustrialLoadProfile(e_slp.date_time_index,
+                                                 holidays=holidays)
+            elec_demand['i0'] = ilp.simple_profile(
+                annual_electrical_demand_per_sector['i0'])
+
+            de21_profile[region] = elec_demand.sum(1).resample('H').mean()
+        de21_profile.to_csv(outfile)
+    else:
+        de21_profile = pd.read_csv(outfile, index_col=[0], parse_dates=True)
+
+    if annual_demand is not None:
+        de21_profile.div(de21_profile.sum().sum()).multiply(annual_demand)
+
+    return de21_profile
+
+
+def get_de21_profile(year, kind, annual_demand=None, overwrite=False):
+    # Use the openEgo proposal to calculate annual demand and standardised
+    # load profiles to create profiles.
+    if kind == 'openego':
+        de21_profile_from_slp(year, annual_demand, overwrite)
+
+    # Use the renpass demand share values to divide the national entsoe profile
+    # into 18 regional profiles.
+    if kind == 'renpass':
+        de21_profile_from_entsoe(year, renpass_demand_share(),
+                                 annual_demand, overwrite)
+
+    # Use the openEgo proposal to calculate the demand share values and use them
+    # to divide the national entsoe profile.
+    if kind == 'openego_entsoe':
+        de21_profile_from_entsoe(year, openego_demand_share(),
+                                 annual_demand, overwrite)
 
 
 if __name__ == "__main__":
     logger.define_logging()
-    conf = config.get_configuration()
+    logging.info("Alle drei Profile plotten mit/ohne Skalierung")
     my_year = 2013
     from matplotlib import pyplot as plt
-    logging.info("Retrieving load profiles for Germany ({0}).".format(my_year))
-    get_demand_by_region(my_year, conf).plot()
-    plt.plot()
+    mydf = pd.DataFrame()
+    mydf['renpass'] = renpass_demand_share() * 100
+    mydf['open_ego'] = openego_demand_share() * 100
+    print(mydf)
+    neu = mydf['renpass'] - mydf['open_ego']
+    neu.sort_values(inplace=True)
+    neu.plot(kind='bar')
+    plt.show()
+    mydf.sort_values(by='renpass', inplace=True)
+    mydf.plot(kind='bar')
     plt.show()

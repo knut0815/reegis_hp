@@ -320,8 +320,8 @@ f = ('/home/uwe/express/reegis/' +
 # neu['region'] = gneu['region']
 # del neu['geom']
 # neu.to_csv('/home/uwe/express/reegis/oep_demand_de21.csv')
-bla = pd.read_csv('/home/uwe/express/reegis/oep_demand_de21.csv',
-                  index_col=[0])
+# bla = pd.read_csv('/home/uwe/express/reegis/oep_demand_de21.csv',
+#                   index_col=[0])
 # del bla['st_astext']
 # bla.to_csv('/home/uwe/express/reegis/oep_demand_de21.csv')
 

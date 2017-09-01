@@ -88,7 +88,7 @@ def normalised_feedin_by_region_solar(pp, feedin_de21, feedin_coastdat,
     set_list = config.get_list('solar', 'solar_sets_list')
     set_names = list()
     for my_set in set_list:
-        set_names.append(config.get_single_value(my_set, 'pv_set_name'))
+        set_names.append(cfg.get(my_set, 'pv_set_name'))
 
     # Check for existing output and input files
     # Only years with all sets will be used
@@ -436,7 +436,7 @@ def normalised_feedin_one_year(c, year, overwrite):
     start = time.now()
     weather = None
     fileopen = False
-    set_name = config.get_single_value(c.general['solar_set'], 'pv_set_name')
+    set_name = cfg.get(c.general['solar_set'], 'pv_set_name')
     feedin_pattern = os.path.join(c.paths['feedin'], '{type}', '{sub}',
                                   c.pattern['feedin'])
 

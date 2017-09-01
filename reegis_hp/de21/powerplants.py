@@ -23,15 +23,13 @@ __license__ = "GPLv3"
 import pandas as pd
 import numpy as np
 import os
-from shapely.geometry import Point
 import datetime
 from shapely.wkt import loads as wkt_loads
-import geopandas as gpd
 import requests
 import logging
-import warnings
 import pyproj
 import oemof.tools.logger as logger
+from reegis_hp.de21 import tools
 
 
 logger.define_logging()
@@ -264,103 +262,6 @@ def clean_df(df, rmv_ls=None, str_columns=None, float_columns=None, time=None):
     return df
 
 
-def lat_lon2point(df):
-    """Create shapely point object of latitude and longitude."""
-    return Point(df['lon'], df['lat'])
-
-
-def create_geo_df(df, time=None):
-    """Convert pandas.DataFrame to geopandas.geoDataFrame"""
-    if time is None:
-        time = datetime.datetime.now()
-    if 'geom' not in df:
-        df['geom'] = df.apply(lat_lon2point, axis=1)
-    logging.info("Geom: {0}".format(str(datetime.datetime.now() - time)))
-
-    return gpd.GeoDataFrame(df, crs='epsg:4326', geometry='geom')
-
-
-def add_spatial_name(c, gdf, path_spatial_file, name, category, icol='gid',
-                     time=None, ignore_invalid=False):
-    """Add name of containing region to new column for all points."""
-    logging.info("Add spatial name for column: {0}".format(name))
-    if time is None:
-        time = datetime.datetime.now()
-
-    # Read spatial file (with polygons).
-    spatial_df = pd.read_csv(path_spatial_file, index_col=icol)
-
-    # Use the length to create an output.
-    length = len(spatial_df.index)
-
-    # Write datasets without coordinates to a file for later analyses.
-    gdf_invalid = gdf.loc[~gdf.is_valid].copy()
-
-    if len(gdf_invalid) > 0 and not ignore_invalid:
-        path = os.path.join(c.paths['messages'],
-                            '{0}_{1}_invalid.csv'.format(category, name))
-        gdf_invalid.to_csv(path)
-        logging.warning("Power plants with invalid geometries present.")
-        logging.warning("See '{0}' file for more information.".format(path))
-        logging.warning("It is possible to fix the original file manually.")
-        logging.warning("Repair file and rename it from '...something.csv'" +
-                        " to 'something_fixed.csv' to skip this message.")
-        logging.warning(
-            "Or set ignore_invalid=True to ignore invalid geometries.")
-
-    # Find points that intersect with polygon and pass name of the polygon to
-    # a new column (name of the new column is defined by 'name' parameter.
-    gdf_valid = gdf.loc[gdf.is_valid].copy()
-    for i, v in spatial_df.geom.iteritems():
-        length -= 1
-        logging.info("Remains: {0}".format(str(length)))
-        gdf_valid.loc[gdf_valid.intersects(wkt_loads(v)), name] = i
-    logging.info("Spatial name added to {0}: {1}".format(name,
-                 str(datetime.datetime.now() - time)))
-
-    # If points do not intersect with any polygon, a buffer around the point is
-    # created.
-    if len(gdf_valid.loc[gdf_valid[name].isnull()]) > 0:
-        logging.info("Some plants do not intersect. Buffering {0}...".format(
-            name
-        ))
-        gdf_valid = find_intersection_with_buffer(gdf_valid, spatial_df, name)
-    else:
-        logging.info("All plants intersect. No buffering necessary.")
-    return gdf_valid
-
-
-def find_intersection_with_buffer(gdf, spatial_df, column):
-    """Find intersection of points outside the regions by buffering the point
-    until the buffered point intersects with a region.
-    """
-    for row in gdf.loc[gdf[column].isnull()].iterrows():
-        point = row[1].geom
-        intersec = False
-        reg = 0
-        buffer = 0
-        for n in range(500):
-            if not intersec:
-                for i, v in spatial_df.iterrows():
-                    if not intersec:
-                        my_poly = wkt_loads(v.geom)
-                        if my_poly.intersects(point.buffer(n / 100)):
-                            intersec = True
-                            reg = i
-                            buffer = n
-                            gdf.loc[gdf.id == row[1].id, column] = reg
-        if intersec:
-            logging.debug("Region found for {0}: {1}, Buffer: {2}".format(
-                row[1].id, reg, buffer))
-        else:
-            warnings.warn(
-                "{0} does not intersect with any region. Please check".format(
-                    row[1]))
-    logging.warning("Some points needed buffering to fit. " +
-                    "See debug file for more information.")
-    return gdf
-
-
 def group_conventional_power_plants(c, overwrite=False):
     filepath_prep = os.path.join(c.paths['conventional'],
                                  c.pattern['prepared'].format(
@@ -587,18 +488,18 @@ def prepare_conventional_power_plants(c, overwrite=False):
                                   category, start, fs_column='state')
 
         # Create GeoDataFrame from original DataFrame
-        gcpp = create_geo_df(cpp, start)
+        gcpp = tools.create_geo_df(cpp, start)
 
         # Add region column (DE01 - DE21)
         geo_file = os.path.join(c.paths['geometry'], c.files['region_polygons'])
-        gcpp = add_spatial_name(c, gcpp, geo_file, 'region', category,
-                                time=start)
+        gcpp = tools.add_spatial_name(c, gcpp, geo_file, 'region', category,
+                                      time=start)
 
         # Add column with name of the federal state (Bayern, Berlin,...)
         geo_file = os.path.join(c.paths['geometry'],
                                 c.files['federal_states_polygon'])
-        gcpp = add_spatial_name(c, gcpp, geo_file, 'federal_state', category,
-                                time=start, icol='iso')
+        gcpp = tools.add_spatial_name(c, gcpp, geo_file, 'federal_state',
+                                      category, time=start, icol='iso')
 
         # fix region by country code
         country_codes = list(gcpp.country_code.unique())
@@ -652,16 +553,16 @@ def prepare_re_power_plants(c, overwrite=False):
         ee = clean_df(ee, rmv_ls=remove_list)
 
         # Create GeoDataFrame from original DataFrame
-        gee = create_geo_df(ee, start)
+        gee = tools.create_geo_df(ee, start)
 
         # Add region column (DE01 - DE21)
-        gee = add_spatial_name(
+        gee = tools.add_spatial_name(
             c, gee, os.path.join(c.paths['geometry'],
                                  c.files['region_polygons']),
             'region', category, time=start)
 
         # Add column with coastdat id
-        gee = add_spatial_name(
+        gee = tools.add_spatial_name(
             c, gee, os.path.join(c.paths['geometry'],
                                  c.files['coastdatgrid_polygons']),
             'coastdat_id', category, time=start)
@@ -710,19 +611,19 @@ def create_patch_offshore_wind(c):
     # Create GeoDataFrame
     offsh.columns = offsh.columns.droplevel()
     offsh.loc[:, 'geom'] = offsh.geom.apply(wkt_loads)
-    gee = create_geo_df(offsh)
+    gee = tools.create_geo_df(offsh)
     gee['commissioning'] = gee['commissioning'].apply(str)
     gee['capacity'] = pd.to_numeric(gee['capacity'])
     gee['commissioning (planned)'] = gee['commissioning (planned)'].apply(str)
 
     # Add column with region id
-    gee = add_spatial_name(
+    gee = tools.add_spatial_name(
         c, gee, os.path.join(c.paths['geometry'],
                              c.files['region_polygons']),
         'region', 'offshore')
 
     # Add column with coastdat id
-    gee = add_spatial_name(
+    gee = tools.add_spatial_name(
         c, gee, os.path.join(c.paths['geometry'],
                              c.files['coastdatgrid_polygons']),
         'coastdat_id', 'offshore')
