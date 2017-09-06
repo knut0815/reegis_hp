@@ -2,10 +2,15 @@ import pandas as pd
 import numpy as np
 import os
 import geoplot
+import locale
+import datetime
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.patheffects as path_effects
-import configuration as config
+# import configuration as config
+
+from oemof.tools import logger
+from reegis_hp.de21 import demand
 
 
 def add_grid_labels(data, plotter, label=None,
@@ -428,9 +433,131 @@ def plot_orientation_by_region():
     plt.show()
 
 
+def demand_plots():
+    locale.setlocale(locale.LC_ALL, 'de_DE.utf8')
+    logger.define_logging()
+    my_year = 2014
+
+    oe = demand.get_de21_profile(my_year, 'openego')
+    rp = demand.get_de21_profile(my_year, 'renpass')
+
+    print('openEgo, sum:', oe.sum().sum())
+    print('Entsoe, sum:', rp.sum().sum())
+
+    # Jährlicher Verlauf
+    netto2014 = 511500000
+    slp_de = demand.get_de21_profile(
+        my_year, 'openego', annual_demand=netto2014).sum(1)
+    entsoe = demand.get_de21_profile(
+        my_year, 'openego_entsoe', annual_demand=netto2014).sum(1)
+
+    slp_de_month = slp_de.resample('M').mean()
+    entsoe_month = entsoe.resample('M').mean()
+    slp_ax = slp_de_month.plot(label='Standardlastprofil', linewidth=3)
+    ax = entsoe_month.plot(ax=slp_ax, label='Entsoe-Profil', linewidth=3)
+    e_avg = entsoe_month.mean()
+    e_max = entsoe_month.max()
+    e_min = entsoe_month.min()
+    d_e_max = int(round((e_max / e_avg - 1) * 100))
+    d_e_min = int(round((1 - e_min / e_avg) * 100))
+    s_avg = slp_de_month.mean()
+    s_max = slp_de_month.max()
+    s_min = slp_de_month.min()
+    d_s_max = round((s_max / s_avg - 1) * 100, 1)
+    # d_s_min = round((1 - s_min / s_avg) * 100, 1)
+    plt.plot((0, 1000), (s_max, s_max), 'k-.')
+    plt.plot((0, 8800), (s_min, s_min), 'k-.')
+    plt.plot((0, 8800), (e_max, e_max), 'k-.')
+    plt.plot((0, 8800), (e_min, e_min), 'k-.')
+    plt.text(
+        datetime.date(my_year, 6, 30), e_max - 500, '+{0}%'.format(d_e_max))
+    plt.text(
+        datetime.date(my_year, 6, 30), e_min + 250, '-{0}%'.format(d_e_min))
+    plt.text(
+        datetime.date(my_year, 6, 30), s_max + 200, '+/-{0}%'.format(d_s_max))
+    plt.legend(facecolor='white', framealpha=1, shadow=True)
+    plt.ylabel('Mittlerer Stromverbrauch [kW]')
+
+    labels = ['Jan']
+
+    ax.set_xticklabels(labels)
+
+    plt.xlabel('2014')
+    plt.show()
+
+    fig = plt.figure(figsize=(12, 5))
+    fig.subplots_adjust(
+        wspace=0.05, left=0.07, right=0.98, bottom=0.05, top=0.95)
+    slp_de_no_idx = slp_de.reset_index(drop=True)
+    entsoe_no_idx = entsoe.reset_index(drop=True)
+
+    p = pd.DataFrame(index=slp_de_no_idx.index)
+    tmp = slp_de_no_idx.div(7)
+    # p['a'] = np.roll(tmp, 4)
+    p['b'] = np.roll(tmp, 3)
+    p['c'] = np.roll(tmp, 2)
+    p['d'] = np.roll(tmp, 1)
+    p['e'] = tmp
+    p['f'] = np.roll(tmp, -1)
+    p['g'] = np.roll(tmp, -2)
+    p['h'] = np.roll(tmp, -3)
+    # p['i'] = np.roll(tmp, -4)
+    p = p.sum(1)
+    # print(ege.sum(1))
+    df = pd.DataFrame(
+        pd.concat([slp_de_no_idx, entsoe_no_idx, p],
+                  axis=1, keys=['Standardlastprofil',
+                                'Entsoe-Profil',
+                                'geglättet']))
+    df.set_index(rp.index, inplace=True)
+
+    my_ax1 = fig.add_subplot(1, 2, 1)
+    my_ax1 = df.loc[datetime.date(my_year, 1, 23):
+                    datetime.date(my_year, 1, 29)].plot(
+        ax=my_ax1, linewidth=2, style=['-', '-', '-.'])
+    my_ax1.legend_.remove()
+    plt.ylim([30100, 90000])
+    plt.xlim([735256, 735261.96])
+    plt.ylabel('Mittlerer Stromverbrauch [kW]')
+    locs, labels = plt.xticks()
+    handles = locs - 0.5
+    plt.xticks(
+        handles,
+        ['Donnerstag', 'Freitag', 'Samstag', 'Sonntag', 'Montag', 'Dienstag'],
+        rotation='horizontal', horizontalalignment='center')
+    plt.xlabel('23. - 28. Januar 2014')
+    my_ax2 = fig.add_subplot(1, 2, 2)
+    df.loc[datetime.date(my_year, 7, 24):
+           datetime.date(my_year, 7, 30)].plot(
+        ax=my_ax2, linewidth=2, style=['-', '-', '-.'])
+    plt.ylim([30100, 90000])
+    plt.xlim([735438, 735443.93])
+    my_ax2.get_yaxis().set_visible(False)
+    handles, labels = plt.xticks()
+    handles = handles - 0.5
+    plt.xticks(
+        handles,
+        ['Donnerstag', 'Freitag', 'Samstag', 'Sonntag', 'Montag', 'Dienstag'],
+        rotation='horizontal', horizontalalignment='center')
+    plt.xlabel('24. - 29. Juli 2014')
+    plt.legend(facecolor='white', framealpha=1, shadow=True)
+    plt.show()
+
+    mydf = pd.DataFrame()
+    mydf['openEgo'] = demand.openego_demand_share() * 100
+    mydf['renpass'] = demand.renpass_demand_share() * 100
+    mydf.sort_values(by='openEgo', inplace=True)
+    mydf = mydf[:-3]
+    mydf.plot(kind='bar')
+    plt.ylabel('Anteil am gesamten Strombedarf [%]')
+    plt.legend(facecolor='white', framealpha=1, shadow=True)
+    plt.show()
+
+
 if __name__ == "__main__":
     # heatmap_pv_orientation()
-    plot_full_load_hours(2008)
+    demand_plots()
+    # plot_full_load_hours(2008)
     # plot_module_comparison()
     # plot_orientation_by_region()
     # de21_grid()
