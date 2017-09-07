@@ -2,11 +2,11 @@
 
 import os
 import logging
-import time_series
+from reegis_hp.de21 import time_series
 import pandas as pd
 import datetime
 # from oemof.tools import logger
-import config as cfg
+from reegis_hp.de21 import config as cfg
 from reegis_hp.de21 import tools
 import demandlib.bdew as bdew
 import demandlib.particular_profiles as profiles
