@@ -5,7 +5,7 @@ import logging
 from reegis_hp.de21 import time_series
 import pandas as pd
 import datetime
-# from oemof.tools import logger
+from oemof.tools import logger
 from reegis_hp.de21 import config as cfg
 from reegis_hp.de21 import tools
 import demandlib.bdew as bdew
@@ -37,9 +37,10 @@ def de21_profile_from_entsoe(year, share, annual_demand=None, overwrite=False):
     start = datetime.datetime(year, 1, 1, 0, 0)
     end = datetime.datetime(year, 12, 31, 23, 0)
 
-    entsoe = pd.read_csv(load_file, index_col='cet', parse_dates=True)
+    entsoe = pd.read_csv(load_file, index_col='utc_timestamp', parse_dates=True)
     entsoe = entsoe.tz_localize('UTC').tz_convert('Europe/Berlin')
     de_load_profile = entsoe.ix[start:end].DE_load_
+
     load_profile = pd.DataFrame(index=de_load_profile.index)
     for i in range(21):
         region = 'DE{:02.0f}'.format(i + 1)
@@ -98,11 +99,13 @@ def create_de21_slp_profile(year, outfile):
             'l0': annual_demand.sector_consumption_agricultural,
             'i0': annual_demand.sector_consumption_industrial}
         e_slp = bdew.ElecSlp(year, holidays=holidays)
+
         elec_demand = e_slp.get_profile(annual_electrical_demand_per_sector)
 
         # Add the slp for the industrial group
         ilp = profiles.IndustrialLoadProfile(e_slp.date_time_index,
                                              holidays=holidays)
+
         elec_demand['i0'] = ilp.simple_profile(
             annual_electrical_demand_per_sector['i0'])
 
@@ -170,6 +173,7 @@ def get_de21_profile(year, kind, annual_demand=None, overwrite=False):
 
 
 if __name__ == "__main__":
+    logger.define_logging()
     my_year = 2011
     oe = get_de21_profile(my_year, 'openego')
     rp = get_de21_profile(my_year, 'renpass')

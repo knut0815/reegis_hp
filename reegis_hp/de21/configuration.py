@@ -2,7 +2,7 @@ __copyright__ = "Uwe Krien"
 __license__ = "GPLv3"
 
 
-import config as cfg
+from reegis_hp.de21 import config as cfg
 import os
 from oemof.tools import logger
 

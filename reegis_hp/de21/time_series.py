@@ -3,9 +3,10 @@
 import os
 import logging
 import requests
+import datetime
+import pytz
 import pandas as pd
-import config as cfg
-import configuration as config
+from reegis_hp.de21 import config as cfg
 from oemof.tools import logger
 
 
@@ -59,10 +60,21 @@ def prepare_de_file(overwrite=False):
 def split_timeseries_file(overwrite=False):
     path_pattern = os.path.join(cfg.get('paths', 'time_series'), '{0}')
     de_file = path_pattern.format(cfg.get('time_series', 'de_file'))
-
+    import dateutil
     if not os.path.isfile(de_file) or overwrite:
         prepare_de_file(overwrite)
-    de_ts = pd.read_csv(de_file, index_col='cet')
+    # date_parser = lambda x: dateutil.parser.parse(x, ignoretz=True)
+    de_ts = pd.read_csv(de_file, index_col='utc_timestamp', parse_dates=True,
+                        date_parser=dateutil.parser.parse)
+
+    berlin = pytz.timezone('Europe/Berlin')
+    end_date = berlin.localize(datetime.datetime(2015, 1, 1, 0, 0, 0))
+
+    de_ts.loc[de_ts.index < end_date, 'DE_load_'] = (
+        de_ts.loc[de_ts.index < end_date, 'DE_load_old'])
+    de_ts.loc[de_ts.index >= end_date, 'DE_load_'] = (
+        de_ts.loc[de_ts.index >= end_date, 'DE_load_new'])
+    de_ts.to_csv('/home/local/RL-INSTITUT/uwe.krien/sdaf.csv')
 
     load = pd.DataFrame(de_ts[pd.notnull(de_ts['DE_load_'])]['DE_load_'],
                         columns=['DE_load_'])
@@ -94,5 +106,4 @@ def get_timeseries(overwrite=False):
 
 if __name__ == "__main__":
     logger.define_logging()
-    conf = config.get_configuration()
     split_timeseries_file()

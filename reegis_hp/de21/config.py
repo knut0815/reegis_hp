@@ -32,33 +32,51 @@ Option2 = value2 \n
 import os
 import logging
 import configparser as cp
-import configuration
 
-
-FILENAME = 'config.ini'
-FILE = os.path.join(os.path.expanduser("~"), '.oemof', FILENAME)
+FILE = None
 
 cfg = cp.RawConfigParser()
 _loaded = False
 
 
-def load_config(filename=None):
-    """
-    Load data from config file to `cfg` that can be accessed by get, set
-    afterwards.
+# def load_config(filename=None):
+#     """
+#     Load data from config file to `cfg` that can be accessed by get, set
+#     afterwards.
+#
+#     Specify absolute or relative path to your config file.
+#
+#     :param filename: Relative or absolute path
+#     :type filename: str or list
+#     """
+#     # load config
+#
+#     global FILE
+#
+#     if filename is not None:
+#         FILE = filename
+#     init(FILE)
 
-    Specify absolute or relative path to your config file.
 
-    :param filename: Relative or absolute path
-    :type filename: str or list
-    """
-    # load config
+def get_ini_filenames():
+    filenames = list()
+    paths = list()
+    files = list()
 
-    global FILE
+    filenames.append('de21_default.ini')
+    filenames.append('de21_scenario_default.ini')
+    filenames.append('de21.ini')
+    filenames.append('de21_scenario.ini')
+    filenames.append('config.ini')
 
-    if filename is not None:
-        FILE = filename
-    init(FILE)
+    paths.append(os.path.join(os.path.dirname(__file__), 'data'))
+    paths.append(os.path.join(os.path.expanduser("~"), '.oemof'))
+
+    for p in paths:
+        for f in filenames:
+            files.append(os.path.join(p, f))
+
+    return files
 
 
 def main():
@@ -71,12 +89,15 @@ def init(file):
 
     Parameters
     ----------
-    file : str or list
+    file : str or list or None
         Absolute path to config file (incl. filename)
     """
+    if file is None:
+        file = get_ini_filenames()
     cfg.read(file)
     global _loaded
     _loaded = True
+    de21_configuration()
 
 
 def get(section, key):
@@ -120,19 +141,134 @@ def get(section, key):
 
 def get_list(section, parameter):
     try:
-        my_list = cfg.get(section, parameter).split(',')
+        my_list = get(section, parameter).split(',')
         my_list = [x.strip() for x in my_list]
 
     except AttributeError:
-        my_list = list((cfg.get(section, parameter),))
+        my_list = list((get(section, parameter),))
     return my_list
 
 
 def set(section, key, value):
     return cfg.set(section, key, value)
 
-print('Loading de21 configuration....')
-configuration.de21_configuration()
+
+def check_path(pathname):
+    if pathname is None:
+        pathname = os.path.join(os.path.dirname(__file__), 'data')
+    if not os.path.isdir(pathname):
+        os.makedirs(pathname)
+    return pathname
+
+
+def extend_path(ex_path, name):
+    return check_path(os.path.join(ex_path, name))
+
+
+def de21_configuration():
+    # initialise de21 configuration
+    logging.info('Loading de21 configuration....')
+
+    if get('paths', 'basic') is None:
+        basicpath = os.path.join(os.path.dirname(__file__), 'data')
+        cfg.set('paths', 'basic', basicpath)
+        logging.debug("Set default path for basic path: {0}".format(basicpath))
+
+    if get('paths', 'data') is None:
+        datapath = os.path.join(os.path.expanduser("~"), 'reegis', 'de21')
+        cfg.set('paths', 'data', datapath)
+        logging.debug("Set default path for data path: {0}".format(datapath))
+
+    # *************************************************************************
+    # ********* set paths *****************************************************
+    # *************************************************************************
+
+    # general sources
+    cfg.set('paths', 'general', extend_path(
+        get('paths', get('general_sources', 'path')),
+        get('general_sources', 'dir')))
+
+    # weather
+    cfg.set('paths', 'weather', extend_path(
+        get('paths', get('weather', 'path')),
+        get('weather', 'dir')))
+
+    # geometry
+    cfg.set('paths', 'geometry', extend_path(
+        get('paths', get('geometry', 'path')),
+        get('geometry', 'dir')))
+
+    # power plants
+    cfg.set('paths', 'powerplants', extend_path(
+        get('paths', get('powerplants', 'path')),
+        get('powerplants', 'dir')))
+    cfg.set('paths', 'conventional', extend_path(
+        get('paths', get('conventional', 'path')),
+        get('conventional', 'dir')))
+    cfg.set('paths', 'renewable', extend_path(
+        get('paths', get('renewable', 'path')),
+        get('renewable', 'dir')))
+
+    # static sources
+    cfg.set('paths', 'static', extend_path(
+        get('paths', get('static_sources', 'path')),
+        get('static_sources', 'dir')))
+
+    # messages
+    cfg.set('paths', 'messages', extend_path(
+        get('paths', get('paths', 'msg_path')),
+        get('paths', 'msg_dir')))
+
+    # storages
+    cfg.set('paths', 'storages', extend_path(
+        get('paths', get('storages', 'path')),
+        get('storages', 'dir')))
+
+    # transmission
+    cfg.set('paths', 'transmission', extend_path(
+        get('paths', get('transmission', 'path')),
+        get('transmission', 'dir')))
+
+    # commodity sources
+    cfg.set('paths', 'commodity', extend_path(
+        get('paths', get('commodity_sources', 'path')),
+        get('commodity_sources', 'dir')))
+
+    # time series
+    cfg.set('paths', 'time_series', extend_path(
+        get('paths', get('time_series', 'path')),
+        get('time_series', 'dir')))
+
+    # demand
+    cfg.set('paths', 'demand', extend_path(
+        get('paths', get('demand', 'path')),
+        get('demand', 'dir')))
+
+    # feedin*
+    cfg.set('paths', 'feedin', extend_path(
+        get('paths', get('feedin', 'path')),
+        get('feedin', 'dir')))
+
+    # analysis
+    cfg.set('paths', 'analysis', extend_path(
+        get('paths', get('analysis', 'path')),
+        get('analysis', 'dir')))
+
+    # external
+    cfg.set('paths', 'external', extend_path(
+        get('paths', get('external', 'path')),
+        get('external', 'dir')))
+
+    # plots
+    cfg.set('paths', 'plots', extend_path(
+        get('paths', get('plots', 'path')),
+        get('plots', 'dir')))
+
+    # scenario_data
+    cfg.set('paths', 'scenario_data', extend_path(
+        get('paths', get('scenario_data', 'path')),
+        get('scenario_data', 'dir')))
+
 
 if __name__ == "__main__":
     main()
