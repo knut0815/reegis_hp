@@ -7,10 +7,10 @@ import datetime
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.patheffects as path_effects
-# import configuration as config
 
 from oemof.tools import logger
 from reegis_hp.de21 import demand
+from reegis_hp.de21 import config as cfg
 
 
 def add_grid_labels(data, plotter, label=None,
@@ -46,12 +46,13 @@ def de21_region():
     """
     Plot of the de21 regions (offshore=blue, onshore=green).
     """
-    c = config.get_configuration()
     my_df = pd.read_csv(
-        os.path.join(c.paths['geometry'], c.files['region_polygons']),
+        os.path.join(cfg.get('paths', 'geometry'),
+                     cfg.get('geometry', 'region_polygons')),
         index_col='gid').sort_index()
 
-    label_coord = os.path.join(c.paths['geometry'], c.files['region_labels'])
+    label_coord = os.path.join(cfg.get('paths', 'geometry'),
+                               cfg.get('geometry', 'region_labels'))
 
     offshore = geoplot.postgis2shapely(my_df.iloc[18:21].geom)
     onshore = geoplot.postgis2shapely(my_df.iloc[0:18].geom)
@@ -68,25 +69,24 @@ def de21_region():
 
 
 def de21_grid():
-    c = config.get_configuration()
 
     plt.figure(figsize=(7, 8))
     plt.rc('legend', **{'fontsize': 16})
     plt.rcParams.update({'font.size': 16})
     plt.style.use('grayscale')
 
-    data = pd.read_csv(os.path.join(c.paths['static'],
-                                    c.files['data_electricity_grid']),
+    data = pd.read_csv(os.path.join(cfg.get('paths', 'static'),
+                                    cfg.get('files', 'data_electricity_grid')),
                        index_col='Unnamed: 0')
 
-    geo = pd.read_csv(os.path.join(c.paths['geometry'],
-                                   c.files['powerlines_lines']),
+    geo = pd.read_csv(os.path.join(cfg.get('paths', 'geometry'),
+                                   cfg.get('files', 'powerlines_lines')),
                       index_col='name')
 
     lines = pd.DataFrame(pd.concat([data, geo], axis=1, join='inner'))
 
-    background = pd.read_csv(os.path.join(c.paths['geometry'],
-                                          c.files['region_polygons']),
+    background = pd.read_csv(os.path.join(cfg.get('paths', 'geometry'),
+                                          cfg.get('files', 'region_polygons')),
                              index_col='gid').sort_index()
 
     onshore = geoplot.postgis2shapely(
@@ -106,7 +106,8 @@ def de21_grid():
                                                            (1, '#3a3a48')])
     plotter_lines.data = lines.capacity
     plotter_lines.plot(edgecolor='data', linewidth=2, cmap=my_cmap)
-    filename = os.path.join(c.paths['geometry'], c.files['powerlines_labels'])
+    filename = os.path.join(cfg.get('paths', 'geometry'),
+                            cfg.get('files', 'powerlines_labels'))
     add_grid_labels(lines, plotter_lines, 'capacity', coord_file=filename)
     plt.tight_layout()
     plt.box(on=None)
@@ -176,8 +177,8 @@ def plot_geocsv(filepath, idx_col, facecolor=None, edgecolor='#aaaaaa',
 
 def coastdat_plot(data, data_col=None, lmin=0, lmax=1, n=5, digits=50,
                   legendlabel=''):
-    c = config.get_configuration()
-    polygons = pd.read_csv(os.path.join(c.paths['geometry'],
+
+    polygons = pd.read_csv(os.path.join(cfg.get('paths', 'geometry'),
                                         'coastdatgrid_polygons.csv'),
                            index_col='gid')
     polygons['geom'] = geoplot.postgis2shapely(polygons.geom)
@@ -230,8 +231,7 @@ def coastdat_plot(data, data_col=None, lmin=0, lmax=1, n=5, digits=50,
 def heatmap_pv_orientation():
     # import seaborn as sns
     from mpl_toolkits.axes_grid1 import make_axes_locatable
-    c = config.get_configuration()
-    df = pd.read_csv(os.path.join(c.paths['analysis'],
+    df = pd.read_csv(os.path.join(cfg.get('paths', 'analysis'),
                                   'orientation_feedin_dc_high_resolution.csv'),
                      index_col='Unnamed: 0')
     df = df.transpose()
@@ -257,8 +257,7 @@ def heatmap_pv_orientation():
 
 
 def plot_module_comparison():
-    c = config.get_configuration()
-    df = pd.read_csv(os.path.join(c.paths['analysis'],
+    df = pd.read_csv(os.path.join(cfg.get('paths', 'analysis'),
                                   'module_feedin.csv'),
                      index_col=0)['dc_norm']
     print(df)
@@ -292,8 +291,7 @@ def plot_module_comparison():
 
 
 def plot_module_comparison_ts():
-    c = config.get_configuration()
-    df = pd.read_csv(os.path.join(c.paths['analysis'],
+    df = pd.read_csv(os.path.join(cfg.get('paths', 'analysis'),
                                   'module_feedin_ac_ts.csv'),
                      index_col='Unnamed: 0')
 
@@ -302,8 +300,7 @@ def plot_module_comparison_ts():
 
 
 def plot_inverter_comparison():
-    c = config.get_configuration()
-    df = pd.read_csv(os.path.join(c.paths['analyses'],
+    df = pd.read_csv(os.path.join(cfg.get('paths', 'analyses'),
                                   'sapm_inverters_feedin_full2.csv'),
                      index_col=[0])['ac']
     pv_module = df.index.name
@@ -330,8 +327,8 @@ def plot_inverter_comparison():
 
 
 def plot_full_load_hours(year):
-    c = config.get_configuration()
-    df = pd.read_csv(os.path.join(c.paths['analysis'], 'full_load_hours.csv'),
+    df = pd.read_csv(os.path.join(cfg.get('paths', 'analysis'),
+                                  'full_load_hours.csv'),
                      index_col=[0, 1])
 
     plt.figure(figsize=(8, 10))
@@ -339,7 +336,7 @@ def plot_full_load_hours(year):
     plt.rcParams.update({'font.size': 19})
     title = "Full load hours for wind in the year {0}[h].".format(year)
     coastdat_plot(df.loc[year, :]['wind'], lmax=3500, n=8, legendlabel=title)
-    plt.savefig(os.path.join(c.paths['plots'],
+    plt.savefig(os.path.join(cfg.get('paths', 'plots'),
                              'full_load_hours_{0}_{1}.svg'.format(year,
                                                                   'wind')))
     columns = list(df.columns)
@@ -353,7 +350,7 @@ def plot_full_load_hours(year):
         title = "Full load hours for {0} [h].".format(col)
         coastdat_plot(df.loc[year, :][col], lmax=1200, lmin=900, n=7,
                       legendlabel=title)
-        plt.savefig(os.path.join(c.paths['plots'],
+        plt.savefig(os.path.join(cfg.get('paths', 'plots'),
                                  'full_load_hours_{0}_{1}.svg'.format(
                                      year, col)))
 
@@ -380,7 +377,7 @@ def plot_full_load_hours(year):
             int(round(maximum[n] / 10) * 10)))
         n += 1
     plt.tight_layout()
-    plt.savefig(os.path.join(c.paths['plots'],
+    plt.savefig(os.path.join(cfg.get('paths', 'plots'),
                              'full_load_hours_region_{0}.svg'.format(reg)))
 
     colors = ['#6e6ead', '#ed943c', '#da7411']
@@ -396,14 +393,13 @@ def plot_full_load_hours(year):
         plt.title(title)
         ax.plot((-1, 18), (avg, avg), 'r-')
         n += 1
-        plt.savefig(os.path.join(c.paths['plots'],
+        plt.savefig(os.path.join(cfg.get('paths', 'plots'),
                                  'full_load_hours_{0}_region_{1}.svg'.format(
                                     col, reg)))
 
 
 def plot_orientation_by_region():
-    c = config.get_configuration()
-    df = pd.read_csv(os.path.join(c.paths['analysis'],
+    df = pd.read_csv(os.path.join(cfg.get('paths', 'analysis'),
                                   'optimal_orientation_multi_BP.csv'),
                      index_col=[0, 1, 2])
     # print(df)
@@ -563,7 +559,8 @@ if __name__ == "__main__":
     # de21_grid()
     # de21_region()
     # plot_inverter_comparison()
-    # plot_geocsv(os.path.join('data', 'geometries', 'polygons_de21_simple.csv'),
+    # plot_geocsv(os.path.join(
+    #                  'data', 'geometries', 'polygons_de21_simple.csv'),
     #             idx_col='gid',
     #             # coord_file=os.path.join('data_basic', 'centroid_region.csv')
     #             )
