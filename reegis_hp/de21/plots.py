@@ -75,18 +75,20 @@ def de21_grid():
     plt.rcParams.update({'font.size': 16})
     plt.style.use('grayscale')
 
-    data = pd.read_csv(os.path.join(cfg.get('paths', 'static'),
-                                    cfg.get('files', 'data_electricity_grid')),
+    data = pd.read_csv(os.path.join(
+                           cfg.get('paths', 'static'),
+                           cfg.get('static_sources', 'data_electricity_grid')),
                        index_col='Unnamed: 0')
 
     geo = pd.read_csv(os.path.join(cfg.get('paths', 'geometry'),
-                                   cfg.get('files', 'powerlines_lines')),
+                                   cfg.get('geometry', 'powerlines_lines')),
                       index_col='name')
 
     lines = pd.DataFrame(pd.concat([data, geo], axis=1, join='inner'))
 
-    background = pd.read_csv(os.path.join(cfg.get('paths', 'geometry'),
-                                          cfg.get('files', 'region_polygons')),
+    background = pd.read_csv(os.path.join(
+                                 cfg.get('paths', 'geometry'),
+                                 cfg.get('geometry', 'region_polygons_simple')),
                              index_col='gid').sort_index()
 
     onshore = geoplot.postgis2shapely(
@@ -107,7 +109,7 @@ def de21_grid():
     plotter_lines.data = lines.capacity
     plotter_lines.plot(edgecolor='data', linewidth=2, cmap=my_cmap)
     filename = os.path.join(cfg.get('paths', 'geometry'),
-                            cfg.get('files', 'powerlines_labels'))
+                            cfg.get('geometry', 'powerlines_labels'))
     add_grid_labels(lines, plotter_lines, 'capacity', coord_file=filename)
     plt.tight_layout()
     plt.box(on=None)
