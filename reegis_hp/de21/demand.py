@@ -130,6 +130,22 @@ def get_de21_slp_profile(year, annual_demand=None, overwrite=False):
     return de21_profile
 
 
+def get_annual_demand_bmwi(year):
+    """Returns the annual demand for the given year from the BMWI Energiedaten
+    in Wh (Watthours). Will return None if data for the given year is not
+    available.
+    """
+    infile = os.path.join(
+        cfg.get('paths', 'general'),
+        cfg.get('general_sources', 'bmwi_energiedaten')
+    )
+    table = pd.read_excel(infile, '21', skiprows=7, index_col=[0])
+    try:
+        return table.loc['   zusammen', year] * 1e+12
+    except KeyError:
+        return None
+
+
 def get_de21_profile(year, kind, annual_demand=None, overwrite=False):
     """
 
@@ -174,17 +190,22 @@ def get_de21_profile(year, kind, annual_demand=None, overwrite=False):
 
 if __name__ == "__main__":
     logger.define_logging()
-    my_year = 2011
-    oe = get_de21_profile(my_year, 'openego')
-    rp = get_de21_profile(my_year, 'renpass')
-    ege = get_de21_profile(my_year, 'openego_entsoe')
 
-    netto2014 = 511500000  # kWh
-    oe_s = get_de21_profile(my_year, 'openego', annual_demand=netto2014)
-    rp_s = get_de21_profile(my_year, 'renpass', annual_demand=netto2014)
-    ege_s = get_de21_profile(my_year, 'openego_entsoe', annual_demand=netto2014)
+    my_year = 2014
+    oe = get_de21_profile(my_year, 'openego') * 1000000
+    rp = get_de21_profile(my_year, 'renpass') * 1000000
+    ege = get_de21_profile(my_year, 'openego_entsoe') * 1000000
 
-    print('[kWh] original    scaled')
-    print(' oe:', round(oe.sum().sum()), oe_s.sum().sum())
-    print(' rp:', round(rp.sum().sum()), rp_s.sum().sum())
-    print('ege:', round(ege.sum().sum()), ege_s.sum().sum())
+    netto = get_annual_demand_bmwi(my_year)
+    print(netto)
+    oe_s = get_de21_profile(my_year, 'openego', annual_demand=netto)
+    rp_s = get_de21_profile(my_year, 'renpass', annual_demand=netto)
+    ege_s = get_de21_profile(my_year, 'openego_entsoe', annual_demand=netto)
+
+    print('[TWh] original    scaled (BMWI)')
+    print(' oe:  ', int(oe.sum().sum() / 1e+12), '       ',
+          int(oe_s.sum().sum() / 1e+12))
+    print(' rp:  ', int(rp.sum().sum() / 1e+12), '       ',
+          int(rp_s.sum().sum() / 1e+12))
+    print('ege:  ', int(ege.sum().sum() / 1e+12), '       ',
+          int(ege_s.sum().sum() / 1e+12))

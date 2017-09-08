@@ -489,21 +489,9 @@ def demand_plots():
     slp_de_no_idx = slp_de.reset_index(drop=True)
     entsoe_no_idx = entsoe.reset_index(drop=True)
 
-    p = pd.DataFrame(index=slp_de_no_idx.index)
-    tmp = slp_de_no_idx.div(7)
-    # p['a'] = np.roll(tmp, 4)
-    p['b'] = np.roll(tmp, 3)
-    p['c'] = np.roll(tmp, 2)
-    p['d'] = np.roll(tmp, 1)
-    p['e'] = tmp
-    p['f'] = np.roll(tmp, -1)
-    p['g'] = np.roll(tmp, -2)
-    p['h'] = np.roll(tmp, -3)
-    # p['i'] = np.roll(tmp, -4)
-    p = p.sum(1)
     # print(ege.sum(1))
     df = pd.DataFrame(
-        pd.concat([slp_de_no_idx, entsoe_no_idx, p],
+        pd.concat([slp_de_no_idx, entsoe_no_idx],
                   axis=1, keys=['Standardlastprofil',
                                 'Entsoe-Profil',
                                 'geglättet']))
@@ -512,7 +500,7 @@ def demand_plots():
     my_ax1 = fig.add_subplot(1, 2, 1)
     my_ax1 = df.loc[datetime.date(my_year, 1, 23):
                     datetime.date(my_year, 1, 29)].plot(
-        ax=my_ax1, linewidth=2, style=['-', '-', '-.'])
+        ax=my_ax1, linewidth=2, style=['-', '-'])
     my_ax1.legend_.remove()
     plt.ylim([30100, 90000])
     plt.xlim([735256, 735261.96])
@@ -548,6 +536,82 @@ def demand_plots():
     mydf = mydf[:-3]
     mydf.plot(kind='bar')
     plt.ylabel('Anteil am gesamten Strombedarf [%]')
+    plt.legend(facecolor='white', framealpha=1, shadow=True)
+    plt.show()
+
+    fig = plt.figure(figsize=(12, 5))
+    fig.subplots_adjust(
+        wspace=0.05, left=0.07, right=0.98, bottom=0.05, top=0.95)
+    slp_de_no_idx = slp_de.reset_index(drop=True)
+    entsoe_no_idx = entsoe.reset_index(drop=True)
+
+    p = pd.DataFrame(index=slp_de_no_idx.index)
+    tmp = slp_de_no_idx.div(9)
+    p['a'] = np.roll(tmp, 4)
+    p['b'] = np.roll(tmp, 3)
+    p['c'] = np.roll(tmp, 2)
+    p['d'] = np.roll(tmp, 1)
+    p['e'] = tmp
+    p['f'] = np.roll(tmp, -1)
+    p['g'] = np.roll(tmp, -2)
+    p['h'] = np.roll(tmp, -3)
+    p['i'] = np.roll(tmp, -4)
+    p = p.sum(1)
+
+    p2 = pd.DataFrame(index=slp_de_no_idx.index)
+    tmp = slp_de_no_idx.div(7)
+    p2['b'] = np.roll(tmp, 3)
+    p2['c'] = np.roll(tmp, 2)
+    p2['d'] = np.roll(tmp, 1)
+    p2['e'] = tmp
+    p2['f'] = np.roll(tmp, -1)
+    p2['g'] = np.roll(tmp, -2)
+    p2['h'] = np.roll(tmp, -3)
+    p2 = p2.sum(1)
+
+    p3 = pd.DataFrame(index=slp_de_no_idx.index)
+    tmp = slp_de_no_idx.div(5)
+    p3['c'] = np.roll(tmp, 2)
+    p3['d'] = np.roll(tmp, 1)
+    p3['e'] = tmp
+    p3['f'] = np.roll(tmp, -1)
+    p3['g'] = np.roll(tmp, -2)
+    p3 = p3.sum(1)
+
+    p4 = pd.DataFrame(index=slp_de_no_idx.index)
+    tmp = slp_de_no_idx.div(3)
+    p4['d'] = np.roll(tmp, 1)
+    p4['e'] = tmp
+    p4['f'] = np.roll(tmp, -1)
+    p4 = p4.sum(1)
+    # print(ege.sum(1))
+    df = pd.DataFrame(
+        pd.concat([slp_de_no_idx, p4, p3, p2, p, entsoe_no_idx],
+                  axis=1, keys=['Standardlastprofil',
+                                'geglättet (1h)',
+                                'geglättet (2h)',
+                                'geglättet (3h)',
+                                'geglättet (4h)',
+                                'Entsoe-Profil']))
+    df.set_index(rp.index, inplace=True)
+
+    my_ax1 = fig.add_subplot(1, 2, 1)
+    my_ax1 = df.loc[datetime.datetime(my_year, 1, 22, 22, 0):
+                    datetime.datetime(my_year, 1, 24, 5, 0)].plot(
+        ax=my_ax1, linewidth=2, style=['-', '-', '-', '-', '-', 'k-'])
+    my_ax1.legend_.remove()
+    plt.ylim([30100, 80000])
+    plt.xlim([735255.9, 735257.1])
+    plt.ylabel('Mittlerer Stromverbrauch [kW]')
+    plt.xlabel('23. Januar 2014')
+    my_ax2 = fig.add_subplot(1, 2, 2)
+    df.loc[datetime.datetime(my_year, 7, 23, 22, 0):
+           datetime.datetime(my_year, 7, 25, 5, 0)].plot(
+        ax=my_ax2, linewidth=2, style=['-', '-', '-', '-', '-', 'k-'])
+    plt.ylim([30100, 80000])
+    plt.xlim([735437.9, 735439.1])
+    my_ax2.get_yaxis().set_visible(False)
+    plt.xlabel('24. Juli 2014')
     plt.legend(facecolor='white', framealpha=1, shadow=True)
     plt.show()
 

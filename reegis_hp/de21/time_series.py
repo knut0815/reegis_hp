@@ -5,6 +5,7 @@ import logging
 import requests
 import datetime
 import pytz
+import dateutil
 import pandas as pd
 from reegis_hp.de21 import config as cfg
 from oemof.tools import logger
@@ -58,12 +59,13 @@ def prepare_de_file(overwrite=False):
 
 
 def split_timeseries_file(overwrite=False):
+    logging.info("Splitting time series.")
     path_pattern = os.path.join(cfg.get('paths', 'time_series'), '{0}')
     de_file = path_pattern.format(cfg.get('time_series', 'de_file'))
-    import dateutil
+
     if not os.path.isfile(de_file) or overwrite:
         prepare_de_file(overwrite)
-    # date_parser = lambda x: dateutil.parser.parse(x, ignoretz=True)
+
     de_ts = pd.read_csv(de_file, index_col='utc_timestamp', parse_dates=True,
                         date_parser=dateutil.parser.parse)
 
@@ -74,7 +76,6 @@ def split_timeseries_file(overwrite=False):
         de_ts.loc[de_ts.index < end_date, 'DE_load_old'])
     de_ts.loc[de_ts.index >= end_date, 'DE_load_'] = (
         de_ts.loc[de_ts.index >= end_date, 'DE_load_new'])
-    de_ts.to_csv('/home/local/RL-INSTITUT/uwe.krien/sdaf.csv')
 
     load = pd.DataFrame(de_ts[pd.notnull(de_ts['DE_load_'])]['DE_load_'],
                         columns=['DE_load_'])
