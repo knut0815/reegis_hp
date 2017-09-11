@@ -57,6 +57,14 @@ def download_file(filename, url, overwrite=False):
     return r
 
 
+def get_bmwi_energiedaten_file():
+    filename = os.path.join(cfg.get('paths', 'general'),
+                            cfg.get('general_sources', 'bmwi_energiedaten'))
+    logging.debug("Return status from energiedaten file: {0}".format(
+        download_file(filename, cfg.get('download', 'url_bmwi_energiedaten'))))
+    return filename
+
+
 def lat_lon2point(df):
     """Create shapely point object of latitude and longitude."""
     return Point(df['lon'], df['lat'])

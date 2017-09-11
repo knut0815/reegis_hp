@@ -135,10 +135,8 @@ def get_annual_demand_bmwi(year):
     in Wh (Watthours). Will return None if data for the given year is not
     available.
     """
-    infile = os.path.join(
-        cfg.get('paths', 'general'),
-        cfg.get('general_sources', 'bmwi_energiedaten')
-    )
+    infile = tools.get_bmwi_energiedaten_file()
+
     table = pd.read_excel(infile, '21', skiprows=7, index_col=[0])
     try:
         return table.loc['   zusammen', year] * 1e+12
@@ -188,19 +186,16 @@ def get_de21_profile(year, kind, annual_demand=None, overwrite=False):
         logging.error('Method "{0}" not found.'.format(kind))
 
 
-if __name__ == "__main__":
-    logger.define_logging()
+def test_elec_demand(year):
+    oe = get_de21_profile(year, 'openego') * 1000000
+    rp = get_de21_profile(year, 'renpass') * 1000000
+    ege = get_de21_profile(year, 'openego_entsoe') * 1000000
 
-    my_year = 2014
-    oe = get_de21_profile(my_year, 'openego') * 1000000
-    rp = get_de21_profile(my_year, 'renpass') * 1000000
-    ege = get_de21_profile(my_year, 'openego_entsoe') * 1000000
+    netto = get_annual_demand_bmwi(year)
 
-    netto = get_annual_demand_bmwi(my_year)
-    print(netto)
-    oe_s = get_de21_profile(my_year, 'openego', annual_demand=netto)
-    rp_s = get_de21_profile(my_year, 'renpass', annual_demand=netto)
-    ege_s = get_de21_profile(my_year, 'openego_entsoe', annual_demand=netto)
+    oe_s = get_de21_profile(year, 'openego', annual_demand=netto)
+    rp_s = get_de21_profile(year, 'renpass', annual_demand=netto)
+    ege_s = get_de21_profile(year, 'openego_entsoe', annual_demand=netto)
 
     print('[TWh] original    scaled (BMWI)')
     print(' oe:  ', int(oe.sum().sum() / 1e+12), '       ',
@@ -209,3 +204,17 @@ if __name__ == "__main__":
           int(rp_s.sum().sum() / 1e+12))
     print('ege:  ', int(ege.sum().sum() / 1e+12), '       ',
           int(ege_s.sum().sum() / 1e+12))
+
+
+def heat_demand():
+    infile = os.path.join(cfg.get('paths', 'static'),
+                          cfg.get('general_sources', 'energiebilanzen_laender'))
+    table = pd.read_excel(infile, index_col=[0, 1, 2])
+    print(table.index.get_level_values(2).unique())
+
+
+
+if __name__ == "__main__":
+    logger.define_logging()
+    # heat_demand()
+    test_elec_demand(2009)

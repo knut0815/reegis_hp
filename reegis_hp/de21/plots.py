@@ -434,7 +434,28 @@ def plot_orientation_by_region():
 def demand_plots():
     locale.setlocale(locale.LC_ALL, 'de_DE.utf8')
     logger.define_logging()
-    my_year = 2014
+    my_year = 2008
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    load_file = os.path.join(cfg.get('paths', 'time_series'),
+                             cfg.get('time_series', 'load_file'))
+    entsoe = pd.read_csv(load_file, index_col='utc_timestamp', parse_dates=True)
+    entsoe = entsoe.tz_localize('UTC').tz_convert('Europe/Berlin')
+    for y in range(2006, 2015):
+        start = datetime.datetime(y, 1, 1, 0, 0)
+        end = datetime.datetime(y, 12, 31, 23, 0)
+        de_load_profile = entsoe.ix[start:end].DE_load_
+        ax = de_load_profile.resample('M').mean().plot(ax=ax)
+    plt.show()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    netto2014 = 511500000
+    for y in range(2006, 2015):
+        entsoe = demand.get_de21_profile(
+            y, 'openego_entsoe', annual_demand=netto2014).sum(1)
+        ax = entsoe.resample('M').mean().plot(ax=ax)
+    plt.show()
 
     oe = demand.get_de21_profile(my_year, 'openego')
     rp = demand.get_de21_profile(my_year, 'renpass')
@@ -503,7 +524,7 @@ def demand_plots():
         ax=my_ax1, linewidth=2, style=['-', '-'])
     my_ax1.legend_.remove()
     plt.ylim([30100, 90000])
-    plt.xlim([735256, 735261.96])
+    # plt.xlim([735256, 735261.96])
     plt.ylabel('Mittlerer Stromverbrauch [kW]')
     locs, labels = plt.xticks()
     handles = locs - 0.5
@@ -517,7 +538,7 @@ def demand_plots():
            datetime.date(my_year, 7, 30)].plot(
         ax=my_ax2, linewidth=2, style=['-', '-', '-.'])
     plt.ylim([30100, 90000])
-    plt.xlim([735438, 735443.93])
+    # plt.xlim([735438, 735443.93])
     my_ax2.get_yaxis().set_visible(False)
     handles, labels = plt.xticks()
     handles = handles - 0.5
@@ -566,7 +587,7 @@ def demand_plots():
         ax=my_ax1, linewidth=2, style=['-', '-', '-', '-', '-', 'k-'])
     my_ax1.legend_.remove()
     plt.ylim([30100, 80000])
-    plt.xlim([735255.9, 735257.1])
+    # plt.xlim([735255.9, 735257.1])
     plt.ylabel('Mittlerer Stromverbrauch [kW]')
     plt.xlabel('23. Januar 2014')
     my_ax2 = fig.add_subplot(1, 2, 2)
@@ -574,7 +595,7 @@ def demand_plots():
            datetime.datetime(my_year, 7, 25, 5, 0)].plot(
         ax=my_ax2, linewidth=2, style=['-', '-', '-', '-', '-', 'k-'])
     plt.ylim([30100, 80000])
-    plt.xlim([735437.9, 735439.1])
+    # plt.xlim([735437.9, 735439.1])
     my_ax2.get_yaxis().set_visible(False)
     plt.xlabel('24. Juli 2014')
     plt.legend(facecolor='white', framealpha=1, shadow=True)

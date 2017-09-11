@@ -23,8 +23,8 @@ def prices_from_bmwi_energiedaten(c, src):
         '  - Erdgas': 'Natural gas',
         '  - Steinkohlen': 'Hard coal'
     }
-    filename = os.path.join(c.paths['general'], c.files['bmwi_energiedaten'])
-    t.download_file(filename, c.url['bmwi_energiedaten'])
+
+    filename = t.get_bmwi_energiedaten_file()
 
     # get prices for commodity source from sheet 26
     fs = pd.read_excel(filename, '26', skiprows=6, index_col=[0]).ix[4:7]
