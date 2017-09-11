@@ -545,48 +545,13 @@ def demand_plots():
     slp_de_no_idx = slp_de.reset_index(drop=True)
     entsoe_no_idx = entsoe.reset_index(drop=True)
 
-    p = pd.DataFrame(index=slp_de_no_idx.index)
-    tmp = slp_de_no_idx.div(9)
-    p['a'] = np.roll(tmp, 4)
-    p['b'] = np.roll(tmp, 3)
-    p['c'] = np.roll(tmp, 2)
-    p['d'] = np.roll(tmp, 1)
-    p['e'] = tmp
-    p['f'] = np.roll(tmp, -1)
-    p['g'] = np.roll(tmp, -2)
-    p['h'] = np.roll(tmp, -3)
-    p['i'] = np.roll(tmp, -4)
-    p = p.sum(1)
+    p4 = slp_de_no_idx.rolling(9, center=True).mean()
+    p3 = slp_de_no_idx.rolling(7, center=True).mean()
+    p2 = slp_de_no_idx.rolling(5, center=True).mean()
+    p1 = slp_de_no_idx.rolling(3, center=True).mean()
 
-    p2 = pd.DataFrame(index=slp_de_no_idx.index)
-    tmp = slp_de_no_idx.div(7)
-    p2['b'] = np.roll(tmp, 3)
-    p2['c'] = np.roll(tmp, 2)
-    p2['d'] = np.roll(tmp, 1)
-    p2['e'] = tmp
-    p2['f'] = np.roll(tmp, -1)
-    p2['g'] = np.roll(tmp, -2)
-    p2['h'] = np.roll(tmp, -3)
-    p2 = p2.sum(1)
-
-    p3 = pd.DataFrame(index=slp_de_no_idx.index)
-    tmp = slp_de_no_idx.div(5)
-    p3['c'] = np.roll(tmp, 2)
-    p3['d'] = np.roll(tmp, 1)
-    p3['e'] = tmp
-    p3['f'] = np.roll(tmp, -1)
-    p3['g'] = np.roll(tmp, -2)
-    p3 = p3.sum(1)
-
-    p4 = pd.DataFrame(index=slp_de_no_idx.index)
-    tmp = slp_de_no_idx.div(3)
-    p4['d'] = np.roll(tmp, 1)
-    p4['e'] = tmp
-    p4['f'] = np.roll(tmp, -1)
-    p4 = p4.sum(1)
-    # print(ege.sum(1))
     df = pd.DataFrame(
-        pd.concat([slp_de_no_idx, p4, p3, p2, p, entsoe_no_idx],
+        pd.concat([slp_de_no_idx, p1, p2, p3, p4, entsoe_no_idx],
                   axis=1, keys=['Standardlastprofil',
                                 'geglättet (1h)',
                                 'geglättet (2h)',
