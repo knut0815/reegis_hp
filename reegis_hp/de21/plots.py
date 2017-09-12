@@ -8,6 +8,9 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.patheffects as path_effects
 
+import demandlib.bdew as bdew
+import demandlib.particular_profiles as profiles
+
 from oemof.tools import logger
 from reegis_hp.de21 import demand
 from reegis_hp.de21 import config as cfg
@@ -602,9 +605,97 @@ def demand_plots():
     plt.show()
 
 
+def demand_share_of_sector_and_region():
+    year = 2014
+    fig = plt.figure(figsize=(12, 5))
+    fig.subplots_adjust(
+        wspace=0.29, left=0.06, right=0.92, bottom=0.12, top=0.95)
+    demand_de21 = demand.prepare_ego_demand()
+
+    share_relative = pd.DataFrame()
+
+    for region in demand_de21.index:
+        sc_sum = demand_de21.loc[region, 'sector_consumption_sum']
+        share_relative.loc[region, 'h0'] = (
+            demand_de21.loc[region, 'sector_consumption_residential'] / sc_sum)
+        share_relative.loc[region, 'g0'] = (
+            demand_de21.loc[region, 'sector_consumption_retail'] / sc_sum)
+        share_relative.loc[region, 'l0'] = (
+            demand_de21.loc[region, 'sector_consumption_agricultural'] / sc_sum)
+        share_relative.loc[region, 'ind'] = (
+            demand_de21.loc[region, 'sector_consumption_industrial'] / sc_sum)
+
+    share_relative.loc['  ', 'h0'] = 0
+    share_relative.loc['  ', 'g0'] = 0
+    share_relative.loc['  ', 'l0'] = 0
+    share_relative.loc['  ', 'ind'] = 0
+    share_relative.loc['DE '] = share_relative.sum().div(18)
+    ax1 = fig.add_subplot(1, 2, 1)
+    ax1 = share_relative.plot(kind='bar', stacked=True, ax=ax1)
+    handles, labels = ax1.get_legend_handles_labels()
+    ax1.legend(handles[::-1], labels[::-1], loc='center left',
+               bbox_to_anchor=(1, 0.895))
+    ax1.set_ylabel("Anteil")
+
+    holidays = {
+        datetime.date(year, 5, 24): 'Whit Monday',
+        datetime.date(year, 4, 5): 'Easter Monday',
+        datetime.date(year, 5, 13): 'Ascension Thursday',
+        datetime.date(year, 1, 1): 'New year',
+        datetime.date(year, 10, 3): 'Day of German Unity',
+        datetime.date(year, 12, 25): 'Christmas Day',
+        datetime.date(year, 5, 1): 'Labour Day',
+        datetime.date(year, 4, 2): 'Good Friday',
+        datetime.date(year, 12, 26): 'Second Christmas Day'}
+
+    ann_el_demand_per_sector = {
+        'h0': 1000,
+        'g0': 1000,
+        'l0': 1000,
+        'ind': 1000,
+    }
+
+    # read standard load profiles
+    e_slp = bdew.ElecSlp(year, holidays=holidays)
+
+    # multiply given annual demand with timeseries
+    elec_demand = e_slp.get_profile(ann_el_demand_per_sector)
+
+    # Add the slp for the industrial group
+    ilp = profiles.IndustrialLoadProfile(e_slp.date_time_index,
+                                         holidays=holidays)
+
+    # Beginning and end of workday, weekdays and weekend days, and scaling
+    # factors by default.
+    elec_demand['ind'] = ilp.simple_profile(ann_el_demand_per_sector['ind'])
+
+    elec_demand['mix'] = (elec_demand['h0'] * 0.291229 +
+                          elec_demand['g0'] * 0.185620 +
+                          elec_demand['l0'] * 0.100173 +
+                          elec_demand['ind'] * 0.422978)
+
+    # Resample 15-minute values to monthly values.
+    elec_demand = elec_demand.resample('M').mean()
+    print(elec_demand.mean())
+    mean_d = elec_demand.mean()
+    elec_demand = (elec_demand - mean_d) / 0.114158 * 100
+    # Plot demand
+    ax2 = fig.add_subplot(1, 2, 2)
+    elec_demand = elec_demand[['mix', 'h0', 'g0', 'l0', 'ind']]
+    print(elec_demand)
+    ax2 = elec_demand.plot(style=['k-.', '-', '-', '-', '-'], ax=ax2)
+    handles, labels = ax2.get_legend_handles_labels()
+    ax2.legend(handles[::-1], labels[::-1], loc='center left',
+               bbox_to_anchor=(1, 0.87))
+    ax2.set_xlabel("")
+    ax2.set_ylabel("Abweichung vom Jahresmittel [%]")
+    plt.show()
+
+
 if __name__ == "__main__":
     # heatmap_pv_orientation()
-    demand_plots()
+    demand_share_of_sector_and_region()
+    # demand_plots()
     # plot_full_load_hours(2008)
     # plot_module_comparison()
     # plot_orientation_by_region()
