@@ -169,6 +169,7 @@ def de21_configuration():
     # initialise de21 configuration
     logging.info('Loading de21 configuration....')
 
+    # Set default paths for 'basic' and 'data' if set to 'None' in the ini-file
     if get('paths', 'basic') is None:
         basicpath = os.path.join(os.path.dirname(__file__), 'data')
         cfg.set('paths', 'basic', basicpath)
@@ -180,7 +181,7 @@ def de21_configuration():
         logging.debug("Set default path for data path: {0}".format(datapath))
 
     # *************************************************************************
-    # ********* set paths *****************************************************
+    # ********* Set sub-paths according to ini-file ***************************
     # *************************************************************************
 
     # general sources
