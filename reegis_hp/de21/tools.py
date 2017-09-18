@@ -10,7 +10,7 @@ import datetime
 from shapely.wkt import loads as wkt_loads
 import geopandas as gpd
 import warnings
-import config as cfg
+from reegis_hp.de21 import config as cfg
 
 
 def read_seq_file():

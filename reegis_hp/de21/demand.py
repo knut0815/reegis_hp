@@ -333,7 +333,7 @@ def heat_demand():
         'Verkehr insgesamt': 'transp',
     }
 
-    year = 2013
+    years = [2012, 2013, 2014]
     # energy balance
     ebfile = os.path.join(cfg.get('paths', 'static'),
                           cfg.get('general_sources', 'energiebilanzen_laender'))
@@ -363,66 +363,89 @@ def heat_demand():
     st.sort_index(inplace=True)
     del st['Anm.']
 
-    # Comparing
-    endenergie_check = pd.DataFrame()
-    for col in ft.columns:
-        ft_piece = ft.loc[(year, slice(None)), col]
-        ft_piece.index = ft_piece.index.droplevel([0])
-        ft_piece = ft_piece.apply(lambda x: pd.to_numeric(x, errors='coerce'))
-        eb_piece = eb.loc[(year, slice(None), 'Endenergieverbrauch'), col]
-        eb_piece.index = eb_piece.index.droplevel([0, 2])
-        endenergie_check[col] = ft_piece-eb_piece.round()
+    writer = pd.ExcelWriter('/home/local/RL-INSTITUT/uwe.krien/output.xlsx')
 
-    writer = pd.ExcelWriter('/home/uwe/output.xlsx')
-    endenergie_check.to_excel(writer, 'tester1')
-    endenergie_check.sum().to_excel(writer, 'tester2')
-    print(endenergie_check.sum(1))
-    print(endenergie_check.sum().sum())
+    for year in years:
+        # Compare sum of fuel groups with LAK-table
+        endenergie_check = pd.DataFrame()
+        for col in ft.columns:
+            ft_piece = ft.loc[(year, slice(None)), col]
+            ft_piece.index = ft_piece.index.droplevel([0])
+            ft_piece = ft_piece.apply(lambda x: pd.to_numeric(x,
+                                                              errors='coerce'))
+            eb_piece = eb.loc[(year, slice(None), 'Endenergieverbrauch'), col]
+            eb_piece.index = eb_piece.index.droplevel([0, 2])
+            endenergie_check[col] = ft_piece-eb_piece.round()
+
+        endenergie_check['check'] = (endenergie_check.sum(1) -
+                                     2 * endenergie_check['total'])
+        endenergie_check.loc['all'] = endenergie_check.sum()
+        endenergie_check.to_excel(writer, 'fuel_groups_{0}'.format(year),
+                                  freeze_panes=(1, 1))
+
+        # Compare subtotal of transport, industrial and domestic and retail with
+        # the total of endenergy
+        endenergie_summe = pd.DataFrame()
+
+        for state in eb.index.get_level_values(1).unique():
+            try:
+                tmp = pd.DataFrame()
+                n = 0
+                main_cat = [
+                    'Haushalte, Gewerbe, Handel, Dienstleistungen,'
+                    ' übrige Verbraucher', 'Verkehr insgesamt',
+                    'Gewinngung und verarbeitendes Gewerbe']
+                for idx in main_cat:
+                    n += 1
+                    tmp[state, n] = eb.loc[year, state, idx]
+                tmp = (tmp.sum(1) - eb.loc[year, state, 'Endenergieverbrauch']
+                       ).round()
+
+                endenergie_summe[state] = tmp
+            except KeyError:
+                endenergie_summe[state] = None
+        endenergie_summe.transpose().to_excel(
+            writer, 'internal sum check {0}'.format(year), freeze_panes=(1, 1))
+
+        # Compare
+        eb_fuel = (eb[['hard coal',  'lignite',  'oil',  'gas', 're',
+                       'electricity', 'district heating', 'other']])
+
+        eb_fuel = eb_fuel.sum(1)
+        # print((eb_fuel - eb['total']).round().unstack())
+        # exit(0)
+        # eb_sectoreb_fuel.unstack())
+        # exit(0)
+        eb_sector = eb_fuel.round().unstack()
+        eb_sector.rename(columns=sector_columns, inplace=True)
+        del eb_sector['ghd']
+        del eb_sector['dom']
+        eb_sector = eb_sector.sort_index(1).loc[year]
+
+        st_year = st.sort_index(1).loc[year]
+        st_year.index = st_year.index
+        st_year = st_year.apply(
+            lambda x: pd.to_numeric(x, errors='coerce')).fillna(0)
+        (eb_sector.astype(int) - st_year.astype(int)).to_excel(
+            writer, 'sector_groups_{0}'.format(year), freeze_panes=(1, 1))
+
+        sum_check_hrz = pd.DataFrame()
+        for row in eb.index.get_level_values(2).unique():
+            eb.sort_index(0, inplace=True)
+            summe = (eb.loc[(year, slice(None), row)]).sum(1)
+            ges = (eb.loc[(year, slice(None), row), ('total')])
+
+            tmp_check = round(summe - 2 * ges)
+            tmp_check.index = tmp_check.index.droplevel(0)
+            tmp_check.index = tmp_check.index.droplevel(1)
+            sum_check_hrz[row] = tmp_check
+        sum_check_hrz.to_excel(
+                writer, 'sum_check_hrz_{0}'.format(year), freeze_panes=(1, 1))
+
     writer.save()
-    exit(0)
-    endenergie_summe = pd.DataFrame()
-
-    for state in eb.index.get_level_values(1).unique():
-        tmp = pd.DataFrame()
-        n = 0
-        main_cat = [
-            'Haushalte, Gewerbe, Handel, Dienstleistungen, übrige Verbraucher',
-            'Verkehr insgesamt',
-            'Gewinngung und verarbeitendes Gewerbe']
-        for idx in main_cat:
-            n += 1
-            tmp[state, n] = eb.loc[year, state, idx]
-        tmp = (tmp.sum(1) - eb.loc[year, state, 'Endenergieverbrauch']).round()
-
-        endenergie_summe[state] = tmp
-    print(endenergie_summe)
-    exit(0)
-    eb_fuel = (eb[['hard coal',  'lignite',  'oil',  'gas', 're', 'electricity',
-                   'district heating', 'other']])
-
-    eb_fuel = eb_fuel.sum(1)
-    print((eb_fuel - eb['total']).round().unstack())
-    # eb_sectoreb_fuel.unstack())
-    # exit(0)
-    eb_sector = eb_fuel.round().unstack()
-    eb_sector.rename(columns=sector_columns, inplace=True)
-    del eb_sector['ghd']
-    del eb_sector['dom']
-    eb_sector = eb_sector.sort_index(1).loc[2012:2013]
-    st = st.sort_index(1).loc[2012:2013]
-    st.index = eb_sector.index
-    st = st.apply(lambda x: pd.to_numeric(x, errors='coerce')).fillna(0)
-    print(eb_sector.astype(int) - st.astype(int))
-    # print(st)
-
-    # for row in eb.index.get_level_values(2).unique():
-    #     eb.sort_index(0, inplace=True)
-    #     summe = (eb.loc[(year, slice(None), row)]).sum(1)
-    #     ges = (eb.loc[(year, slice(None), row), ('Insgesamt')])
-    #     # print(round(summe - 2 * ges))
 
     # print(eb.columns)
-
+    #
     # print(eb_grp.columns)
     # print(eb_grp.loc[2014, :, 'Endenergieverbrauch']['hard coal'])
     # exit(0)
