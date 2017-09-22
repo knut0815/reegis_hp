@@ -6,50 +6,73 @@ import geopandas as gpd
 from oemof.tools import logger
 from shapely.wkt import loads as wkt_loads
 from reegis_hp.de21 import tools as t
-import configuration as config
 import zipfile
 import shutil
 import glob
 import logging
+from reegis_hp.de21 import config as cfg
 
 
-def get_ew_shp_file(c, year):
-    url = ('http://www.geodatenzentrum.de/auftrag1/archiv/vektor/' +
-           'vg250_ebenen/{0}/vg250-ew_{0}-12-31.geo84.shape'.format(year) +
-           '.{0}.zip')
-    filename_zip = os.path.join(c.paths['general'], c.files['vg250_ew_zip'])
+STATES = {
+    'Baden-Württemberg': 'BW',
+    'Bayern': 'BY',
+    'Berlin': 'BE',
+    'Brandenburg': 'BB',
+    'Bremen': 'HB',
+    'Hamburg': 'HH',
+    'Hessen': 'HE',
+    'Mecklenburg-Vorpommern': 'MV',
+    'Niedersachsen': 'NI',
+    'Nordrhein-Westfalen': 'NW',
+    'Rheinland-Pfalz': 'RP',
+    'Saarland': 'SL',
+    'Sachsen': 'SN',
+    'Sachsen-Anhalt': 'ST',
+    'Schleswig-Holstein': 'SH',
+    'Thüringen': 'TH',
+    }
+
+
+def get_ew_shp_file(year):
+    # url = ('http://www.geodatenzentrum.de/auftrag1/archiv/vektor/' +
+    #        'vg250_ebenen/{0}/vg250-ew_{0}-12-31.geo84.shape'.format(year) +
+    #        '.{0}.zip')
+    url = cfg.get('download', 'url_geodata_ew').format(year=year,
+                                                       var1='{0}')
+    filename_zip = os.path.join(cfg.get('paths', 'general'),
+                                cfg.get('general_sources', 'vg250_ew_zip'))
     msg = t.download_file(filename_zip, url.format('ebene'))
     if msg == 404:
         logging.warning("Wrong URL. Try again with different URL.")
         t.download_file(filename_zip, url.format('ebenen'), overwrite=True)
     zip_ref = zipfile.ZipFile(filename_zip, 'r')
-    zip_ref.extractall(c.paths['general'])
+    zip_ref.extractall(cfg.get('paths', 'general'))
     zip_ref.close()
-    subs = next(os.walk(c.paths['general']))[1]
+    subs = next(os.walk(cfg.get('paths', 'general')))[1]
     mysub = None
     for sub in subs:
         if 'vg250' in sub:
             mysub = sub
-    pattern_path = os.path.join(c.paths['general'],
+    pattern_path = os.path.join(cfg.get('paths', 'general'),
                                 mysub,
                                 'vg250-ew_ebenen',
                                 'VG250_VWG*')
     for file in glob.glob(pattern_path):
-        file_new = os.path.join(c.paths['general'],
+        file_new = os.path.join(cfg.get('paths', 'general'),
                                 'VG250_VWG_' + str(year) + file[-4:])
         shutil.copyfile(file, file_new)
 
-    shutil.rmtree(os.path.join(c.paths['general'], mysub))
+    shutil.rmtree(os.path.join(cfg.get('paths', 'general'), mysub))
 
     os.remove(filename_zip)
 
 
-def get_ew_by_region(c, spatial, year):
-    filename_shp = os.path.join(c.paths['general'],
+def get_ew_by_region(spatial, year):
+    filename_shp = os.path.join(cfg.get('paths', 'general'),
                                 'VG250_VWG_' + str(year) + '.shp')
 
     if not os.path.isfile(filename_shp):
-        get_ew_shp_file(c, year)
+        get_ew_shp_file(year)
 
     vwg = gpd.read_file(filename_shp)
 
@@ -63,7 +86,7 @@ def get_ew_by_region(c, spatial, year):
         n += 1
         ewz.loc[i] = vwg.loc[vwg.intersects(wkt_loads(v.geom)), 'EWZ'].sum()
         print(i, end=', ', flush=True)
-        if n % 10 == 0:
+        if n % 9 == 0:
             print()
     print()
     if vwg.EWZ.sum() - ewz.sum() > 0:
@@ -72,10 +95,23 @@ def get_ew_by_region(c, spatial, year):
                 ewz.sum(), vwg.EWZ.sum()))
     return ewz
 
+
+def full_ew_table_to_csv(year):
+    infile = os.path.join(cfg.get('paths', 'geometry'),
+                          cfg.get('geometry', 'overlap_region_polygon'))
+    outfile = os.path.join(cfg.get('paths', 'general'),
+                           cfg.get('general_sources', 'ew'))
+    overlap_regions = pd.read_csv(infile, index_col=[0])
+    ew = get_ew_by_region(overlap_regions, year)
+    ew.to_csv(outfile.format(year=year))
+
+
 if __name__ == "__main__":
     logger.define_logging()
-    cfg = config.get_configuration()
-    spatial_file = os.path.join(cfg.paths['geometry'],
-                                cfg.files['federal_states_polygon'])
-    spatial_dfs = pd.read_csv(spatial_file, index_col='gen')
-    print(get_ew_by_region(cfg, spatial_dfs, 2014))
+    full_ew_table_to_csv(2013)
+    full_ew_table_to_csv(2014)
+    exit(0)
+    spatial_file_fs = os.path.join(cfg.get('paths', 'geometry'),
+                                   cfg.get('geometry', 'federalstates_polygon'))
+    spatial_dfs = pd.read_csv(spatial_file_fs, index_col='gen')
+    print(get_ew_by_region(spatial_dfs, 2014))

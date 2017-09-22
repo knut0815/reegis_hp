@@ -319,7 +319,7 @@ def check_balance(orig, ebfile):
     writer.save()
 
 
-def fix_balance():
+def edit_balance():
     """Fixes the energy balances after analysing them. This is done manually."""
 
     # Read energy balance table
@@ -464,9 +464,11 @@ def get_domestic_retail_share(year):
     return share
 
 
-def get_grouped_balance(year= None):
+def get_grouped_balance(year=None):
     fname = os.path.join(cfg.get('paths', 'demand'),
                          cfg.get('energy_balance', 'energy_balance_edited'))
+    if not os.path.isfile(fname):
+        edit_balance()
     eb = pd.read_csv(fname, index_col=[0, 1, 2])
     eb_grp = eb.groupby(by=FUEL_GROUPS, axis=1).sum()
     eb_grp.index = eb_grp.index.set_names(['year', 'state', 'sector'])

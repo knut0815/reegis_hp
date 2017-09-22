@@ -166,6 +166,22 @@ def find_intersection_with_buffer(gdf, spatial_df, column):
     return gdf
 
 
+def geo_csv_from_shp(shapefile, outfile, id_col, tmp_file='tmp.csv'):
+    tmp = gpd.read_file(shapefile)
+    tmp.to_csv(tmp_file)
+    tmp = pd.read_csv(tmp_file)
+    new = pd.DataFrame()
+    new['gid'] = tmp[id_col]
+    # # Special column manipulations
+    # new['gid'] = new['gid'].apply(lambda x: x.replace('Ã¼', 'ü'))
+    # new['region'] = new['gid'].apply(lambda x: x.split('_')[1])
+    # new['state'] = new['gid'].apply(lambda x: x.split('_')[0])
+    new['geom'] = tmp['geometry']
+    new.set_index('gid', inplace=True)
+    new.to_csv(outfile)
+    os.remove(tmp_file)
+
+
 def sorter():
     b_path = '/home/uwe/express/reegis/data/feedin/solar/'
     lg_path = b_path + 'M_LG290G3__I_ABB_MICRO_025_US208/'
