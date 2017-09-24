@@ -86,31 +86,49 @@ def get_ew_by_region(spatial, year):
         n += 1
         ewz.loc[i] = vwg.loc[vwg.intersects(wkt_loads(v.geom)), 'EWZ'].sum()
         print(i, end=', ', flush=True)
-        if n % 9 == 0:
+        if n % 5 == 0:
             print()
     print()
     if vwg.EWZ.sum() - ewz.sum() > 0:
         logging.warning(
             "Overall sum {0} is higher than localised sum {1}.".format(
                 ewz.sum(), vwg.EWZ.sum()))
+    ewz.name = 'ew'
+    ewz.index.name = 'id'
     return ewz
 
 
-def full_ew_table_to_csv(year):
+def ew_de21_table_to_csv(year, outfile=None):
     infile = os.path.join(cfg.get('paths', 'geometry'),
                           cfg.get('geometry', 'overlap_region_polygon'))
-    outfile = os.path.join(cfg.get('paths', 'general'),
-                           cfg.get('general_sources', 'ew'))
+    if outfile is None:
+        outfile = os.path.join(cfg.get('paths', 'general'),
+                               cfg.get('general_sources', 'ew'))
+
     overlap_regions = pd.read_csv(infile, index_col=[0])
-    ew = get_ew_by_region(overlap_regions, year)
+
+    ew = pd.DataFrame(get_ew_by_region(overlap_regions, year))
+
+    ew['region'] = ew.index.map(lambda x: x.split('_')[1])
+    ew['state'] = ew.index.map(lambda x: x.split('_')[0])
+
     ew.to_csv(outfile.format(year=year))
+
+
+def get_ew_de21(year):
+    filename = os.path.join(cfg.get('paths', 'general'),
+                            cfg.get('general_sources', 'ew'))
+    filename = filename.format(year=year)
+    if os.path.isfile(filename):
+        ew_de21_table_to_csv(year, filename)
+    return pd.read_csv(filename, index_col=[0])
 
 
 if __name__ == "__main__":
     logger.define_logging()
-    full_ew_table_to_csv(2013)
-    full_ew_table_to_csv(2014)
-    exit(0)
+
+    # print(get_ew_de21(2014).groupby('state').sum().sum())
+
     spatial_file_fs = os.path.join(cfg.get('paths', 'geometry'),
                                    cfg.get('geometry', 'federalstates_polygon'))
     spatial_dfs = pd.read_csv(spatial_file_fs, index_col='gen')

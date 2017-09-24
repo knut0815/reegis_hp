@@ -237,7 +237,8 @@ def heat_demand(year):
         logging.info("Everything worked fine.")
     eb_new = eb.loc[(slice(None), ['industrial', 'domestic', 'retail',
                                    'transport', 'total']), ]
-    print(eb_new)
+    by_sector = eb_new.loc[(slice(None), 'domestic'), ].sum()
+    print((by_sector / by_sector['total'] * 100).round().apply(int))
 
 
 if __name__ == "__main__":

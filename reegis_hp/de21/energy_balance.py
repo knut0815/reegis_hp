@@ -427,7 +427,7 @@ def edit_balance():
     return fname
 
 
-def get_grouped_de_balance(year=None):
+def get_de_balance(year=None, grouped=False):
     fname_de = os.path.join(
         cfg.get('paths', 'static'),
         cfg.get('energy_balance', 'energy_balance_de_original'))
@@ -441,16 +441,17 @@ def get_grouped_de_balance(year=None):
         new_index_values.append(SECTOR[value])
     deb.index.set_levels(new_index_values, level=2, inplace=True)
 
-    deb_grp = deb.groupby(by=FUEL_GROUPS, axis=1).sum()
-    deb_grp.index = deb_grp.index.set_names(['year', 'state', 'sector'])
-    deb_grp.sort_index(0, inplace=True)
+    if grouped:
+        deb = deb.groupby(by=FUEL_GROUPS, axis=1).sum()
+    deb.index = deb.index.set_names(['year', 'state', 'sector'])
+    deb.sort_index(0, inplace=True)
     if year is not None:
-        deb_grp = deb_grp.loc[year]
-    return deb_grp
+        deb = deb.loc[year]
+    return deb
 
 
 def get_domestic_retail_share(year):
-    deb_grp = get_grouped_de_balance(year=year)
+    deb_grp = get_de_balance(year=year, grouped=True)
     deb_grp.sort_index(1, inplace=True)
 
     deb_grp = deb_grp.groupby(level=[1]).sum()
