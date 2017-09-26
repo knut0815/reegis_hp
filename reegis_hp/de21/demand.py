@@ -284,7 +284,7 @@ def heat_demand(year):
         if not eb_new.loc[(slice(None), 'domestic and retail'), col].sum() > 0:
             del eb_new[col]
         # print(col)
-    # del eb_new['electricity']
+    del eb_new['electricity']
     # del eb_new['gasoline']
     # del eb_new['diesel']
     # del eb_new['oil']
@@ -298,7 +298,7 @@ def heat_demand(year):
     print('dr', (dr / dr[:-1].sum() * 100).round(1))
     print('dr', dr / 1000)
     all = (dr + ind) / 1000
-    all['electricity'] = all['electricity'] - 1380
+    # all['electricity'] = all['electricity'] - 1380
     print('all', all)
     print('all_sum', all.sum() - all.total)
 
@@ -314,5 +314,24 @@ def heat_demand(year):
 
 if __name__ == "__main__":
     logger.define_logging()
+    from reegis_hp.de21 import tools as t
+    filename = t.get_bmwi_energiedaten_file()
+    # fs = pd.read_excel(filename, '7', skiprows=6, index_col=[0]).ix[4:7]
+    fs = pd.read_excel(filename, '7', skiprows=7)
+    remove_list = ['1996 *)', 'Anteil am Endenergie-verbrauch 1996', 2008, 2009,
+                   2010, 2011, 2012, 2014, 2015,
+                   'Anteil am Endenergie-verbrauch 2015']
+    for c in remove_list:
+        del fs[c]
+    fs['Unnamed: 0'] = fs['Unnamed: 0'].apply(str)
+    fs['A'] = fs['Unnamed: 0'].apply(lambda x: x if '-' not in x else float('nan'))
+    fs['B'] = fs['Unnamed: 0'].apply(lambda x: x if '-' in x else float('nan'))
+    fs['A'] = fs['A'].fillna(method='ffill')
+    del fs['Unnamed: 0']
+    fs = fs.set_index(['A', 'B'], drop=True)
+    # print(fs)
+    print(fs.loc['mechanische Energie'])
+    # print(fs.loc[' - davon Strom'])
+    exit(0)
     heat_demand(2013)
     # test_elec_demand(2009)
