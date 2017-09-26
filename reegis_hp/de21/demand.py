@@ -209,13 +209,54 @@ def test_elec_demand(year):
 
 
 def heat_demand(year):
-    eb = energy_balance.get_grouped_balance(year)
+    FUEL_GROUPS = {
+        'hard coal (raw)': 'coal',
+        'hard coal (brick)': 'coal',
+        'hard coal (coke)': 'coal',
+        'hard coal (other)': 'coal',
+        'lignite (raw)': 'coal',
+        'lignite (brick)': 'coal',
+        'lignite (other)': 'coal',
+        'oil (raw)': 'oil (raw)',
+        'petroleum': 'petroleum',
+        'gasoline': 'gasoline',
+        'diesel': 'diesel',
+        'jet fuel': 'oil',
+        'light heating oil': 'light heating oil',
+        'heavy heating oil': 'oil',
+        'petroleum coke': 'oil',
+        'mineral oil products': 'oil',
+        'liquid gas': 'natural gas',
+        'refinery gas': 'oil',
+        'coke oven gas': 'gas',
+        'furnace/converter gas': 'gas',
+        'natural gas': 'natural gas',
+        'mine gas': 'gas',
+        'sewer/landfill gas': 're',
+        'hydro power': 're',
+        'wind power': 're',
+        'solar power': 're',
+        'biomass': 're',
+        'biofuel': 're',
+        'waste (biogen)': 're',
+        'other renewable': 're',
+        'electricity': 'electricity',
+        'district heating': 'district heating',
+        'waste (fossil)': 'other',
+        'other': 'other',
+        'total': 'total'}
+    eb = energy_balance.get_states_balance(year)
     eb.sort_index(inplace=True)
     share = energy_balance.get_domestic_retail_share(year)
+    share.fillna(0.5, inplace=True)
+
     check_value = True
     for state in eb.index.get_level_values(0).unique():
-        eb_short_state = eb.loc[state]
-        for col in eb_short_state.columns:
+        tmp = eb.loc[state]
+        tot = tmp.pop('total')
+        # print(state, (tot - tmp.sum(1)).round())
+
+        for col in eb.columns:
             check = (eb.loc[(state, 'domestic'), col] +
                      eb.loc[(state, 'retail'), col] -
                      eb.loc[(state, 'domestic and retail'), col]).round()
@@ -229,6 +270,7 @@ def heat_demand(year):
                          eb.loc[(state, 'retail'), col] -
                          eb.loc[(state, 'domestic and retail')
                          , col]).round()
+
                 if check < 0:
                     logging.error("In {0} the {1} sector results {2}".format(
                         state, col, check))
@@ -236,9 +278,31 @@ def heat_demand(year):
     if check_value:
         logging.info("Everything worked fine.")
     eb_new = eb.loc[(slice(None), ['industrial', 'domestic', 'retail',
-                                   'transport', 'total']), ]
-    by_sector = eb_new.loc[(slice(None), 'domestic'), ].sum()
-    print((by_sector / by_sector['total'] * 100).round().apply(int))
+                                   'transport', 'total', 'domestic and retail']), ]
+    eb_new = eb_new.groupby(by=FUEL_GROUPS, axis=1).sum()
+    for col in eb_new.columns:
+        if not eb_new.loc[(slice(None), 'domestic and retail'), col].sum() > 0:
+            del eb_new[col]
+        # print(col)
+    del eb_new['electricity']
+    del eb_new['gasoline']
+    del eb_new['diesel']
+    del eb_new['oil']
+    dom_by_sector = eb_new.loc[(slice(None), 'domestic'), ].sum()
+    retail_by_sector = eb_new.loc[(slice(None), 'retail'), ].sum()
+    dr = eb_new.loc[(slice(None), 'domestic and retail'), ].sum()
+    print('dom', (dom_by_sector / dom_by_sector[:-1].sum() * 100).round(1))
+    print('ret', (retail_by_sector / retail_by_sector[:-1].sum() * 100).round(1))
+    print('all', (dr / dr[:-1].sum() * 100).round(1))
+
+    print("Jetzt bitte vergleichen, ob das in etwa hinhaut!!!")
+    # print(dom_by_sector[:-1].sum(), dom_by_sector['total'])
+    # print(retail_by_sector[:-1].sum(), retail_by_sector['total'])
+    # print(dr[:-1].sum(), dr['total'])
+    # print((dom_by_sector[:-1].sum() + retail_by_sector[:-1].sum()).round())
+    # print(dom_by_sector['total'] + retail_by_sector['total'])
+
+    # print((by_sector / by_sector['total'] * 100).round().apply(int))
 
 
 if __name__ == "__main__":

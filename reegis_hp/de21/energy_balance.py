@@ -45,6 +45,7 @@ COLUMN_TRANSLATION = {
     'andere Energieträger': 'other',
     'Insgesamt': 'total'}
 
+
 FUEL_GROUPS = {
     'hard coal (raw)': 'hard coal',
     'hard coal (brick)': 'hard coal',
@@ -359,7 +360,7 @@ def edit_balance():
     electricity = {2012: 9150, 2013: 7095}
     gas = {2012: -27883, 2013: -13317}
     total = {2012: -18733, 2013: -6223}
-    for row in ['total', 'domestic and retail']:
+    for row in ['total', 'domestic and retail', 'domestic']:
         for y in [2012, 2013]:
             eb.loc[(y, 'BE', row), 'electricity'] += electricity[y]
             eb.loc[(y, 'BE', row), 'natural gas'] += gas[y]
@@ -450,34 +451,35 @@ def get_de_balance(year=None, grouped=False):
     return deb
 
 
-def get_domestic_retail_share(year):
-    deb_grp = get_de_balance(year=year, grouped=True)
-    deb_grp.sort_index(1, inplace=True)
+def get_domestic_retail_share(year, grouped=False):
+    deb = get_de_balance(year=year, grouped=grouped)
+    deb.sort_index(1, inplace=True)
 
-    deb_grp = deb_grp.groupby(level=[1]).sum()
+    deb = deb.groupby(level=[1]).sum()
 
     share = pd.DataFrame()
-    share['domestic'] = (deb_grp.loc['domestic'] /
-                         deb_grp.loc['domestic and retail']
+    share['domestic'] = (deb.loc['domestic'] /
+                         deb.loc['domestic and retail']
                          ).round(2)
-    share['retail'] = (deb_grp.loc['retail'] /
-                       deb_grp.loc['domestic and retail']).round(2).transpose()
+    share['retail'] = (deb.loc['retail'] /
+                       deb.loc['domestic and retail']).round(2).transpose()
     return share
 
 
-def get_grouped_balance(year=None):
+def get_states_balance(year=None, grouped=False, overwrite=False):
     fname = os.path.join(cfg.get('paths', 'demand'),
                          cfg.get('energy_balance', 'energy_balance_edited'))
-    if not os.path.isfile(fname):
+    if not os.path.isfile(fname) or overwrite:
         edit_balance()
     eb = pd.read_csv(fname, index_col=[0, 1, 2])
-    eb_grp = eb.groupby(by=FUEL_GROUPS, axis=1).sum()
-    eb_grp.index = eb_grp.index.set_names(['year', 'state', 'sector'])
+    if grouped:
+        eb = eb.groupby(by=FUEL_GROUPS, axis=1).sum()
+    eb.index = eb.index.set_names(['year', 'state', 'sector'])
 
     if year is not None:
-        eb_grp = eb_grp.loc[year]
+        eb = eb.loc[year]
 
-    return eb_grp
+    return eb
 
 
 if __name__ == "__main__":
@@ -487,5 +489,7 @@ if __name__ == "__main__":
     # check_balance(orig=True, ebfile=fn)
     # fn = fix_balance()
     # check_balance(orig=False, ebfile=fn)
-    print(get_grouped_balance(2013))
+    # print(get_de_balance(year=None, grouped=False).columns)
+    # exit(0)
+    print(get_states_balance(2013, overwrite=True))
     print(get_domestic_retail_share(2013))
