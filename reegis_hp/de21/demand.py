@@ -219,10 +219,10 @@ def heat_demand(year):
         'lignite (other)': 'coal',
         'oil (raw)': 'oil (raw)',
         'petroleum': 'petroleum',
-        'gasoline': 'gasoline',
-        'diesel': 'diesel',
+        'gasoline': 'oil',
+        'diesel': 'oil',
         'jet fuel': 'oil',
-        'light heating oil': 'light heating oil',
+        'light heating oil': 'oil',
         'heavy heating oil': 'oil',
         'petroleum coke': 'oil',
         'mineral oil products': 'oil',
@@ -284,16 +284,23 @@ def heat_demand(year):
         if not eb_new.loc[(slice(None), 'domestic and retail'), col].sum() > 0:
             del eb_new[col]
         # print(col)
-    del eb_new['electricity']
-    del eb_new['gasoline']
-    del eb_new['diesel']
-    del eb_new['oil']
+    # del eb_new['electricity']
+    # del eb_new['gasoline']
+    # del eb_new['diesel']
+    # del eb_new['oil']
+    # eb_new['electricity'] = eb_new['electricity'] - 1380
     dom_by_sector = eb_new.loc[(slice(None), 'domestic'), ].sum()
     retail_by_sector = eb_new.loc[(slice(None), 'retail'), ].sum()
     dr = eb_new.loc[(slice(None), 'domestic and retail'), ].sum()
+    ind = eb_new.loc[(slice(None), 'industrial'), ].sum()
     print('dom', (dom_by_sector / dom_by_sector[:-1].sum() * 100).round(1))
     print('ret', (retail_by_sector / retail_by_sector[:-1].sum() * 100).round(1))
-    print('all', (dr / dr[:-1].sum() * 100).round(1))
+    print('dr', (dr / dr[:-1].sum() * 100).round(1))
+    print('dr', dr / 1000)
+    all = (dr + ind) / 1000
+    all['electricity'] = all['electricity'] - 1380
+    print('all', all)
+    print('all_sum', all.sum() - all.total)
 
     print("Jetzt bitte vergleichen, ob das in etwa hinhaut!!!")
     # print(dom_by_sector[:-1].sum(), dom_by_sector['total'])
