@@ -182,6 +182,56 @@ def geo_csv_from_shp(shapefile, outfile, id_col, tmp_file='tmp.csv'):
     os.remove(tmp_file)
 
 
+def read_bmwi_sheet_7(a=False):
+    filename = get_bmwi_energiedaten_file()
+    if a:
+        sheet = '7a'
+    else:
+        sheet = '7'
+    fs = pd.DataFrame()
+    n = 4
+    while 2014 not in fs.columns:
+        n += 1
+        fs = pd.read_excel(filename, sheet, skiprows=n)
+
+    # Convert first column to string
+    fs['Unnamed: 0'] = fs['Unnamed: 0'].apply(str)
+
+    # Create 'A' column with sector name (shorten the name)
+    fs['A'] = fs['Unnamed: 0'].apply(
+        lambda x: x.replace('nach Anwendungsbereichen ', '')
+        if 'Endenergie' in x else float('nan'))
+    fs['A'] = fs['A'].fillna(method='ffill')
+    fs = fs[fs['A'].notnull()]
+    fs['A'] = fs['A'].apply(
+        lambda x: x.replace('Endenergieverbrauch in der ', ''))
+    fs['A'] = fs['A'].apply(
+        lambda x: x.replace('Endenergieverbrauch im ', ''))
+    fs['A'] = fs['A'].apply(
+        lambda x: x.replace('Endenergieverbrauch in den ', ''))
+    fs['A'] = fs['A'].apply(lambda x: x.replace('Sektor ', ''))
+    fs['A'] = fs['A'].apply(
+        lambda x: x.replace('privaten Haushalten', 'private Haushalte'))
+
+    # Create 'B' column with type
+    fs['B'] = fs['Unnamed: 0'].apply(
+        lambda x: x if '-' not in x else float('nan'))
+    fs['B'] = fs['B'].fillna(method='ffill')
+
+    fs['B'] = fs['B'].apply(lambda x: x if 'nan' not in x else float('nan'))
+    fs = fs[fs['B'].notnull()]
+
+    # Create 'C' column with fuel
+    fs['C'] = fs['Unnamed: 0'].apply(lambda x: x if '-' in x else float('nan'))
+    fs['C'] = fs['C'].fillna(fs['B'])
+
+    # Delete first column and set 'A', 'B', 'C' columns to index
+    del fs['Unnamed: 0']
+    fs = fs.set_index(['A', 'B', 'C'], drop=True)
+
+    return fs
+
+
 def sorter():
     b_path = '/home/uwe/express/reegis/data/feedin/solar/'
     lg_path = b_path + 'M_LG290G3__I_ABB_MICRO_025_US208/'

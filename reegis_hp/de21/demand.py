@@ -15,6 +15,44 @@ import demandlib.particular_profiles as profiles
 from workalendar.europe import Germany
 
 
+FUEL_GROUPS = {
+        'hard coal (raw)': 'coal',
+        'hard coal (brick)': 'coal',
+        'hard coal (coke)': 'coal',
+        'hard coal (other)': 'coal',
+        'lignite (raw)': 'coal',
+        'lignite (brick)': 'coal',
+        'lignite (other)': 'coal',
+        'oil (raw)': 'oil (raw)',
+        'petroleum': 'petroleum',
+        'gasoline': 'oil',
+        'diesel': 'oil',
+        'jet fuel': 'oil',
+        'light heating oil': 'oil',
+        'heavy heating oil': 'oil',
+        'petroleum coke': 'oil',
+        'mineral oil products': 'oil',
+        'liquid gas': 'natural gas',
+        'refinery gas': 'oil',
+        'coke oven gas': 'gas',
+        'furnace/converter gas': 'gas',
+        'natural gas': 'natural gas',
+        'mine gas': 'gas',
+        'sewer/landfill gas': 're',
+        'hydro power': 're',
+        'wind power': 're',
+        'solar power': 're',
+        'biomass': 're',
+        'biofuel': 're',
+        'waste (biogen)': 're',
+        'other renewable': 're',
+        'electricity': 'electricity',
+        'district heating': 'district heating',
+        'waste (fossil)': 'other',
+        'other': 'other',
+        'total': 'total'}
+
+
 def renpass_demand_share():
     demand_share = os.path.join(cfg.get('paths', 'static'),
                                 cfg.get('static_sources',
@@ -209,53 +247,20 @@ def test_elec_demand(year):
 
 
 def heat_demand(year):
-    FUEL_GROUPS = {
-        'hard coal (raw)': 'coal',
-        'hard coal (brick)': 'coal',
-        'hard coal (coke)': 'coal',
-        'hard coal (other)': 'coal',
-        'lignite (raw)': 'coal',
-        'lignite (brick)': 'coal',
-        'lignite (other)': 'coal',
-        'oil (raw)': 'oil (raw)',
-        'petroleum': 'petroleum',
-        'gasoline': 'oil',
-        'diesel': 'oil',
-        'jet fuel': 'oil',
-        'light heating oil': 'oil',
-        'heavy heating oil': 'oil',
-        'petroleum coke': 'oil',
-        'mineral oil products': 'oil',
-        'liquid gas': 'natural gas',
-        'refinery gas': 'oil',
-        'coke oven gas': 'gas',
-        'furnace/converter gas': 'gas',
-        'natural gas': 'natural gas',
-        'mine gas': 'gas',
-        'sewer/landfill gas': 're',
-        'hydro power': 're',
-        'wind power': 're',
-        'solar power': 're',
-        'biomass': 're',
-        'biofuel': 're',
-        'waste (biogen)': 're',
-        'other renewable': 're',
-        'electricity': 'electricity',
-        'district heating': 'district heating',
-        'waste (fossil)': 'other',
-        'other': 'other',
-        'total': 'total'}
     eb = energy_balance.get_states_balance(year)
     eb.sort_index(inplace=True)
+
+    # get fraction of domestic and retail from the german energy balance
     share = energy_balance.get_domestic_retail_share(year)
+
+    # Use 0.5 for both sectors if no value is given
     share.fillna(0.5, inplace=True)
 
+    # Divide domestic and retail by the value of the german energy balance if
+    # the sum of domestic and retail does not equal the value given in the
+    # local energy balance.
     check_value = True
     for state in eb.index.get_level_values(0).unique():
-        tmp = eb.loc[state]
-        tot = tmp.pop('total')
-        # print(state, (tot - tmp.sum(1)).round())
-
         for col in eb.columns:
             check = (eb.loc[(state, 'domestic'), col] +
                      eb.loc[(state, 'retail'), col] -
@@ -268,70 +273,73 @@ def heat_demand(year):
 
                 check = (eb.loc[(state, 'domestic'), col] +
                          eb.loc[(state, 'retail'), col] -
-                         eb.loc[(state, 'domestic and retail')
-                         , col]).round()
+                         eb.loc[(state, 'domestic and retail'), col]).round()
 
                 if check < 0:
                     logging.error("In {0} the {1} sector results {2}".format(
                         state, col, check))
                     check_value = False
     if check_value:
-        logging.info("Everything worked fine.")
-    eb_new = eb.loc[(slice(None), ['industrial', 'domestic', 'retail',
-                                   'transport', 'total', 'domestic and retail']), ]
-    eb_new = eb_new.groupby(by=FUEL_GROUPS, axis=1).sum()
-    for col in eb_new.columns:
-        if not eb_new.loc[(slice(None), 'domestic and retail'), col].sum() > 0:
-            del eb_new[col]
-        # print(col)
-    del eb_new['electricity']
-    # del eb_new['gasoline']
-    # del eb_new['diesel']
-    # del eb_new['oil']
-    # eb_new['electricity'] = eb_new['electricity'] - 1380
-    dom_by_sector = eb_new.loc[(slice(None), 'domestic'), ].sum()
-    retail_by_sector = eb_new.loc[(slice(None), 'retail'), ].sum()
-    dr = eb_new.loc[(slice(None), 'domestic and retail'), ].sum()
-    ind = eb_new.loc[(slice(None), 'industrial'), ].sum()
-    print('dom', (dom_by_sector / dom_by_sector[:-1].sum() * 100).round(1))
-    print('ret', (retail_by_sector / retail_by_sector[:-1].sum() * 100).round(1))
-    print('dr', (dr / dr[:-1].sum() * 100).round(1))
-    print('dr', dr / 1000)
-    all = (dr + ind) / 1000
-    # all['electricity'] = all['electricity'] - 1380
-    print('all', all)
-    print('all_sum', all.sum() - all.total)
+        logging.debug("Divides 'domestic and retail' without errors.")
 
-    print("Jetzt bitte vergleichen, ob das in etwa hinhaut!!!")
-    # print(dom_by_sector[:-1].sum(), dom_by_sector['total'])
-    # print(retail_by_sector[:-1].sum(), retail_by_sector['total'])
-    # print(dr[:-1].sum(), dr['total'])
-    # print((dom_by_sector[:-1].sum() + retail_by_sector[:-1].sum()).round())
-    # print(dom_by_sector['total'] + retail_by_sector['total'])
+    # Reduce energy balance to the needed columns and group by fuel groups.
+    eb = eb.loc[(slice(None), ['industrial', 'domestic', 'retail']), ]
+    eb = eb.groupby(by=FUEL_GROUPS, axis=1).sum()
 
-    # print((by_sector / by_sector['total'] * 100).round().apply(int))
+    # Remove empty columns
+    for col in eb.columns:
+        if not (eb.loc[(slice(None), 'domestic'), col].sum() > 0 or
+                eb.loc[(slice(None), 'retail'), col].sum() > 0 or
+                eb.loc[(slice(None), 'industrial'), col].sum() > 0):
+            del eb[col]
+
+    # The use of electricity belongs to the electricity sector. It is possible
+    # to connect it to the heating sector for future scenarios.
+    del eb['electricity']
+
+    # get fraction of mechanical energy use and subtract it from the balance to
+    # get the use of heat only.
+    share_mech = share_of_mechanical_energy_bmwi(year)
+    for c in share_mech.columns:
+        for i in share_mech.index:
+            eb.loc[(slice(None), c), i] -= (
+                eb.loc[(slice(None), c), i] * share_mech.loc[i, c])
+    return eb
+
+
+def share_of_mechanical_energy_bmwi(year):
+    mech = pd.DataFrame()
+    fs = tools.read_bmwi_sheet_7()
+    fs.sort_index(inplace=True)
+    sector = 'Industrie'
+    total = float(fs.loc[(sector, 'gesamt'), year])
+    mech[sector] = fs.loc[(sector, 'mechanische Energie'), year].div(
+        total).round(3)
+
+    fs = tools.read_bmwi_sheet_7(a=True)
+    fs.sort_index(inplace=True)
+    for sector in fs.index.get_level_values(0).unique():
+        total = float(fs.loc[(sector, 'gesamt'), year])
+        mech[sector] = fs.loc[(sector, 'mechanische Energie'), year].div(
+            total).astype(float).round(3)
+    mech.drop(' - davon Strom', inplace=True)
+    mech.drop('mechanische Energie', inplace=True)
+    ren_col = {
+        'Industrie': 'industrial',
+        'Gewerbe, Handel, Dienstleistungen ': 'retail',
+        'private Haushalte': 'domestic', }
+    ren_index = {
+        ' - davon Öl': 'oil',
+        ' - davon Gas': 'natural gas', }
+    del mech.index.name
+    mech.rename(columns=ren_col, inplace=True)
+    mech.rename(index=ren_index, inplace=True)
+    mech.fillna(0, inplace=True)
+    return mech
 
 
 if __name__ == "__main__":
     logger.define_logging()
-    from reegis_hp.de21 import tools as t
-    filename = t.get_bmwi_energiedaten_file()
-    # fs = pd.read_excel(filename, '7', skiprows=6, index_col=[0]).ix[4:7]
-    fs = pd.read_excel(filename, '7', skiprows=7)
-    remove_list = ['1996 *)', 'Anteil am Endenergie-verbrauch 1996', 2008, 2009,
-                   2010, 2011, 2012, 2014, 2015,
-                   'Anteil am Endenergie-verbrauch 2015']
-    for c in remove_list:
-        del fs[c]
-    fs['Unnamed: 0'] = fs['Unnamed: 0'].apply(str)
-    fs['A'] = fs['Unnamed: 0'].apply(lambda x: x if '-' not in x else float('nan'))
-    fs['B'] = fs['Unnamed: 0'].apply(lambda x: x if '-' in x else float('nan'))
-    fs['A'] = fs['A'].fillna(method='ffill')
-    del fs['Unnamed: 0']
-    fs = fs.set_index(['A', 'B'], drop=True)
-    # print(fs)
-    print(fs.loc['mechanische Energie'])
-    # print(fs.loc[' - davon Strom'])
-    exit(0)
-    heat_demand(2013)
+    print(share_of_mechanical_energy_bmwi(2013))
+    print(heat_demand(2013))
     # test_elec_demand(2009)
