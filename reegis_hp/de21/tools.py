@@ -227,8 +227,9 @@ def read_bmwi_sheet_7(a=False):
 
     # Delete first column and set 'A', 'B', 'C' columns to index
     del fs['Unnamed: 0']
-    fs = fs.set_index(['A', 'B', 'C'], drop=True)
 
+    # Set new columns to index
+    fs = fs.set_index(['A', 'B', 'C'], drop=True)
     return fs
 
 

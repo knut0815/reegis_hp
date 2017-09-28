@@ -340,6 +340,12 @@ def share_of_mechanical_energy_bmwi(year):
 
 if __name__ == "__main__":
     logger.define_logging()
-    print(share_of_mechanical_energy_bmwi(2013))
-    print(heat_demand(2013))
+    whg = pd.read_csv(
+        '/home/local/RL-INSTITUT/uwe.krien/downloads/Zensus2011_Wohnungen.csv',
+        delimiter=';', index_col=[0], header=[0, 1], skiprows=5)
+    whg = whg.loc[whg['Insgesamt', 'Insgesamt'].notnull()]
+        # error_bad_lines=False)
+    print(whg)
+    # print(share_of_mechanical_energy_bmwi(2013))
+    # print(heat_demand(2013))
     # test_elec_demand(2009)
