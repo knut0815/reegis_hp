@@ -36,46 +36,21 @@ import configparser as cp
 FILE = None
 
 cfg = cp.RawConfigParser()
+cfg.optionxform = str
 _loaded = False
 
 
-# def load_config(filename=None):
-#     """
-#     Load data from config file to `cfg` that can be accessed by get, set
-#     afterwards.
-#
-#     Specify absolute or relative path to your config file.
-#
-#     :param filename: Relative or absolute path
-#     :type filename: str or list
-#     """
-#     # load config
-#
-#     global FILE
-#
-#     if filename is not None:
-#         FILE = filename
-#     init(FILE)
-
-
 def get_ini_filenames():
-    filenames = list()
     paths = list()
     files = list()
 
-    filenames.append('de21_default.ini')
-    filenames.append('de21_scenario_default.ini')
-    filenames.append('de21.ini')
-    filenames.append('de21_scenario.ini')
-    filenames.append('config.ini')
-
-    paths.append(os.path.join(os.path.dirname(__file__), 'data'))
+    paths.append(os.path.join(os.path.dirname(__file__)))
     paths.append(os.path.join(os.path.expanduser("~"), '.oemof'))
 
     for p in paths:
-        for f in filenames:
-            files.append(os.path.join(p, f))
-
+        for f in os.listdir(p):
+            if f[-4:] == '.ini':
+                files.append(os.path.join(p, f))
     return files
 
 
@@ -97,7 +72,7 @@ def init(file):
     cfg.read(file)
     global _loaded
     _loaded = True
-    de21_configuration()
+    set_de21_paths()
 
 
 def get(section, key):
@@ -149,23 +124,24 @@ def get_list(section, parameter):
     return my_list
 
 
+def get_dict(section):
+    if not _loaded:
+        init(FILE)
+    return dict(cfg.items(section))
+
+
 def set(section, key, value):
     return cfg.set(section, key, value)
 
 
-def check_path(pathname):
-    if pathname is None:
-        pathname = os.path.join(os.path.dirname(__file__), 'data')
+def extend_path(basic_path, new_dir):
+    pathname = os.path.join(basic_path, new_dir)
     if not os.path.isdir(pathname):
         os.makedirs(pathname)
     return pathname
 
 
-def extend_path(ex_path, name):
-    return check_path(os.path.join(ex_path, name))
-
-
-def de21_configuration():
+def set_de21_paths():
     # initialise de21 configuration
     logging.info('Loading de21 configuration....')
 

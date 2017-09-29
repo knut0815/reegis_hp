@@ -7,168 +7,168 @@ from oemof.tools import logger
 from reegis_hp.de21 import config as cfg
 
 
-COLUMN_TRANSLATION = {
-    'Steinkohle (roh)': 'hard coal (raw)',
-    'Steinkohle (Briketts)': 'hard coal (brick)',
-    'Steinkohle (Koks)': 'hard coal (coke)',
-    'Steinkohle (sonstige)': 'hard coal (other)',
-    'Braunkohle (roh)': 'lignite (raw)',
-    'Braunkohle (Briketts)': 'lignite (brick)',
-    'Braunkohle (sonstige)': 'lignite (other)',
-    'Erdöl': 'oil (raw)',
-    'Rohbenzin': 'petroleum',
-    'Ottokraftstoffe': 'gasoline',
-    'Dieselkraftstoffe': 'diesel',
-    'Flugturbinenkraftstoffe': 'jet fuel',
-    'Heizöl (leicht)': 'light heating oil',
-    'Heizöl (schwer)': 'heavy heating oil',
-    'Petrolkoks': 'petroleum coke',
-    'Mineralölprodukte (sonstige)': 'mineral oil products',
-    'Flüssiggas': 'liquid gas',
-    'Raffineriegas': 'refinery gas',
-    'Kokereigas, Stadtgas': 'coke oven gas',
-    'Gichtgas, Konvertergas': 'furnace/converter gas',
-    'Erdgas': 'natural gas',
-    'Grubengas': 'mine gas',
-    'Klärgas, Deponiegas': 'sewer/landfill gas',
-    'Wasserkraft': 'hydro power',
-    'Windkraft': 'wind power',
-    'Solarenergie': 'solar power',
-    'Biomasse': 'biomass',
-    'Biotreibstoff': 'biofuel',
-    'Abfälle (biogen)': 'waste (biogen)',
-    'EE (sonstige)': 'other renewable',
-    'Strom': 'electricity',
-    'Kernenergie': 'nuclear energy',
-    'Fernwärme': 'district heating',
-    'Abfälle (nicht biogen)': 'waste (fossil)',
-    'andere Energieträger': 'other',
-    'Insgesamt': 'total'}
-
-
-FUEL_GROUPS = {
-    'hard coal (raw)': 'hard coal',
-    'hard coal (brick)': 'hard coal',
-    'hard coal (coke)': 'hard coal',
-    'hard coal (other)': 'hard coal',
-    'lignite (raw)': 'lignite',
-    'lignite (brick)': 'lignite',
-    'lignite (other)': 'lignite',
-    'oil (raw)': 'oil',
-    'petroleum': 'oil',
-    'gasoline': 'oil',
-    'diesel': 'oil',
-    'jet fuel': 'oil',
-    'light heating oil': 'oil',
-    'heavy heating oil': 'oil',
-    'petroleum coke': 'oil',
-    'mineral oil products': 'oil',
-    'liquid gas': 'oil',
-    'refinery gas': 'oil',
-    'coke oven gas': 'gas',
-    'furnace/converter gas': 'gas',
-    'natural gas': 'gas',
-    'mine gas': 'gas',
-    'sewer/landfill gas': 're',
-    'hydro power': 're',
-    'wind power': 're',
-    'solar power': 're',
-    'biomass': 're',
-    'biofuel': 're',
-    'waste (biogen)': 're',
-    'other renewable': 're',
-    'electricity': 'electricity',
-    'district heating': 'district heating',
-    'waste (fossil)': 'other',
-    'other': 'other',
-    'total': 'total'
-}
-STATES = {
-    'Baden-Württemberg': 'BW',
-    'Bayern': 'BY',
-    'Berlin': 'BE',
-    'Brandenburg': 'BB',
-    'Bremen': 'HB',
-    'Hamburg': 'HH',
-    'Hessen': 'HE',
-    'Mecklenburg-Vorpommern': 'MV',
-    'Niedersachsen': 'NI',
-    'Nordrhein-Westfalen': 'NW',
-    'Rheinland-Pfalz': 'RP',
-    'Saarland': 'SL',
-    'Sachsen': 'SN',
-    'Sachsen-Anhalt': 'ST',
-    'Schleswig-Holstein': 'SH',
-    'Thüringen': 'TH',
-    }
-
-SUM_COLUMNS = {
-    'Insgesamt': 'total',
-    'Steinkohle': 'hard coal',
-    'Braunkohle': 'lignite',
-    'Mineralöle und Mineralölprodukte': 'oil',
-    'Gase': 'gas',
-    'Erneuerbare Energieträger': 're',
-    'Strom': 'electricity',
-    'Fernwärme': 'district heating',
-    'andere Energieträger': 'other',
-}
-
-SECTOR_SHORT = {
-    'Insgesamt': 'total',
-    'Gewinnung v. Steinen u. Erden, sonst. Bergbau und Verarb. Gewerbe':
-        'ind',
-    'Verkehr (gesamt)': 'transp',
-    'Schienenverkehr': 'train',
-    'Straßenverkehr': 'street',
-    'Luftverkehr': 'air',
-    'Küsten- und Binnenschifffahrt': 'ship',
-    'Haushalte, Gewerbe, Handel, Dienstl., übrige Verbraucher': 'hghd',
-    'Endenergieverbrauch': 'total',
-    'Gewerbe, Handel, Dienstleistungen und übrige Verbraucher': 'ghd',
-    'Gewinngung und verarbeitendes Gewerbe': 'ind',
-    'Haushalte': 'dom',
-    'Haushalte, Gewerbe, Handel, Dienstleistungen, übrige Verbraucher':
-        'hghd',
-    'Küsten und Binnenschiffahrt': 'ship',
-    'Verkehr insgesamt': 'transp',
-}
-
-
-SECTOR_SHORT_EN = {
-    'total': 'total',
-    'industrial': 'ind',
-    'transport': 'transp',
-    'rail transport': 'train',
-    'road transport': 'street',
-    'air transport': 'air',
-    'waterway transport': 'ship',
-    'domestic and retail': 'hghd',
-    'retail': 'ghd',
-    'domestic': 'dom',
-}
-
-
-SECTOR = {
-    'Insgesamt': 'total',
-    'Gewinnung v. Steinen u. Erden, sonst. Bergbau und Verarb. Gewerbe':
-        'industrial',
-    'Verkehr (gesamt)': 'transport',
-    'Schienenverkehr': 'rail transport',
-    'Straßenverkehr': 'road transport',
-    'Luftverkehr': 'air transport',
-    'Küsten- und Binnenschifffahrt': 'waterway transport',
-    'Haushalte, Gewerbe, Handel, Dienstl., übrige Verbraucher':
-        'domestic and retail',
-    'Endenergieverbrauch': 'total',
-    'Gewerbe, Handel, Dienstleistungen und übrige Verbraucher': 'retail',
-    'Gewinngung und verarbeitendes Gewerbe': 'industrial',
-    'Haushalte': 'domestic',
-    'Haushalte, Gewerbe, Handel, Dienstleistungen, übrige Verbraucher':
-        'domestic and retail',
-    'Küsten und Binnenschiffahrt': 'waterway transport',
-    'Verkehr insgesamt': 'transport',
-}
+# COLUMN_TRANSLATION = {
+#     'Steinkohle (roh)': 'hard coal (raw)',
+#     'Steinkohle (Briketts)': 'hard coal (brick)',
+#     'Steinkohle (Koks)': 'hard coal (coke)',
+#     'Steinkohle (sonstige)': 'hard coal (other)',
+#     'Braunkohle (roh)': 'lignite (raw)',
+#     'Braunkohle (Briketts)': 'lignite (brick)',
+#     'Braunkohle (sonstige)': 'lignite (other)',
+#     'Erdöl': 'oil (raw)',
+#     'Rohbenzin': 'petroleum',
+#     'Ottokraftstoffe': 'gasoline',
+#     'Dieselkraftstoffe': 'diesel',
+#     'Flugturbinenkraftstoffe': 'jet fuel',
+#     'Heizöl (leicht)': 'light heating oil',
+#     'Heizöl (schwer)': 'heavy heating oil',
+#     'Petrolkoks': 'petroleum coke',
+#     'Mineralölprodukte (sonstige)': 'mineral oil products',
+#     'Flüssiggas': 'liquid gas',
+#     'Raffineriegas': 'refinery gas',
+#     'Kokereigas, Stadtgas': 'coke oven gas',
+#     'Gichtgas, Konvertergas': 'furnace/converter gas',
+#     'Erdgas': 'natural gas',
+#     'Grubengas': 'mine gas',
+#     'Klärgas, Deponiegas': 'sewer/landfill gas',
+#     'Wasserkraft': 'hydro power',
+#     'Windkraft': 'wind power',
+#     'Solarenergie': 'solar power',
+#     'Biomasse': 'biomass',
+#     'Biotreibstoff': 'biofuel',
+#     'Abfälle (biogen)': 'waste (biogen)',
+#     'EE (sonstige)': 'other renewable',
+#     'Strom': 'electricity',
+#     'Kernenergie': 'nuclear energy',
+#     'Fernwärme': 'district heating',
+#     'Abfälle (nicht biogen)': 'waste (fossil)',
+#     'andere Energieträger': 'other',
+#     'Insgesamt': 'total'}
+#
+#
+# FUEL_GROUPS = {
+#     'hard coal (raw)': 'hard coal',
+#     'hard coal (brick)': 'hard coal',
+#     'hard coal (coke)': 'hard coal',
+#     'hard coal (other)': 'hard coal',
+#     'lignite (raw)': 'lignite',
+#     'lignite (brick)': 'lignite',
+#     'lignite (other)': 'lignite',
+#     'oil (raw)': 'oil',
+#     'petroleum': 'oil',
+#     'gasoline': 'oil',
+#     'diesel': 'oil',
+#     'jet fuel': 'oil',
+#     'light heating oil': 'oil',
+#     'heavy heating oil': 'oil',
+#     'petroleum coke': 'oil',
+#     'mineral oil products': 'oil',
+#     'liquid gas': 'oil',
+#     'refinery gas': 'oil',
+#     'coke oven gas': 'gas',
+#     'furnace/converter gas': 'gas',
+#     'natural gas': 'gas',
+#     'mine gas': 'gas',
+#     'sewer/landfill gas': 're',
+#     'hydro power': 're',
+#     'wind power': 're',
+#     'solar power': 're',
+#     'biomass': 're',
+#     'biofuel': 're',
+#     'waste (biogen)': 're',
+#     'other renewable': 're',
+#     'electricity': 'electricity',
+#     'district heating': 'district heating',
+#     'waste (fossil)': 'other',
+#     'other': 'other',
+#     'total': 'total'
+# }
+# STATES = {
+#     'Baden-Württemberg': 'BW',
+#     'Bayern': 'BY',
+#     'Berlin': 'BE',
+#     'Brandenburg': 'BB',
+#     'Bremen': 'HB',
+#     'Hamburg': 'HH',
+#     'Hessen': 'HE',
+#     'Mecklenburg-Vorpommern': 'MV',
+#     'Niedersachsen': 'NI',
+#     'Nordrhein-Westfalen': 'NW',
+#     'Rheinland-Pfalz': 'RP',
+#     'Saarland': 'SL',
+#     'Sachsen': 'SN',
+#     'Sachsen-Anhalt': 'ST',
+#     'Schleswig-Holstein': 'SH',
+#     'Thüringen': 'TH',
+#     }
+#
+# SUM_COLUMNS = {
+#     'Insgesamt': 'total',
+#     'Steinkohle': 'hard coal',
+#     'Braunkohle': 'lignite',
+#     'Mineralöle und Mineralölprodukte': 'oil',
+#     'Gase': 'gas',
+#     'Erneuerbare Energieträger': 're',
+#     'Strom': 'electricity',
+#     'Fernwärme': 'district heating',
+#     'andere Energieträger': 'other',
+# }
+#
+# SECTOR_SHORT = {
+#     'Insgesamt': 'total',
+#     'Gewinnung v. Steinen u. Erden, sonst. Bergbau und Verarb. Gewerbe':
+#         'ind',
+#     'Verkehr (gesamt)': 'transp',
+#     'Schienenverkehr': 'train',
+#     'Straßenverkehr': 'street',
+#     'Luftverkehr': 'air',
+#     'Küsten- und Binnenschifffahrt': 'ship',
+#     'Haushalte, Gewerbe, Handel, Dienstl., übrige Verbraucher': 'hghd',
+#     'Endenergieverbrauch': 'total',
+#     'Gewerbe, Handel, Dienstleistungen und übrige Verbraucher': 'ghd',
+#     'Gewinngung und verarbeitendes Gewerbe': 'ind',
+#     'Haushalte': 'dom',
+#     'Haushalte, Gewerbe, Handel, Dienstleistungen, übrige Verbraucher':
+#         'hghd',
+#     'Küsten und Binnenschiffahrt': 'ship',
+#     'Verkehr insgesamt': 'transp',
+# }
+#
+#
+# SECTOR_SHORT_EN = {
+#     'total': 'total',
+#     'industrial': 'ind',
+#     'transport': 'transp',
+#     'rail transport': 'train',
+#     'road transport': 'street',
+#     'air transport': 'air',
+#     'waterway transport': 'ship',
+#     'domestic and retail': 'hghd',
+#     'retail': 'ghd',
+#     'domestic': 'dom',
+# }
+#
+#
+# SECTOR = {
+#     'Insgesamt': 'total',
+#     'Gewinnung v. Steinen u. Erden, sonst. Bergbau und Verarb. Gewerbe':
+#         'industrial',
+#     'Verkehr (gesamt)': 'transport',
+#     'Schienenverkehr': 'rail transport',
+#     'Straßenverkehr': 'road transport',
+#     'Luftverkehr': 'air transport',
+#     'Küsten- und Binnenschifffahrt': 'waterway transport',
+#     'Haushalte, Gewerbe, Handel, Dienstl., übrige Verbraucher':
+#         'domestic and retail',
+#     'Endenergieverbrauch': 'total',
+#     'Gewerbe, Handel, Dienstleistungen und übrige Verbraucher': 'retail',
+#     'Gewinngung und verarbeitendes Gewerbe': 'industrial',
+#     'Haushalte': 'domestic',
+#     'Haushalte, Gewerbe, Handel, Dienstleistungen, übrige Verbraucher':
+#         'domestic and retail',
+#     'Küsten und Binnenschiffahrt': 'waterway transport',
+#     'Verkehr insgesamt': 'transport',
+# }
 
 
 def check_balance(orig, ebfile):
@@ -186,18 +186,19 @@ def check_balance(orig, ebfile):
         logging.error('Cannot load {0}'.format(ebfile))
         eb = None
         exit(0)
-    eb.rename(columns=COLUMN_TRANSLATION, inplace=True)
+    eb.rename(columns=cfg.get_dict('COLUMN_TRANSLATION'), inplace=True)
     eb.sort_index(0, inplace=True)
     eb = eb.apply(lambda x: pd.to_numeric(x, errors='coerce')).fillna(0)
-    eb = eb.groupby(by=FUEL_GROUPS, axis=1).sum()
+    eb = eb.groupby(by=cfg.get_dict('FUEL_GROUPS'), axis=1).sum()
 
     # sum table (fuel)
     ftfile = os.path.join(cfg.get('paths', 'static'),
                           'sum_table_fuel_groups.xlsx')
     ft = pd.read_excel(ftfile)
-    ft['Bundesland'] = ft['Bundesland'].apply(lambda x: STATES[x])
+    states = cfg.get_dict('STATES')
+    ft['Bundesland'] = ft['Bundesland'].apply(lambda x: states[x])
     ft.set_index(['Jahr', 'Bundesland'], inplace=True)
-    ft.rename(columns=SUM_COLUMNS, inplace=True)
+    ft.rename(columns=cfg.get_dict('SUM_COLUMNS'), inplace=True)
     ft.sort_index(inplace=True)
 
     # sum table (sector)
@@ -205,9 +206,9 @@ def check_balance(orig, ebfile):
                           'sum_table_sectors.xlsx')
 
     st = pd.read_excel(stfile)
-    st['Bundesland'] = st['Bundesland'].apply(lambda x: STATES[x])
+    st['Bundesland'] = st['Bundesland'].apply(lambda x: states[x])
     st.set_index(['Jahr', 'Bundesland'], inplace=True)
-    st.rename(columns=SECTOR_SHORT, inplace=True)
+    st.rename(columns=cfg.get_dict('SECTOR_SHORT'), inplace=True)
     st.sort_index(inplace=True)
     del st['Anm.']
 
@@ -279,8 +280,8 @@ def check_balance(orig, ebfile):
 
         eb_fuel = eb_fuel.sum(1)
         eb_sector = eb_fuel.round().unstack()
-        eb_sector.rename(columns=SECTOR_SHORT, inplace=True)
-        eb_sector.rename(columns=SECTOR_SHORT_EN, inplace=True)
+        eb_sector.rename(columns=cfg.get_dict('SECTOR_SHORT'), inplace=True)
+        eb_sector.rename(columns=cfg.get_dict('SECTOR_SHORT_EN'), inplace=True)
         try:
             del eb_sector['ghd']
             del eb_sector['dom']
@@ -311,7 +312,7 @@ def check_balance(orig, ebfile):
                 writer, 'sum_check_hrz_{0}'.format(year), freeze_panes=(1, 1))
 
         # Check states
-        for state, abr in STATES.items():
+        for state, abr in states.items():
             if abr not in eb.loc[year].index.get_level_values(0).unique():
                 logging.warning(
                     '{0} ({1}) not present in the {2} balance.'.format(
@@ -327,13 +328,15 @@ def edit_balance():
     ebfile = os.path.join(cfg.get('paths', 'static'),
                           cfg.get('general_sources', 'energiebilanzen_laender'))
     eb = pd.read_excel(ebfile, index_col=[0, 1, 2]).fillna(0)
-    eb.rename(columns=COLUMN_TRANSLATION, inplace=True)
+    eb.rename(columns=cfg.get_dict('COLUMN_TRANSLATION'), inplace=True)
     eb.sort_index(0, inplace=True)
     eb = eb.apply(lambda x: pd.to_numeric(x, errors='coerce')).fillna(0)
 
     new_index_values = list()
+    sector = cfg.get_dict('SECTOR')
+    print(pd.Series(sector))
     for value in eb.index.get_level_values(2):
-        new_index_values.append(SECTOR[value])
+        new_index_values.append(sector[value])
     eb.index.set_levels(new_index_values, level=2, inplace=True)
 
     # ************************************************************************
@@ -433,17 +436,18 @@ def get_de_balance(year=None, grouped=False):
         cfg.get('paths', 'static'),
         cfg.get('energy_balance', 'energy_balance_de_original'))
     deb = pd.read_excel(fname_de, index_col=[0, 1, 2]).fillna(0)
-    deb.rename(columns=COLUMN_TRANSLATION, inplace=True)
+    deb.rename(columns=cfg.get_dict('COLUMN_TRANSLATION'), inplace=True)
     deb.sort_index(0, inplace=True)
     deb = deb.apply(lambda x: pd.to_numeric(x, errors='coerce')).fillna(0)
 
     new_index_values = list()
+    sector = cfg.get_dict('SECTOR')
     for value in deb.index.get_level_values(2):
-        new_index_values.append(SECTOR[value])
+        new_index_values.append(sector[value])
     deb.index.set_levels(new_index_values, level=2, inplace=True)
 
     if grouped:
-        deb = deb.groupby(by=FUEL_GROUPS, axis=1).sum()
+        deb = deb.groupby(by=cfg.get_dict('FUEL_GROUPS'), axis=1).sum()
     deb.index = deb.index.set_names(['year', 'state', 'sector'])
     deb.sort_index(0, inplace=True)
     if year is not None:
@@ -473,7 +477,7 @@ def get_states_balance(year=None, grouped=False, overwrite=False):
         edit_balance()
     eb = pd.read_csv(fname, index_col=[0, 1, 2])
     if grouped:
-        eb = eb.groupby(by=FUEL_GROUPS, axis=1).sum()
+        eb = eb.groupby(by=cfg.get_dict('FUEL_GROUPS'), axis=1).sum()
     eb.index = eb.index.set_names(['year', 'state', 'sector'])
 
     if year is not None:

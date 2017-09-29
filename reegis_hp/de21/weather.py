@@ -7,6 +7,9 @@ import calendar
 import logging
 import shapely.wkt as wkt
 import tools
+from reegis_hp.de21 import config as cfg
+from oemof.tools import logger
+
 
 try:
     import oemof.db.coastdat as coastdat
@@ -105,6 +108,34 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
         logging.info("Skipped: Calculating the average wind speed.")
 
 
+def calculate_average_temperature_by_region(year):
+    weatherfile = os.path.join(
+        cfg.get('paths', 'weather'),
+        cfg.get('weather', 'file_pattern').format(year=year))
+    groupingfile = os.path.join(
+        cfg.get('paths', 'geometry'),
+        cfg.get('geometry', 'intersection_coastdat_de21'))
+    outfile = os.path.join(
+        cfg.get('paths', 'weather'),
+        cfg.get('weather', 'avg_temperature').format(year=year))
+    groups = pd.read_csv(groupingfile, index_col=[0, 1, 2])
+    groups = groups.swaplevel(0, 2).sort_index()
+    weather = pd.HDFStore(weatherfile, mode='r')
+
+    temperature = pd.DataFrame()
+    for region in groups.index.get_level_values(0).unique():
+        cid_list = groups.loc[region].index.get_level_values(0).unique()
+        number_of_sets = len(cid_list)
+        tmp = pd.DataFrame(index=weather['A' + str(cid_list[0])].index)
+        for cid in groups.loc[region].index.get_level_values(0).unique():
+            key = 'A' + str(cid)
+            tmp[cid] = weather[key]['temp_air']
+        temperature[region] = tmp.sum(1).div(number_of_sets)
+    weather.close()
+    temperature.to_csv(outfile)
+    logging.info("Average temperature saved to {0}".format(outfile))
+
+
 def fetch_coastdat2_year_from_db(weather_path, geometry_path, out_file_pattern,
                                  geometry_file, years=range(1980, 2020),
                                  overwrite=False):
@@ -172,3 +203,8 @@ def coastdat_id2coord():
     data = pd.DataFrame(results.fetchall(), columns=columns)
     data.set_index('gid', inplace=True)
     data.to_csv(os.path.join('data', 'basic', 'id2latlon.csv'))
+
+
+if __name__ == "__main__":
+    logger.define_logging()
+    calculate_average_temperature_by_region(2013)

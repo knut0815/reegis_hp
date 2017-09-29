@@ -111,6 +111,8 @@ def ew_de21_table_to_csv(year, outfile=None):
 
     ew['region'] = ew.index.map(lambda x: x.split('_')[1])
     ew['state'] = ew.index.map(lambda x: x.split('_')[0])
+    states = cfg.get_dict('STATES')
+    ew['sid'] = ew.state.apply(lambda x: states[x])
 
     ew.to_csv(outfile.format(year=year))
 
@@ -119,7 +121,7 @@ def get_ew_de21(year):
     filename = os.path.join(cfg.get('paths', 'general'),
                             cfg.get('general_sources', 'ew'))
     filename = filename.format(year=year)
-    if os.path.isfile(filename):
+    if not os.path.isfile(filename):
         ew_de21_table_to_csv(year, filename)
     return pd.read_csv(filename, index_col=[0])
 
