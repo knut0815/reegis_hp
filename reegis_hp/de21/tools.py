@@ -102,7 +102,7 @@ def create_intersection_table():
     gdf = create_geo_df(coastdat_centroid)
     gdf = add_spatial_name(gdf, germany_polygon_file, 'country',
                            'coastdat2state', icol='gid', buffer=False)
-    gdf = gdf.loc[gdf.state.notnull()]
+    gdf = gdf.loc[gdf.country.notnull()]
     gdf = add_spatial_name(gdf, state_polygon_file, 'state', 'coastdat2state',
                            icol='iso', buffer=True)
     gdf = gdf.loc[gdf.state.notnull()]
