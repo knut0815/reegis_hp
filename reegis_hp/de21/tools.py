@@ -85,8 +85,32 @@ def create_geo_df(df, wkt_column=None, time=None, keep_wkt=False):
     return gpd.GeoDataFrame(df, crs='epsg:4326', geometry='geom')
 
 
+def create_intersection_table():
+    state_polygon_file = os.path.join(
+        cfg.get('paths', 'geometry'),
+        cfg.get('geometry', 'federalstates_polygon'))
+    germany_polygon_file = os.path.join(
+        cfg.get('paths', 'geometry'),
+        cfg.get('geometry', 'germany_polygon'))
+    coastdat_centroid_file = os.path.join(
+        cfg.get('paths', 'geometry'),
+        cfg.get('geometry', 'coastdatgrid_centroid'))
+    coastdat_centroid = pd.read_csv(coastdat_centroid_file, index_col=[0])
+    coastdat_centroid.rename(columns={'st_x': 'lon', 'st_y': 'lat'},
+                             inplace=True)
+
+    gdf = create_geo_df(coastdat_centroid)
+    gdf = add_spatial_name(gdf, germany_polygon_file, 'country',
+                           'coastdat2state', icol='gid', buffer=False)
+    gdf = gdf.loc[gdf.state.notnull()]
+    gdf = add_spatial_name(gdf, state_polygon_file, 'state', 'coastdat2state',
+                           icol='iso', buffer=True)
+    gdf = gdf.loc[gdf.state.notnull()]
+    gdf.to_file('test.shp')
+
+
 def add_spatial_name(gdf, path_spatial_file, name, category, icol='gid',
-                     time=None, ignore_invalid=False):
+                     time=None, ignore_invalid=False, buffer=True):
     """Add name of containing region to new column for all points."""
     logging.info("Add spatial name for column: {0}".format(name))
     if time is None:
@@ -125,7 +149,7 @@ def add_spatial_name(gdf, path_spatial_file, name, category, icol='gid',
 
     # If points do not intersect with any polygon, a buffer around the point is
     # created.
-    if len(gdf_valid.loc[gdf_valid[name].isnull()]) > 0:
+    if len(gdf_valid.loc[gdf_valid[name].isnull()]) > 0 and buffer:
         logging.info("Some points do not intersect. Buffering {0}...".format(
             name
         ))
@@ -390,7 +414,8 @@ if __name__ == "__main__":
     # plot_geocsv('/home/uwe/geo.csv', idx_col='gid')
     logger.define_logging()
     # offshore()
-    load_energiebilanzen()
+    # load_energiebilanzen()
+    create_intersection_table()
     # prices()
     exit(0)
     plz2ireg()

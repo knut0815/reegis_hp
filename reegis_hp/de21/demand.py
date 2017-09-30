@@ -398,87 +398,112 @@ def share_houses_flats(key=None):
 
 if __name__ == "__main__":
     logger.define_logging()
-    year = 2013
-    # house_flats = share_houses_flats('share_area')
-    # demand_state = heat_demand(year).sort_index()
-    #
-    # for state in demand_state.index.get_level_values(0).unique():
-    #     dom = demand_state.loc[state, 'domestic']
-    #     demand_state.loc[(state, 'domestic_efh'), ] = (
-    #         dom * house_flats.loc[state, '1 + 2 Wohnungen'])
-    #     demand_state.sort_index(0, inplace=True)
-    #     dom = demand_state.loc[state, 'domestic']
-    #     demand_state.loc[(state, 'domestic_mfh'), ] = (
-    #         dom * house_flats.loc[state, '3 und mehr Wohnungen'])
-    #     demand_state.sort_index(0, inplace=True)
-    #
-    # demand_state.sort_index(inplace=True)
-    # demand_state.drop('domestic', level=1, inplace=True)
-    # demand_state.to_csv('/home/uwe/check.csv')
-    # my_ew = ew.get_ew_de21(year)
-    # state_ew = my_ew.groupby('sid').sum()
-    # for region in my_ew.index:
-    #     my_ew.loc[region, 'share_state'] = float(
-    #         my_ew.loc[region, 'ew'] / state_ew.loc[my_ew.loc[region, 'sid']])
-    #
-    # my_index = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []])
-    # h_demand = pd.DataFrame(index=my_index, columns=demand_state.columns)
-    # sectors = demand_state.index.get_level_values(1).unique()
-    # for subregion in my_ew.index:
-    #     state = my_ew.loc[subregion, 'sid']
-    #     region = my_ew.loc[subregion, 'region']
-    #     share = float(
-    #         my_ew.loc[subregion, 'ew'] / state_ew.loc[state])
-    #     for sector in sectors:
-    #         h_demand.sort_index(inplace=True)
-    #         h_demand.loc[(region, sector, subregion), ] = (
-    #             demand_state.loc[state, sector] * share)
-    #
-    # h_demand.to_csv('/home/uwe/check.csv')
-    # h_demand = h_demand.groupby(level=[0, 1]).sum()
-    # print(h_demand.groupby(level=1).sum().T)
-    # print(demand_state.groupby(level=1).sum().T)
-    h_demand = pd.read_csv('/home/uwe/check.csv', index_col=[0, 1])\
+    year = 2012
+    house_flats = share_houses_flats('share_area')
+    demand_state = heat_demand(year).sort_index()
+
+    for state in demand_state.index.get_level_values(0).unique():
+        dom = demand_state.loc[state, 'domestic']
+        demand_state.loc[(state, 'domestic_efh'), ] = (
+            dom * house_flats.loc[state, '1 + 2 Wohnungen'])
+        demand_state.sort_index(0, inplace=True)
+        dom = demand_state.loc[state, 'domestic']
+        demand_state.loc[(state, 'domestic_mfh'), ] = (
+            dom * house_flats.loc[state, '3 und mehr Wohnungen'])
+        demand_state.sort_index(0, inplace=True)
+
+    demand_state.sort_index(inplace=True)
+    demand_state.drop('domestic', level=1, inplace=True)
+    # demand_state.to_csv('/home/local/RL-INSTITUT/uwe.krien/check.csv')
+    my_ew = ew.get_ew_de21(year)
+    state_ew = my_ew.groupby('sid').sum()
+    for region in my_ew.index:
+        my_ew.loc[region, 'share_state'] = float(
+            my_ew.loc[region, 'ew'] / state_ew.loc[my_ew.loc[region, 'sid']])
+
+    my_index = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []])
+    h_demand = pd.DataFrame(index=my_index, columns=demand_state.columns)
+    sectors = demand_state.index.get_level_values(1).unique()
+    for subregion in my_ew.index:
+        state = my_ew.loc[subregion, 'sid']
+        region = my_ew.loc[subregion, 'region']
+        share = float(
+            my_ew.loc[subregion, 'ew'] / state_ew.loc[state])
+        for sector in sectors:
+            h_demand.sort_index(inplace=True)
+            h_demand.loc[(region, sector, subregion), ] = (
+                demand_state.loc[state, sector] * share)
+
+    h_demand.to_csv('/home/local/RL-INSTITUT/uwe.krien/check.csv')
+    h_demand = h_demand.groupby(level=[0, 1]).sum()
+    print(h_demand.groupby(level=1).sum().T)
+    print(demand_state.groupby(level=1).sum().T)
+    h_demand = pd.read_csv('/home/local/RL-INSTITUT/uwe.krien/check.csv',
+                           index_col=[0, 1])
+    h_demand = demand_state
         # .groupby(
         # level=1).sum().T
     temperature_file = os.path.join(
         cfg.get('paths', 'weather'),
         cfg.get('weather', 'avg_temperature').format(year=year))
     if not os.path.isfile(temperature_file):
-        weather.calculate_average_temperature_by_region(year)
-    temperature = pd.read_csv(temperature_file, index_col=[0], parse_dates=True)
-    temperature = temperature.tz_localize('UTC').tz_convert('Europe/Berlin')
+        temperature_file = weather.calculate_average_temperature_by_region(year)
+    temperatures = pd.read_csv(temperature_file, index_col=[0],
+                               parse_dates=True)
+    temperatures = temperatures.tz_localize('UTC').tz_convert('Europe/Berlin')
 
     cal = Germany()
     holidays = dict(cal.holidays(year))
 
-    for region in temperature.columns:
+    my_columns = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []])
+    heat_profiles = pd.DataFrame(columns=my_columns)
+
+    def get_heat_profile_from_demandlib(temperature, annual_demand, sector):
+        if 'efh' in sector:
+            shlp_type = 'EFH'
+            build = 1
+        elif 'mfh' in sector:
+            shlp_type = 'MFH'
+            build = 1
+        elif 'retail' in sector:
+            shlp_type = 'ghd'
+            build = 0
+        elif 'industrial' in sector:
+            shlp_type = 'ghd'
+            build = 0
+        else:
+            raise AttributeError('"{0}" is an unknown sector.'.format(sector))
+        return bdew.HeatBuilding(
+            temperature.index, holidays=holidays, temperature=temperature,
+            shlp_type=shlp_type, wind_class=0, building_class=build,
+            annual_heat_demand=annual_demand, name=sector).get_bdew_profile()
+
+    for region in h_demand.index.get_level_values(0).unique():
         tmp = h_demand.loc[region].groupby(level=0).sum()
-        for sector in tmp.index:
-            for fuel in tmp.columns:
-                print(tmp.loc[sector, fuel])
-                test = bdew.HeatBuilding(
-                    temperature.index, holidays=holidays,
-                    temperature=(temperature[region] - 273), shlp_type='EFH',
-                    building_class=1,
-                    wind_class=1, annual_heat_demand=tmp.loc[sector, fuel],
-                    name='EFH').get_bdew_profile()
-                print(test)
-                exit(0)
-        exit(0)
-    demand['efh'] = bdew.HeatBuilding(
-        demand.index, holidays=holidays, temperature=temperature,
-        shlp_type='EFH',
-        building_class=1, wind_class=1, annual_heat_demand=25000,
-        name='EFH').get_bdew_profile()
+        temperature = temperatures[region] - 273
+        for fuel in tmp.columns:
+            print(region, fuel)
+            for sector in tmp.index:
+                heat_profiles[(region, sector, fuel)] = (
+                    get_heat_profile_from_demandlib(
+                        temperature, tmp.loc[sector, fuel], sector))
+    heat_profiles.sort_index(1, inplace=True)
+    print(heat_profiles.sum())
+    exit(0)
 
-    demand['mfh'] = bdew.HeatBuilding(
-        demand.index, holidays=holidays, temperature=temperature,
-        shlp_type='MFH',
-        building_class=2, wind_class=0, annual_heat_demand=80000,
-        name='MFH').get_bdew_profile()
-
-    demand['ghd'] = bdew.HeatBuilding(
-        demand.index, holidays=holidays, temperature=temperature,
-        shlp_type='ghd', wind_class=0, annual_heat_demand=140000,
-        name='ghd').get_bdew_profile()
+    # demand['efh'] = bdew.HeatBuilding(
+    #     demand.index, holidays=holidays, temperature=temperature,
+    #     shlp_type='EFH',
+    #     building_class=1, wind_class=1, annual_heat_demand=25000,
+    #     name='EFH').get_bdew_profile()
+    #
+    # demand['mfh'] = bdew.HeatBuilding(
+    #     demand.index, holidays=holidays, temperature=temperature,
+    #     shlp_type='MFH',
+    #     building_class=2, wind_class=0, annual_heat_demand=80000,
+    #     name='MFH').get_bdew_profile()
+    #
+    # demand['ghd'] = bdew.HeatBuilding(
+    #     demand.index, holidays=holidays, temperature=temperature,
+    #     shlp_type='ghd', wind_class=0, annual_heat_demand=140000,
+    #     name='ghd').get_bdew_profile()

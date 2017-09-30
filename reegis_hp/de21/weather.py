@@ -6,7 +6,7 @@ import os
 import calendar
 import logging
 import shapely.wkt as wkt
-import tools
+from reegis_hp.de21 import tools
 from reegis_hp.de21 import config as cfg
 from oemof.tools import logger
 
@@ -14,11 +14,11 @@ from oemof.tools import logger
 try:
     import oemof.db.coastdat as coastdat
     import oemof.db as db
-    import sqlalchemy
+    from sqlalchemy import exc
 except ImportError:
     coastdat = None
     db = None
-    sqlalchemy = None
+    exc = None
 
 
 def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
@@ -109,6 +109,15 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
 
 
 def calculate_average_temperature_by_region(year):
+    """
+    Calculate the average temperature for every de21-region.
+
+    Parameters
+    ----------
+    year : int
+        Select the year you want to calculate the average temperature for.
+
+    """
     weatherfile = os.path.join(
         cfg.get('paths', 'weather'),
         cfg.get('weather', 'file_pattern').format(year=year))
@@ -134,11 +143,10 @@ def calculate_average_temperature_by_region(year):
     weather.close()
     temperature.to_csv(outfile)
     logging.info("Average temperature saved to {0}".format(outfile))
+    return outfile
 
 
-def fetch_coastdat2_year_from_db(weather_path, geometry_path, out_file_pattern,
-                                 geometry_file, years=range(1980, 2020),
-                                 overwrite=False):
+def fetch_coastdat2_year_from_db(years=None, overwrite=False):
     """Fetch coastDat2 weather data sets from db and store it to hdf5 files.
     this files has to be adapted if the new weather data base is available.
 
@@ -148,39 +156,34 @@ def fetch_coastdat2_year_from_db(weather_path, geometry_path, out_file_pattern,
         Skip existing files if set to False.
     years : list of integer
         Years to fetch.
-    weather_path : str
-        Path to folder that contains all needed files.
-    geometry_path : str
-        Path to folder that contains geometry files.
-    geometry_file : str
-        Name of the geometry file to clip the weather data set.
-    out_file_pattern : str
-        Name of the hdf5 weather files with one wildcard for the year e.g.
-        weather_data_{0}.h5
-
     """
-    weather = os.path.join(weather_path, out_file_pattern)
-    geometry = os.path.join(geometry_path, geometry_file)
+    weather = os.path.join(cfg.get('paths', 'weather'),
+                           cfg.get('weather', 'file_pattern'))
+    geometry = os.path.join(cfg.get('paths', 'geometry'),
+                            cfg.get('geometry', 'germany_polygon'))
 
     polygon = wkt.loads(
         pd.read_csv(geometry, index_col='gid', squeeze=True)[0])
 
-    # remove year 2000 due to an internal error
-    # years = list(years)
-    # years.remove(2000)
+    if years is None:
+        years = range(1980, 2020)
+
     try:
         conn = db.connection()
-    except sqlalchemy.exc.OperationalError:
+    except exc.OperationalError:
         conn = None
     for year in years:
         if not os.path.isfile(weather.format(year=str(year))) or overwrite:
+            logging.info("Fetching weather data for {0}.".format(year))
+
             try:
                 weather_sets = coastdat.get_weather(conn, polygon, year)
             except AttributeError:
                 logging.warning("No database connection found.")
                 weather_sets = list()
             if len(weather_sets) > 0:
-                logging.info("Fetching weather data for {0}.".format(year))
+                logging.info("Success. Store weather data to {0}.".format(
+                    weather.format(year=str(year))))
                 store = pd.HDFStore(weather.format(year=str(year)), mode='w')
                 for weather_set in weather_sets:
                     logging.debug(weather_set.name)
@@ -207,4 +210,5 @@ def coastdat_id2coord():
 
 if __name__ == "__main__":
     logger.define_logging()
-    calculate_average_temperature_by_region(2013)
+    fetch_coastdat2_year_from_db()
+    # calculate_average_temperature_by_region(2013)
