@@ -123,10 +123,10 @@ def calculate_average_temperature_by_region(year):
         cfg.get('weather', 'file_pattern').format(year=year))
     groupingfile = os.path.join(
         cfg.get('paths', 'geometry'),
-        cfg.get('geometry', 'intersection_coastdat_de21'))
+        cfg.get('geometry', 'intersection_coastdat_state'))
     outfile = os.path.join(
         cfg.get('paths', 'weather'),
-        cfg.get('weather', 'avg_temperature').format(year=year))
+        cfg.get('weather', 'avg_temperature_state').format(year=year))
     groups = pd.read_csv(groupingfile, index_col=[0, 1, 2])
     groups = groups.swaplevel(0, 2).sort_index()
     weather = pd.HDFStore(weatherfile, mode='r')

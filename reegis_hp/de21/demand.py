@@ -15,44 +15,6 @@ import demandlib.particular_profiles as profiles
 from workalendar.europe import Germany
 
 
-# FUEL_GROUPS = {
-#         'hard coal (raw)': 'coal',
-#         'hard coal (brick)': 'coal',
-#         'hard coal (coke)': 'coal',
-#         'hard coal (other)': 'coal',
-#         'lignite (raw)': 'coal',
-#         'lignite (brick)': 'coal',
-#         'lignite (other)': 'coal',
-#         'oil (raw)': 'oil (raw)',
-#         'petroleum': 'petroleum',
-#         'gasoline': 'oil',
-#         'diesel': 'oil',
-#         'jet fuel': 'oil',
-#         'light heating oil': 'oil',
-#         'heavy heating oil': 'oil',
-#         'petroleum coke': 'oil',
-#         'mineral oil products': 'oil',
-#         'liquid gas': 'natural gas',
-#         'refinery gas': 'oil',
-#         'coke oven gas': 'gas',
-#         'furnace/converter gas': 'gas',
-#         'natural gas': 'natural gas',
-#         'mine gas': 'gas',
-#         'sewer/landfill gas': 're',
-#         'hydro power': 're',
-#         'wind power': 're',
-#         'solar power': 're',
-#         'biomass': 're',
-#         'biofuel': 're',
-#         'waste (biogen)': 're',
-#         'other renewable': 're',
-#         'electricity': 'electricity',
-#         'district heating': 'district heating',
-#         'waste (fossil)': 'other',
-#         'other': 'other',
-#         'total': 'total'}
-
-
 def renpass_demand_share():
     demand_share = os.path.join(cfg.get('paths', 'static'),
                                 cfg.get('static_sources',
@@ -396,9 +358,36 @@ def share_houses_flats(key=None):
     return None
 
 
-if __name__ == "__main__":
-    logger.define_logging()
-    year = 2012
+def get_heat_profile_from_demandlib(temperature, annual_demand, sector, year,
+                                    build_class=1):
+    cal = Germany()
+    holidays = dict(cal.holidays(year))
+
+    if 'efh' in sector:
+        shlp_type = 'EFH'
+    elif 'mfh' in sector:
+        shlp_type = 'MFH'
+    elif 'retail' in sector:
+        shlp_type = 'ghd'
+        build_class = 0
+    elif 'industrial' in sector:
+        shlp_type = 'ghd'
+        build_class = 0
+    else:
+        raise AttributeError('"{0}" is an unknown sector.'.format(sector))
+    return bdew.HeatBuilding(
+        temperature.index, holidays=holidays, temperature=temperature,
+        shlp_type=shlp_type, wind_class=0, building_class=build_class,
+        annual_heat_demand=annual_demand, name=sector, ww_incl=True
+        ).get_bdew_profile()
+
+
+def get_heat_profiles_by_state(year, to_csv=False):
+    building_class = {}
+    for (k, v) in cfg.get_dict('building_class').items():
+        for s in v.split(', '):
+            building_class[s] = int(k)
+
     house_flats = share_houses_flats('share_area')
     demand_state = heat_demand(year).sort_index()
 
@@ -414,96 +403,85 @@ if __name__ == "__main__":
 
     demand_state.sort_index(inplace=True)
     demand_state.drop('domestic', level=1, inplace=True)
-    # demand_state.to_csv('/home/local/RL-INSTITUT/uwe.krien/check.csv')
-    my_ew = ew.get_ew_de21(year)
-    state_ew = my_ew.groupby('sid').sum()
-    for region in my_ew.index:
-        my_ew.loc[region, 'share_state'] = float(
-            my_ew.loc[region, 'ew'] / state_ew.loc[my_ew.loc[region, 'sid']])
 
-    my_index = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []])
-    h_demand = pd.DataFrame(index=my_index, columns=demand_state.columns)
-    sectors = demand_state.index.get_level_values(1).unique()
-    for subregion in my_ew.index:
-        state = my_ew.loc[subregion, 'sid']
-        region = my_ew.loc[subregion, 'region']
-        share = float(
-            my_ew.loc[subregion, 'ew'] / state_ew.loc[state])
-        for sector in sectors:
-            h_demand.sort_index(inplace=True)
-            h_demand.loc[(region, sector, subregion), ] = (
-                demand_state.loc[state, sector] * share)
-
-    h_demand.to_csv('/home/local/RL-INSTITUT/uwe.krien/check.csv')
-    h_demand = h_demand.groupby(level=[0, 1]).sum()
-    print(h_demand.groupby(level=1).sum().T)
-    print(demand_state.groupby(level=1).sum().T)
-    h_demand = pd.read_csv('/home/local/RL-INSTITUT/uwe.krien/check.csv',
-                           index_col=[0, 1])
-    h_demand = demand_state
-        # .groupby(
-        # level=1).sum().T
     temperature_file = os.path.join(
         cfg.get('paths', 'weather'),
-        cfg.get('weather', 'avg_temperature').format(year=year))
+        cfg.get('weather', 'avg_temperature_state').format(year=year))
     if not os.path.isfile(temperature_file):
         temperature_file = weather.calculate_average_temperature_by_region(year)
     temperatures = pd.read_csv(temperature_file, index_col=[0],
                                parse_dates=True)
     temperatures = temperatures.tz_localize('UTC').tz_convert('Europe/Berlin')
 
-    cal = Germany()
-    holidays = dict(cal.holidays(year))
-
     my_columns = pd.MultiIndex(levels=[[], [], []], labels=[[], [], []])
     heat_profiles = pd.DataFrame(columns=my_columns)
 
-    def get_heat_profile_from_demandlib(temperature, annual_demand, sector):
-        if 'efh' in sector:
-            shlp_type = 'EFH'
-            build = 1
-        elif 'mfh' in sector:
-            shlp_type = 'MFH'
-            build = 1
-        elif 'retail' in sector:
-            shlp_type = 'ghd'
-            build = 0
-        elif 'industrial' in sector:
-            shlp_type = 'ghd'
-            build = 0
-        else:
-            raise AttributeError('"{0}" is an unknown sector.'.format(sector))
-        return bdew.HeatBuilding(
-            temperature.index, holidays=holidays, temperature=temperature,
-            shlp_type=shlp_type, wind_class=0, building_class=build,
-            annual_heat_demand=annual_demand, name=sector).get_bdew_profile()
-
-    for region in h_demand.index.get_level_values(0).unique():
-        tmp = h_demand.loc[region].groupby(level=0).sum()
+    for region in demand_state.index.get_level_values(0).unique():
+        logging.info("Creating heat profile for {}".format(region))
+        tmp = demand_state.loc[region].groupby(level=0).sum()
         temperature = temperatures[region] - 273
         for fuel in tmp.columns:
-            print(region, fuel)
+            logging.debug("{0} - {1} ({2})".format(
+                region, fuel, building_class[region]))
             for sector in tmp.index:
                 heat_profiles[(region, sector, fuel)] = (
                     get_heat_profile_from_demandlib(
-                        temperature, tmp.loc[sector, fuel], sector))
+                        temperature, tmp.loc[sector, fuel], sector, year,
+                        building_class[region]))
     heat_profiles.sort_index(1, inplace=True)
-    print(heat_profiles.sum())
-    exit(0)
+    if to_csv:
+        heat_profiles.to_csv(os.path.join(
+            cfg.get('paths', 'demand'),
+            cfg.get('demand', 'heat_profile_state').format(year=year)))
+    return heat_profiles
 
-    # demand['efh'] = bdew.HeatBuilding(
-    #     demand.index, holidays=holidays, temperature=temperature,
-    #     shlp_type='EFH',
-    #     building_class=1, wind_class=1, annual_heat_demand=25000,
-    #     name='EFH').get_bdew_profile()
-    #
-    # demand['mfh'] = bdew.HeatBuilding(
-    #     demand.index, holidays=holidays, temperature=temperature,
-    #     shlp_type='MFH',
-    #     building_class=2, wind_class=0, annual_heat_demand=80000,
-    #     name='MFH').get_bdew_profile()
-    #
-    # demand['ghd'] = bdew.HeatBuilding(
-    #     demand.index, holidays=holidays, temperature=temperature,
-    #     shlp_type='ghd', wind_class=0, annual_heat_demand=140000,
-    #     name='ghd').get_bdew_profile()
+
+def get_heat_profiles_by_region(year):
+    heat_demand_state_file = os.path.join(
+            cfg.get('paths', 'demand'),
+            cfg.get('demand', 'heat_profile_state').format(year=year))
+    if os.path.isfile(heat_demand_state_file):
+        logging.info("Demand profiles by state exist. Reading file.")
+        demand_state = pd.read_csv('/home/uwe/heat.csv', index_col=[0],
+                                   parse_dates=True, header=[0, 1, 2])
+        demand_state = demand_state.tz_localize('UTC').tz_convert(
+            'Europe/Berlin')
+    else:
+        demand_state = get_heat_profiles_by_state(year, to_csv=False)
+
+    my_columns = pd.MultiIndex(levels=[[], [], [], []], labels=[[], [], [], []])
+    demand_region = pd.DataFrame(index=demand_state.index, columns=my_columns)
+
+    logging.info("Fetching inhabitants table.")
+    my_ew = ew.get_ew_de21(year)
+    state_ew = my_ew.groupby('sid').sum()
+    for region in my_ew.index:
+        my_ew.loc[region, 'share_state'] = float(
+            my_ew.loc[region, 'ew'] / state_ew.loc[my_ew.loc[region, 'sid']])
+
+    logging.info("Convert demand profile...")
+    sectors = demand_state.columns.get_level_values(1).unique()
+    fuels = demand_state.columns.get_level_values(2).unique()
+
+    for subregion in my_ew.index:
+        state = my_ew.loc[subregion, 'sid']
+        region = my_ew.loc[subregion, 'region']
+        share = my_ew.loc[subregion, 'share_state']
+        for sector in sectors:
+            for fuel in fuels:
+                demand_region[region, sector, fuel, subregion] = (
+                    demand_state[state, sector, fuel] * share)
+    demand_region.sort_index(1, inplace=True)
+    demand_region = demand_region.groupby(level=[0, 1, 2], axis=1).sum()
+
+    demand_region.to_csv(os.path.join(
+        cfg.get('paths', 'demand'),
+        cfg.get('demand', 'heat_profile_region').format(year=year)))
+    return demand_region
+
+
+if __name__ == "__main__":
+    logger.define_logging()
+    for y in [2012, 2013]:
+        get_heat_profiles_by_region(y)
+    logging.info("Done!")

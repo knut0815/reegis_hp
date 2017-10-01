@@ -89,24 +89,24 @@ def create_intersection_table():
     state_polygon_file = os.path.join(
         cfg.get('paths', 'geometry'),
         cfg.get('geometry', 'federalstates_polygon'))
-    germany_polygon_file = os.path.join(
-        cfg.get('paths', 'geometry'),
-        cfg.get('geometry', 'germany_polygon'))
     coastdat_centroid_file = os.path.join(
         cfg.get('paths', 'geometry'),
         cfg.get('geometry', 'coastdatgrid_centroid'))
+    outfile = os.path.join(
+        cfg.get('paths', 'geometry'),
+        cfg.get('geometry', 'intersection_coastdat_state'))
     coastdat_centroid = pd.read_csv(coastdat_centroid_file, index_col=[0])
     coastdat_centroid.rename(columns={'st_x': 'lon', 'st_y': 'lat'},
                              inplace=True)
 
     gdf = create_geo_df(coastdat_centroid)
-    gdf = add_spatial_name(gdf, germany_polygon_file, 'country',
-                           'coastdat2state', icol='gid', buffer=False)
-    gdf = gdf.loc[gdf.country.notnull()]
     gdf = add_spatial_name(gdf, state_polygon_file, 'state', 'coastdat2state',
-                           icol='iso', buffer=True)
+                           icol='iso', buffer=False)
     gdf = gdf.loc[gdf.state.notnull()]
-    gdf.to_file('test.shp')
+    del gdf['geom']
+    del gdf['lon']
+    del gdf['lat']
+    gdf.to_csv(outfile)
 
 
 def add_spatial_name(gdf, path_spatial_file, name, category, icol='gid',
@@ -177,10 +177,10 @@ def find_intersection_with_buffer(gdf, spatial_df, column):
                             intersec = True
                             reg = i
                             buffer = n
-                            gdf.loc[gdf.id == row[1].id, column] = reg
+                            gdf.loc[row[0], column] = reg
         if intersec:
             logging.debug("Region found for {0}: {1}, Buffer: {2}".format(
-                row[1].id, reg, buffer))
+                row[0], reg, buffer))
         else:
             warnings.warn(
                 "{0} does not intersect with any region. Please check".format(
