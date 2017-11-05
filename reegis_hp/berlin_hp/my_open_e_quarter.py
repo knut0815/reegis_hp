@@ -35,8 +35,7 @@ def sql_string(spacetype, space_gid=None):
             ag.hausnummer, ag.pseudonumm, st_area(st_transform(ag.geom, 3068)),
             st_perimeter(st_transform(ag.geom, 3068)), ag.gebaeudefu,
             sn.typklar, hz."PRZ_NASTRO", hz."PRZ_FERN", hz."PRZ_GAS",
-            hz."PRZ_OEL", hz."PRZ_KOHLE", ag.year_of_construction,
-            plr.schluessel
+            hz."PRZ_OEL", hz."PRZ_KOHLE", plr.schluessel, st_astext(ag.geom)
         FROM berlin.{0} as space, berlin.alkis_gebaeude ag
         INNER JOIN berlin.stadtnutzung sn ON st_within(
             st_centroid(ag.geom), sn.geom)
@@ -49,11 +48,10 @@ def sql_string(spacetype, space_gid=None):
         INNER JOIN berlin.planungsraum  plr ON st_within(
             st_centroid(ag.geom), plr.geom)
         WHERE
-            space.geom && ag.geom AND
-            st_contains(space.geom, st_centroid(ag.geom)) AND
-            ag.bauart_sch is NULL AND
             {1}
-            ag.anzahldero::int > 0
+            ag.bauart_sch is NULL AND
+            space.geom && ag.geom AND
+            st_contains(space.geom, st_centroid(ag.geom))
         ;
     '''.format(spacetype, where_space)
 
@@ -65,7 +63,7 @@ level, selection = ('berlin', None)
 # level, selection = ('bezirk', 6)
 # level, selection = ('planungsraum', 384)
 # level, selection = ('block', (5812, 9335))
-overwrite = False
+overwrite = True
 
 sql = sql_string(level, selection)
 
@@ -83,23 +81,28 @@ if not os.path.isfile(datafilepath) or overwrite:
     conn = db.connection()
     logging.debug("SQL query: {0}".format(sql))
     logging.info("Retrieving data from db...")
+    print(sql)
     results = (conn.execute(sql))
-
+    logging.info("Success.")
     data = pd.DataFrame(results.fetchall(), columns=[
         'gid', 'population_density', 'spatial_na', 'floors', 'name_street',
         'number', 'alt_number', 'area', 'perimeter', 'building_function',
         'blocktype', 'frac_off-peak_electricity_heating',
         'frac_district_heating', 'frac_natural_gas_heating',
-        'frac_oil_heating', 'frac_coal_stove', 'age_scan', 'plr_key'])
+        'frac_oil_heating', 'frac_coal_stove', 'plr_key', 'geom'])
 
     data.number.fillna(data.alt_number, inplace=True)
     data.drop('alt_number', 1, inplace=True)
 
     # Convert objects from db to floats:
-    data.floors = data.floors.astype(float)
-    data.population_density = data.population_density.astype(float)
-    data.building_function = data.building_function.astype(int)
+    # data.floors = data.floors.astype(float)
+    # data.population_density = data.population_density.astype(float)
+    # data.building_function = data.building_function.astype(int)
 
+    data.to_csv('/home/uwe/express/alkis.csv')
+    data.to_hdf('/home/uwe/express/alkis.hdf', 'alkis')
+    print(data)
+    exit(0)
     sn_data = pd.read_csv(os.path.join(os.path.expanduser('~'), 'chiba/RLI/data/data_by_blocktype.csv'), ';')
     data = data.merge(sn_data, on='blocktype')
     str_cols = ['spatial_na', 'name_street', 'number', 'blocktype', 'age_scan',
@@ -179,11 +182,11 @@ typelist = {
     2310: 0.2,
     3100: 0.2}
 
-# Filter by building_types to get only (partly) residential buildings
-query_str = ""
-for typ in typelist.keys():
-    query_str += "building_function == {0} or ".format(typ)
-data = data.query(query_str[:-4])
+# # Filter by building_types to get only (partly) residential buildings
+# query_str = ""
+# for typ in typelist.keys():
+#     query_str += "building_function == {0} or ".format(typ)
+# data = data.query(query_str[:-4])
 
 
 for typ, value in typelist.items():
