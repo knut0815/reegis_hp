@@ -9,9 +9,10 @@ import logging
 # Default logger of oemof
 from oemof.tools import logger
 from oemof.tools import helpers
+from oemof import solph
+from oemof import outputlib
 
 # import oemof base classes to create energy system objects
-import oemof.solph as solph
 import reegis_hp.berlin_hp.heat as heat
 import reegis_hp.berlin_hp.preferences as preferences
 import reegis_hp.berlin_hp.create_objects as create_objects
@@ -27,7 +28,7 @@ def initialise_energy_system():
     logging.info("Creating energy system object.")
     time_index = pd.date_range('1/1/2012', periods=8784, freq='H')
 
-    return solph.EnergySystem(time_idx=time_index, groupings=solph.GROUPINGS)
+    return solph.EnergySystem(timeindex=time_index, groupings=solph.GROUPINGS)
 
 
 def berlin_model(berlin_e_system):
@@ -41,13 +42,13 @@ def berlin_model(berlin_e_system):
     -------
 
     """
-    time_index = berlin_e_system.time_idx
+    time_index = berlin_e_system.timeindex
     p = preferences.Basic()
     d = preferences.Data()
 
     logging.info("Adding objects to the energy system...")
 
-    # Electricity
+    # Electricity Bus
     solph.Bus(label='bus_el')
 
     heat_demand = heat.DemandHeat(time_index)
@@ -56,9 +57,10 @@ def berlin_model(berlin_e_system):
     remove_string = 'frac_'
     heat_demand.demand_by('total_loss_pres', heating_systems, d.bt_dict,
                           remove_string, percentage=True)
-
+    heat_demand.print(table='oeq')
     heat_demand.df = heat_demand.dissolve('bezirk', 'demand_by', index=True)
-
+    print(heat_demand.df)
+    exit()
     heat_demand.df = heat_demand.df.rename(
         columns={k: k.replace('frac_', '')
                  for k in heat_demand.df.columns.get_level_values(1)})
@@ -260,7 +262,7 @@ def berlin_model(berlin_e_system):
 
     logging.info('Optimise the energy system')
 
-    om = solph.OperationalModel(berlin_e_system)
+    om = solph.Model(berlin_e_system)
 
     filename = os.path.join(
         helpers.extend_basic_path('lp_files'), 'storage_invest.lp')
@@ -268,18 +270,23 @@ def berlin_model(berlin_e_system):
     om.write(filename, io_options={'symbolic_solver_labels': True})
 
     logging.info('Solve the optimization problem')
-    om.solve(solver='gurobi', solve_kwargs={'tee': True})
+    om.solve(solver='cbc', solve_kwargs={'tee': True})
 
     berlin_e_system.dump('/home/uwe/')
-    return berlin_e_system
+    return om
 
 # **********************************
-restore = False
 
-if not restore:
-    berlin_e_sys = berlin_model(initialise_energy_system())
+
+import pickle
+
+plot_only = False
+
+if not plot_only:
+    opmodel = berlin_model(initialise_energy_system())
+    results = outputlib.processing.results(opmodel)
+    pickle.dump(results, open('data.pkl', 'wb'), -1)
 else:
-    berlin_e_sys = initialise_energy_system()
-    berlin_e_sys.restore('/home/uwe/')
+    results = pickle.load(open('data.pkl', 'rb'))
 
-plot.test_plots(berlin_e_sys)
+plot.test_plots(results)

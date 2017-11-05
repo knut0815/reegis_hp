@@ -3,12 +3,11 @@ import scenario_tools as sc
 import os
 import logging
 from oemof.tools import logger
-import configuration as config
+from reegis_hp.de21 import config as cfg
 from oemof.solph import OperationalModel
 from oemof.outputlib import ResultsDataFrame
-import config as cfg
-from shapely.wkt import loads as wkt_loads
-import powerplants as pp
+# from shapely.wkt import loads as wkt_loads
+# import powerplants as pp
 
 
 def commodity_sources(round_nominal_value=True):
@@ -39,7 +38,7 @@ def commodity_sources(round_nominal_value=True):
 
     def add_commodity_sources(fuel_type, reg, val):
         fuel_type = fuel_type.lower().replace(" ", "_")
-        label = '{0}_resource_{1}'.format(reg, fuel_type)
+        label = '{0}_resodurce_{1}'.format(reg, fuel_type)
         source = '{0}_resource_{1}'.format(reg, fuel_type)
         target_bus = '{0}_bus_{1}'.format(reg, fuel_type)
         idx = ('Source', label, source, target_bus)
@@ -57,7 +56,7 @@ def commodity_sources(round_nominal_value=True):
         de21.add_parameters(idx, columns, values)
 
     # global commodity sources
-    globalfile = os.path.join(c.paths['scenario_path'],
+    globalfile = os.path.join(cfg.get('paths', 'scenario_path'),
                               'commodity_sources_global.csv')
     if os.path.isfile(globalfile):
         global_sources = pd.read_csv(globalfile, index_col=[0])
@@ -70,7 +69,7 @@ def commodity_sources(round_nominal_value=True):
         commoditybuses['global'] = list()
 
     # local commodity sources
-    localfile = os.path.join(c.paths['scenario_path'],
+    localfile = os.path.join(cfg.get('paths', 'scenario_path'),
                              'commodity_sources_local.csv')
     if os.path.isfile(localfile):
         local_sources = pd.read_csv(localfile, index_col=[0], header=[0, 1])
@@ -97,7 +96,7 @@ def transformer(com_buses, round_nominal_value=True):
     you have to call this function twice with different subsets of your
     DataFrame.
     """
-    transf = pd.read_csv(os.path.join(c.paths['scenario_path'],
+    transf = pd.read_csv(os.path.join(cfg.get('paths', 'scenario_path'),
                                       'transformer.csv'),
                          index_col=[0], header=[0, 1])
 
@@ -133,12 +132,12 @@ def renewable_sources(round_nominal_value=True):
     You have to pass the capacities (region, type) and the normalised feedin
     series (type, region)
     """
-    seq = pd.read_csv(os.path.join(c.paths['scenario_path'],
+    seq = pd.read_csv(os.path.join(cfg.get('paths', 'scenario_path'),
                                    'sources_timeseries.csv'),
                       index_col=[0], header=[0, 1], parse_dates=True)
     seq.index = seq.index.tz_localize('UTC').tz_convert('Europe/Berlin')
 
-    cap = pd.read_csv(os.path.join(c.paths['scenario_path'],
+    cap = pd.read_csv(os.path.join(cfg.get('paths', 'scenario_path'),
                                    'sources_capacity.csv'),
                       index_col=[0])
 
@@ -165,7 +164,8 @@ def demand_sinks(round_nominal_value=True):
 
     You have to pass the the time series for each region.
     """
-    df = pd.read_csv(os.path.join(c.paths['scenario_path'], 'demand.csv'),
+    df = pd.read_csv(os.path.join(cfg.get('paths', 'scenario_path'),
+                                  'demand.csv'),
                      index_col=[0], parse_dates=True)
     df.index = df.index.tz_localize('UTC').tz_convert('Europe/Berlin')
 
@@ -186,7 +186,8 @@ def demand_sinks(round_nominal_value=True):
 
 def storages(round_nominal_value=True):
     """Storages """
-    df = pd.read_csv(os.path.join(c.paths['scenario_path'], 'storages.csv'),
+    df = pd.read_csv(os.path.join(cfg.get('paths', 'scenario_path'),
+                                  'storages.csv'),
                      index_col=[0], parse_dates=True)
     for reg, values in df.iterrows():
         label = '{0}_storage'.format(reg)
@@ -233,7 +234,8 @@ def excess_sinks(excess_regions):
 
 def powerlines(round_nominal_value=True):
     """Grid"""
-    powerlinefile = os.path.join(c.paths['scenario_path'], 'transmission.csv')
+    powerlinefile = os.path.join(cfg.get('paths', 'scenario_path'),
+                                 'transmission.csv')
 
     if os.path.isfile(powerlinefile):
         df = pd.read_csv(powerlinefile, index_col=[0])
@@ -288,149 +290,20 @@ def create_objects_from_dataframe_collection():
 
 # Define default logger
 logger.define_logging()
-c = config.get_configuration()
 read_only = cfg.get('csv', 'read_only')
 write_table = cfg.get('csv', 'write_table')
 solver = cfg.get('general', 'solver')
 
-# neu = pd.read_csv('/home/uwe/express/reegis/oep_demand.ego_dp_loadarea_v0.2.10.csv',
-#                   index_col=[0])
-# print(len(neu))
-# exit(0)
-# del neu['geom_centre']
-# del neu['geom']
-# neu = neu.groupby('rs_0').sum()
-# neu.to_csv('/home/uwe/express/reegis/oep_demand.ego_dp_loadarea_v0.2.10b.csv')
-f = ('/home/uwe/express/reegis/' +
-     'oedb.demand.ego_dp_loadarea_v0.2.10_WGS84_170721.csv')
-# neu = pd.read_csv(f, index_col=[0])
-# print(neu.sum())
-# neu['consumption_per_ha'] = neu['sector_consumption_sum'] / neu['area_ha']
-# neu['consumption_per_ew'] = neu['sector_consumption_sum'] / neu['zensus_sum']
-#
-# neu['geom'] = neu.st_astext.apply(wkt_loads)
-# gneu = pp.create_geo_df(neu)
-#
-# # Add column with region id
-# gneu = pp.add_spatial_name(
-#     c, gneu, os.path.join(c.paths['geometry'],
-#                           c.files['region_polygons']),
-#     'region', 'ego_load')
-# gneu.to_file('/home/uwe/test2.shp')
-# neu['region'] = gneu['region']
-# del neu['geom']
-# neu.to_csv('/home/uwe/express/reegis/oep_demand_de21.csv')
-# bla = pd.read_csv('/home/uwe/express/reegis/oep_demand_de21.csv',
-#                   index_col=[0])
-# del bla['st_astext']
-# bla.to_csv('/home/uwe/express/reegis/oep_demand_de21.csv')
-
-print(bla.groupby('region').sum())
-
-# print(neu)
-exit(0)
-# neu['rs_0_str'] = neu['rs_0'].apply(lambda x: str(x).zfill(12))
-# neu.to_csv('/home/uwe/express/reegis/oep_demand.ego_dp_loadarea_v0.2.10b.csv')
-print(neu.sum())
-
-exit(0)
-eb = pd.read_excel(os.path.join(c.paths['static'],
-                                'energybalance_states_2012_to_2014.xlsx'),
-                   index_col=[0, 1, 2])
-
-column_translation = {
-    'Steinkohle, roh': 'hard coal, raw',
-    'Steinkohle, Briketts': 'hard coal, brick',
-    'Steinkohle, Koks': 'hard coal, coke',
-    'Steinkohle, andere': 'hard coal, other',
-    'Braunkohle, roh': 'lignite, raw',
-    'Braunkohle, Briketts': 'lignite, brick',
-    'Braunkohle, andere': 'lignite, other',
-    'Erdöl': 'oil, raw',
-    'Rohbenzin': 'petroleum',
-    'Ottokraftstoffe': 'gasoline',
-    'Dieselkraftstoffe': 'diesel',
-    'Flugturbinenkraftstoffe': 'jet fuel',
-    'Heizöl leicht': 'light heating oil',
-    'Heizöl schwer': 'heavy heating oil',
-    'Petrolkoks': 'petroleum coke',
-    'Mineralölprodukte, andere': 'mineral oil products',
-    'Flüssiggas': 'liquid gas',
-    'Raffineriegas': 'refinery gas',
-    'Kokereigas, Stadtgas': 'coke oven gas',
-    'Gichtgas, Konvertergas': 'furnace/converter gas',
-    'Erdgas': 'natural gas',
-    'Grubengas': 'mine gas',
-    'Klärgas, Deponiegas': 'sewer/landfill gas',
-    'Wasserkraft': 'hydro power',
-    'Windkraft': 'wind power',
-    'Solarenergie': 'solar power',
-    'Biomasse': 'biomass',
-    'Biotreibstoff': 'biofuel',
-    'sonstige': 'other renewable',
-    'Strom': 'electricity',
-    'Kernenergie': 'nuclear energy',
-    'Fernwärme': 'district heating',
-    'Abfälle nicht biogen': 'waste, fossil',
-    'andere Energieträger': 'other',
-    'Insgesamt': 'total'}
-
-fuel_groups = {
-    'hard coal raw': 'hard coal',
-    'hard coal brick': 'hard coal',
-    'hard coal coke': 'hard coal',
-    'hard coal other': 'hard coal',
-    'lignite, raw': 'lignite',
-    'lignite, brick': 'lignite',
-    'lignite, other': 'lignite',
-    'oil, raw': 'oil',
-    'petroleum': 'oil',
-    'gasoline': 'oil',
-    'diesel': 'oil',
-    'jet fuel': 'oil',
-    'light heating oil': 'oil',
-    'heavy heating oil': 'oil',
-    'petroleum coke': 'oil',
-    'mineral oil products': 'oil',
-    'liquid gas': 'gas',
-    'refinery gas': 'gas',
-    'coke oven gas': 'gas',
-    'furnace/converter gas': 'gas',
-    'natural gas': 'gas',
-    'mine gas': 'gas',
-    'sewer/landfill gas': 'gas',
-    'hydro power': 're',
-    'wind power': 're',
-    'solar power': 're',
-    'biomass': 're',
-    'biofuel': 're',
-    'other renewable': 're',
-    'electricity': 'electricity',
-    'district heating': 'district heating',
-    'waste, fossil': 'other',
-    'other': 'other',
-    'total': 'total'
-}
-
-eb.sort_index(0, inplace=True)
-eb.rename(columns=column_translation, inplace=True)
-print(eb.columns)
-eb = eb.apply(lambda x: pd.to_numeric(x, errors='coerce')).fillna(0)
-eb_grp = eb.groupby(by=fuel_groups, axis=1).sum()
-# print(eb_grp.loc[2014, :, 'Endenergieverbrauch']['hard coal'])
-# exit(0)
-eb_grp.loc[2014, :, 'Endenergieverbrauch'].to_excel('/home/uwe/test.xls')
-
-exit(0)
-c.paths['scenario_path'] = os.path.join(
-    c.paths['scenario_data'], c.general['name']).replace(' ', '_').lower()
+cfg.set('paths', 'scenario_path', os.path.join(
+    cfg.get('paths', 'scenario_data'),
+    cfg.get('general', 'name').replace(' ', '_').lower()))
 
 # Set path name and year for the basic scenario
 my_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                        'my_scenarios')
 
 my_name = 'de21_basic_uwe'
-year = c.general['year']
+year = cfg.get('general', 'year')
 datetime_index = pd.date_range('{0}-01-01 00:00:00'.format(year),
                                '{0}-12-31 23:00:00'.format(year),
                                freq='60min', tz='Europe/Berlin')
@@ -438,8 +311,9 @@ logging.info("Creating basic scenario '{0}' for {1} in {2}".format(
     my_name, year, my_path))
 
 # Get list of regions from csv-file
-regions = pd.read_csv(os.path.join(c.paths['geometry'],
-                                   c.files['region_polygons_simple'])).gid
+regions = pd.read_csv(os.path.join(
+    cfg.get('paths', 'geometry'),
+    cfg.get('geometry', 'region_polygon_simple'))).gid
 
 # Initialise scenario add empty tables
 de21 = sc.SolphScenario(path=my_path, name=my_name, timeindex=datetime_index)

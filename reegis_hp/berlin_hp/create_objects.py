@@ -16,8 +16,8 @@ import reegis_hp.berlin_hp.prepare_data as prepare_data
 def heating_systems(esystem, dfull, add_elec, p):
     power_plants = prepare_data.chp_berlin(p)
 
-    time_index = esystem.time_idx
-    temperature_path = '/home/uwe/rli-lokal/git_home/demandlib/examples'
+    time_index = esystem.timeindex
+    temperature_path = '/home/uwe/git_local/demandlib/demandlib/examples'
     temperature_file = temperature_path + '/example_data.csv'
     temperature = pd.read_csv(temperature_file)['temperature']
     sli = pd.Series(list(temperature.loc[:23]), index=list(range(8760, 8784)))
@@ -66,7 +66,7 @@ def heating_systems(esystem, dfull, add_elec, p):
         if 'district' not in h:
             if lres_bus not in esystem.groups:
                 solph.Bus(label=lres_bus)
-            solph.LinearTransformer(
+            solph.Transformer(
                 label=ltransf,
                 inputs={esystem.groups[lres_bus]: solph.Flow()},
                 outputs={heatbus[h]: solph.Flow(
@@ -78,7 +78,7 @@ def heating_systems(esystem, dfull, add_elec, p):
                 lres_bus = 'bus_' + pp
                 if lres_bus not in esystem.groups:
                     solph.Bus(label=lres_bus)
-                solph.LinearTransformer(
+                solph.Transformer(
                     label='pp_chp_{0}_{1}'.format(h, pp),
                     inputs={esystem.groups[lres_bus]: solph.Flow()},
                     outputs={

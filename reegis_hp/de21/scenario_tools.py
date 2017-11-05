@@ -8,7 +8,7 @@ from oemof import network
 from oemof.solph import EnergySystem
 from oemof.solph.options import BinaryFlow, Investment
 from oemof.solph.plumbing import sequence
-from oemof.solph.network import (Bus, Source, Sink, Flow, LinearTransformer,
+from oemof.solph.network import (Bus, Source, Sink, Flow, Transformer,
                                  Storage)
 
 
@@ -120,7 +120,7 @@ class SolphScenario(EnergySystem):
 
     def add_parameters(self, idx, columns, values):
         self.p.loc[idx, columns] = values
-        self.p = self.p.sortlevel()
+        self.p = self.p.sort_index()
 
     def add_sequences(self, idx, seq):
         self.s[idx[0], idx[1], idx[2], idx[3], idx[4]] = seq
@@ -128,7 +128,7 @@ class SolphScenario(EnergySystem):
     def add_comment_line(self, comment, sort_entry):
         self.p.loc[('### {0}'.format(comment), '', '', ''),
                    'sort_index'] = sort_entry
-        self.p = self.p.sortlevel()
+        self.p = self.p.sort_index()
 
 
 def function1(row, nodes, classes, flow_attrs, seq_attributes, nodes_flows_seq,
@@ -154,10 +154,6 @@ def function1(row, nodes, classes, flow_attrs, seq_attributes, nodes_flows_seq,
                             'conversion_factors')):
                     if row[attr] != 'seq':
                         if attr in seq_attributes:
-                            print(attr)
-                            print(row)
-                            print(row[attr])
-                            print('blubb')
                             row[attr] = sequence(float(row[attr]))
                         # again from investment storage the next lines
                         # are a little hacky as we need to create an
@@ -353,7 +349,7 @@ def nodes_from_csv(file_nodes_flows=None, file_nodes_flows_sequences=None,
 
     # class dictionary for dynamic instantiation
     classes = {'Source': Source, 'Sink': Sink,
-               'LinearTransformer': LinearTransformer,
+               'LinearTransformer': Transformer,
                'Storage': Storage, 'Bus': Bus}
     classes.update(additional_classes)
 

@@ -204,6 +204,11 @@ if __name__ == "__main__":
         'efh': 'floors < 2',
         'mfh': 'floors > 1',
     }
+    my.data.open()
+    print(my.data.keys())
+    print(my.data['oeq'].columns)
+    print(my.data['oeq']['building_function'].unique())
+    exit(0)
     heating_systems1 = [s for s in my.get().columns if "frac_" in s]
     remove_string1 = 'frac_'
     my.demand_by('total_loss_pres', heating_systems1, bt_dict1,
