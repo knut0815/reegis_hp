@@ -11,6 +11,7 @@ import pandas as pd
 import oemof.db as db
 from oemof.tools import logger
 import Open_eQuarterPy.building_evaluation as be
+from reegis_hp.berlin_hp import config as cfg
 
 
 def sql_string(spacetype, space_gid=None):
@@ -56,6 +57,43 @@ def sql_string(spacetype, space_gid=None):
         ;
     '''.format(spacetype, where_space)
 
+
+def get_buildings_from_db():
+    start_db = time.time()
+    conn = db.connection()
+    logging.debug("SQL query: {0}".format(sql))
+    logging.info("Retrieving data from db...")
+    logging.info(sql)
+    results = (conn.execute(sql))
+    logging.info("Success.")
+    db_data = pd.DataFrame(results.fetchall(), columns=[
+        'gid', 'population_density', 'spatial_na', 'floors', 'name_street',
+        'number', 'alt_number', 'area', 'perimeter', 'building_function',
+        'blocktype', 'frac_off-peak_electricity_heating',
+        'frac_district_heating', 'frac_natural_gas_heating',
+        'frac_oil_heating', 'frac_coal_stove', 'plr_key', 'geom',
+        'age_from_scan'])
+
+    db_data.number.fillna(db_data.alt_number, inplace=True)
+    db_data.drop('alt_number', 1, inplace=True)
+
+    # Convert objects from db to floats:
+    db_data.floors = db_data.floors.astype(float)
+    db_data.population_density = db_data.population_density.astype(float)
+    db_data.building_function = db_data.building_function.astype(int)
+
+    # Dump data into file
+    path = cfg.get('paths', 'fis_broker')
+    db_data.to_csv(os.path.join(path,
+                                cfg.get('fis_broker', 'alkis_buildings_csv')))
+    db_data.to_hdf(os.path.join(path,
+                                cfg.get('fis_broker', 'alkis_buildings_hdf')),
+                   'alkis')
+
+    logging.info("DB time: {0}".format(time.time() - start_db))
+    return db_data
+
+
 logger.define_logging()
 start = time.time()
 
@@ -78,34 +116,16 @@ filepath = os.path.join(basicpath, "eQuarter_{0}.hdf".format(level))
 datafilepath = os.path.join(basicpath, "eQuarter_data_{0}.hdf".format(level))
 
 if not os.path.isfile(datafilepath) or overwrite:
-    start_db = time.time()
-    conn = db.connection()
-    logging.debug("SQL query: {0}".format(sql))
-    logging.info("Retrieving data from db...")
-    print(sql)
-    results = (conn.execute(sql))
-    logging.info("Success.")
-    data = pd.DataFrame(results.fetchall(), columns=[
-        'gid', 'population_density', 'spatial_na', 'floors', 'name_street',
-        'number', 'alt_number', 'area', 'perimeter', 'building_function',
-        'blocktype', 'frac_off-peak_electricity_heating',
-        'frac_district_heating', 'frac_natural_gas_heating',
-        'frac_oil_heating', 'frac_coal_stove', 'plr_key', 'geom',
-        'age_from_scan'])
 
-    data.number.fillna(data.alt_number, inplace=True)
-    data.drop('alt_number', 1, inplace=True)
+    data = get_buildings_from_db()
+else:
+    data = pd.read_hdf('alkis.hdf', 'alkis')
 
-    # Convert objects from db to floats:
-    # data.floors = data.floors.astype(float)
-    # data.population_density = data.population_density.astype(float)
-    # data.building_function = data.building_function.astype(int)
-
-    data.to_csv('alkis.csv')
-    data.to_hdf('alkis.hdf', 'alkis')
-    print(data)
-    exit(0)
-    sn_data = pd.read_csv(os.path.join(os.path.expanduser('~'), 'chiba/RLI/data/data_by_blocktype.csv'), ';')
+exit(0)
+if True:
+    sn_data = pd.read_csv(os.path.join(os.path.expanduser('~'),
+                                       'chiba/RLI/data/data_by_blocktype.csv'),
+                          ';')
     data = data.merge(sn_data, on='blocktype')
     str_cols = ['spatial_na', 'name_street', 'number', 'blocktype', 'age_scan',
                 'floors_average', 'floor_area_fraction', 'building_age']
