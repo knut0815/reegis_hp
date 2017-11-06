@@ -35,7 +35,8 @@ def sql_string(spacetype, space_gid=None):
             ag.hausnummer, ag.pseudonumm, st_area(st_transform(ag.geom, 3068)),
             st_perimeter(st_transform(ag.geom, 3068)), ag.gebaeudefu,
             sn.typklar, hz."PRZ_NASTRO", hz."PRZ_FERN", hz."PRZ_GAS",
-            hz."PRZ_OEL", hz."PRZ_KOHLE", plr.schluessel, st_astext(ag.geom)
+            hz."PRZ_OEL", hz."PRZ_KOHLE", plr.schluessel, st_astext(ag.geom),
+            ag.year_of_construction
         FROM berlin.{0} as space, berlin.alkis_gebaeude ag
         INNER JOIN berlin.stadtnutzung sn ON st_within(
             st_centroid(ag.geom), sn.geom)
@@ -89,7 +90,8 @@ if not os.path.isfile(datafilepath) or overwrite:
         'number', 'alt_number', 'area', 'perimeter', 'building_function',
         'blocktype', 'frac_off-peak_electricity_heating',
         'frac_district_heating', 'frac_natural_gas_heating',
-        'frac_oil_heating', 'frac_coal_stove', 'plr_key', 'geom'])
+        'frac_oil_heating', 'frac_coal_stove', 'plr_key', 'geom',
+        'age_from_scan'])
 
     data.number.fillna(data.alt_number, inplace=True)
     data.drop('alt_number', 1, inplace=True)
@@ -99,8 +101,8 @@ if not os.path.isfile(datafilepath) or overwrite:
     # data.population_density = data.population_density.astype(float)
     # data.building_function = data.building_function.astype(int)
 
-    data.to_csv('/home/uwe/express/alkis.csv')
-    data.to_hdf('/home/uwe/express/alkis.hdf', 'alkis')
+    data.to_csv('alkis.csv')
+    data.to_hdf('alkis.hdf', 'alkis')
     print(data)
     exit(0)
     sn_data = pd.read_csv(os.path.join(os.path.expanduser('~'), 'chiba/RLI/data/data_by_blocktype.csv'), ';')
