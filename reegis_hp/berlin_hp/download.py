@@ -118,11 +118,7 @@ def remove_duplicates(shp_file, id_col):
     orig_crs = geo_table.crs
     geo_table = geo_table.drop_duplicates(id_col)
     geo_table = geo_table.to_crs(orig_crs)
-    print(geo_table['gml_id'])
-    print(geo_table.columns)
-    # exit(0)
     geo_table.to_file(shp_file)
-    exit(0)
     logging.info("Duplicates removed.")
 
 
