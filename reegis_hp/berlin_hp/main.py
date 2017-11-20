@@ -28,7 +28,7 @@ def initialise_energy_system():
     logging.info("Creating energy system object.")
     time_index = pd.date_range('1/1/2012', periods=8784, freq='H')
 
-    return solph.EnergySystem(timeindex=time_index, groupings=solph.GROUPINGS)
+    return solph.EnergySystem(timeindex=time_index)
 
 
 def berlin_model(berlin_e_system):
@@ -270,7 +270,7 @@ def berlin_model(berlin_e_system):
     om.write(filename, io_options={'symbolic_solver_labels': True})
 
     logging.info('Solve the optimization problem')
-    om.solve(solver='cbc', solve_kwargs={'tee': True})
+    om.solve(solver='gurobi', solve_kwargs={'tee': True})
 
     berlin_e_system.dump('/home/uwe/')
     return om
