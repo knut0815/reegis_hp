@@ -498,7 +498,7 @@ def prepare_conventional_power_plants(c, overwrite=False):
         # Add column with name of the federal state (Bayern, Berlin,...)
         geo_file = os.path.join(c.paths['geometry'],
                                 c.files['federal_states_polygon'])
-        gcpp = tools.add_spatial_name(c, gcpp, geo_file, 'federal_state',
+        gcpp = tools.add_spatial_name(gcpp, geo_file, 'federal_state',
                                       category, time=start, icol='iso')
 
         # fix region by country code

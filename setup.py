@@ -18,5 +18,9 @@ setup(name='reegis_hp',
                         'pvlib',
                         'tables',
                         'geopandas',
-                        'requests', 'numpy', 'geoplot', 'workalendar']
+                        'requests',
+                        'numpy',
+                        'geoplot',
+                        'workalendar',
+                        'owslib']
       )

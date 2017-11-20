@@ -164,6 +164,9 @@ def set_berlin_hp_paths():
     cfg.set('paths', 'fis_broker', extend_path(
         get('paths', get('fis_broker', 'path')),
         get('fis_broker', 'dir')))
+    cfg.set('paths', 'fis_broker', extend_path(
+        get('paths', get('fis_broker', 'path')),
+        get('fis_broker', 'dir')))
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ Created on Wed Mar 23 14:35:28 2016
 @author: uwe
 """
 import logging
-import time
+import datetime
 import os
 import pandas as pd
 import oemof.db as db
@@ -90,19 +90,19 @@ def get_buildings_from_db():
                                 cfg.get('fis_broker', 'alkis_buildings_hdf')),
                    'alkis')
 
-    logging.info("DB time: {0}".format(time.time() - start_db))
+    logging.info("DB time: {0}".format(datetime.datetime.now() - start_db))
     return db_data
 
 
 logger.define_logging()
-start = time.time()
+start = datetime.datetime.now()
 
 # Select region
 level, selection = ('berlin', None)
 # level, selection = ('bezirk', 6)
 # level, selection = ('planungsraum', 384)
 # level, selection = ('block', (5812, 9335))
-overwrite = True
+overwrite = False
 
 sql = sql_string(level, selection)
 
@@ -119,17 +119,32 @@ if not os.path.isfile(datafilepath) or overwrite:
 
     data = get_buildings_from_db()
 else:
-    data = pd.read_hdf('alkis.hdf', 'alkis')
+    filename_hdf = os.path.join(cfg.get('paths', 'fis_broker'),
+                                cfg.get('fis_broker', 'alkis_buildings_hdf'))
+    filename_csv = os.path.join(cfg.get('paths', 'fis_broker'),
+                                cfg.get('fis_broker', 'alkis_buildings_csv'))
+    start = datetime.datetime.now()
+    # data = pd.read_csv(filename_csv)
+    print(datetime.datetime.now() - start)
+    start = datetime.datetime.now()
+    data = pd.read_hdf(filename_hdf, 'alkis')
+    print(datetime.datetime.now() - start)
 
-exit(0)
 if True:
     sn_data = pd.read_csv(os.path.join(os.path.expanduser('~'),
                                        'chiba/RLI/data/data_by_blocktype.csv'),
                           ';')
     data = data.merge(sn_data, on='blocktype')
-    str_cols = ['spatial_na', 'name_street', 'number', 'blocktype', 'age_scan',
-                'floors_average', 'floor_area_fraction', 'building_age']
+    str_cols = ['spatial_na', 'name_street', 'number', 'blocktype',
+                'age_from_scan', 'floors_average', 'floor_area_fraction',
+                'building_age']
     data.loc[:, str_cols] = data[str_cols].applymap(str)
+    data['building_age'] = data['building_age'].astype(str)
+    data['population_density'] = data['population_density'].astype(float)
+    data['floors'] = data['floors'].astype(float)
+    # print(data['building_age'])
+    # print(data.dtypes)
+    # exit(0)
     logging.info("Store query results to {0}".format(datafilepath))
     store = pd.HDFStore(datafilepath)
     store['data'] = data
@@ -139,7 +154,8 @@ if True:
         selection = (0, )
     store['selection'] = pd.Series(list(selection), name=level)
     store.close()
-    logging.info("DB time: {0}".format(time.time() - start_db))
+    logging.info("DB time: {0}".format(datetime.datetime.now() - start))
+    exit(0)
 else:
     logging.info("Retrieving data from file: {0}".format(datafilepath))
     load = pd.HDFStore(datafilepath)

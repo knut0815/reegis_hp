@@ -10,9 +10,12 @@ from owslib.wfs import WebFeatureService
 from reegis_hp.berlin_hp import config as cfg
 import subprocess as sub
 import geopandas as gpd
+import pandas as pd
+from shapely.wkt import loads as wkt_loads
 import logging
 from oemof.tools import logger
 from shutil import copyfile
+import warnings
 
 
 def feature2gml(bbox, file, table, wfs11):
@@ -115,7 +118,11 @@ def remove_duplicates(shp_file, id_col):
     orig_crs = geo_table.crs
     geo_table = geo_table.drop_duplicates(id_col)
     geo_table = geo_table.to_crs(orig_crs)
+    print(geo_table['gml_id'])
+    print(geo_table.columns)
+    # exit(0)
     geo_table.to_file(shp_file)
+    exit(0)
     logging.info("Duplicates removed.")
 
 
@@ -165,42 +172,156 @@ def process_alkis_buildings(table='s_wfs_alkis_gebaeudeflaechen'):
     geo_table.to_file(shapefile)
 
 
-def merge_test():
-    blockf = os.path.join(cfg.get('paths', 'fis_broker'), 's_ISU5_2015_UA',
-                          'shp', 's_ISU5_2015_UA.shp')
-    nutzf = os.path.join(cfg.get('paths', 'fis_broker'), 're_nutz2015_nutzsa',
-                         'shp', 're_nutz2015_nutzsa.shp')
-    blocks = gpd.read_file(blockf)
-    nutz = gpd.read_file(nutzf)
+def merge_test(tables):
+    gdf = {}
+    # Filename and path for output files
+    filename_poly_layer = os.path.join(
+        cfg.get('paths', 'fis_broker'),
+        cfg.get('fis_broker', 'merged_blocks_polygon'))
 
-    nutz['geometry'] = nutz.representative_point()
-    logging.info("join")
-    neu = gpd.sjoin(nutz, blocks, how="inner", op='within')
-    logging.info("dump")
-    neu.to_file('/home/uwe/temp3.shp')
+    # Columns to use
+    cols = {
+        'block': ['gml_id', 'PLR', 'STAT', 'STR_FLGES'],
+        'nutz': ['STSTRNAME', 'TYPKLAR', 'WOZ_NAME'],
+        'ew': ['EW_HA']}
+
+    logging.info("Read tables to be joined: {0}.".format(tuple(cols.keys())))
+    for t in ['block', 'nutz', 'ew']:
+        tables[t]['path'] = os.path.join(cfg.get('paths', 'fis_broker'),
+                                         tables[t]['table'], 'shp',
+                                         tables[t]['table'] + '.shp')
+        logging.debug("Reading {0}".format(tables[t]['path']))
+        gdf[t] = gpd.read_file(tables[t]['path'])[cols[t] + ['geometry']]
+
+    logging.info("Spatial join of all tables...")
+
+    gdf['block'].rename(columns={'gml_id': 'SCHL5'}, inplace=True)
+    # Convert geometry to representative points to simplify the join
+    gdf['block']['geometry'] = gdf['block'].representative_point()
+    gdf['block'] = gpd.sjoin(gdf['block'], gdf['nutz'], how='inner',
+                             op='within')
+    del gdf['block']['index_right']
+    gdf['block'] = gpd.sjoin(gdf['block'], gdf['ew'], how='left',
+                             op='within')
+    del gdf['block']['index_right']
+    del gdf['block']['geometry']
+
+    # Merge with polygon layer to dump polygons instead of points.
+    gdf['block'] = pd.DataFrame(gdf['block'])
+    polygons = gpd.read_file(tables['block']['path'])[['gml_id', 'geometry']]
+    polygons.rename(columns={'gml_id': 'SCHL5'}, inplace=True)
+    polygons = polygons.merge(gdf['block'], on='SCHL5')
+    polygons = polygons.set_geometry('geometry')
+
+    logging.info("Dump polygon layer to {0}...".format(filename_poly_layer))
+    polygons.to_file(filename_poly_layer)
+
+    logging.info("Read alkis table...")
+    alkis_path = os.path.join(cfg.get('paths', 'fis_broker'),
+                              tables['alkis']['table'], 'shp',
+                              tables['alkis']['table'] + '.shp')
+    alkis = gpd.read_file(alkis_path)
+    print(alkis.crs)
+    print(alkis.iloc[0]['geometry'])
+
+    logging.info("Join alkis buildings with block data...")
+    alkis = alkis[['AnzahlDerO', 'Strassen_n', 'Hausnummer', 'PseudoNumm',
+                   'area', 'perimeter', 'Gebaeudefu', 'gml_id', 'geometry']]
+    block_j = polygons[['SCHL5', 'PLR', 'STAT', 'TYPKLAR', 'EW_HA', 'geometry']]
+    alkis['geometry'] = alkis.representative_point()
+    alkis = gpd.sjoin(alkis, block_j, how='left', op='within')
+    del alkis['index_right']
+
+    # Hier dann noch die Heizungskarte einlesen und damit joinen
+    logging.info("Join alkis buildings with heiz data...")
+    # heiz = pd.read_csv('/home/uwe/heizungsarten.csv')
+    # heiz = heiz.loc[heiz['geometry'].notnull()]
+    # heiz['geometry'] = heiz['geometry'].apply(wkt_loads)
+    # geoheiz = gpd.GeoDataFrame(heiz, crs={'init': 'epsg:4326'})[[
+    #     'PRZ_FERN', 'PRZ_GAS', 'PRZ_KOHLE', 'PRZ_NASTRO', 'PRZ_OEL',
+    #     'geometry']]
+    geoheiz = gpd.read_file('/home/uwe/heizungsarten.shp')[[
+        'PRZ_FERN', 'PRZ_GAS', 'PRZ_KOHLE', 'PRZ_NASTRO', 'PRZ_OEL',
+        'geometry']]
+
+    geoheiz = geoheiz[geoheiz.geometry.is_valid]
+
+    # geoheiz.to_file('/home/uwe/heizungsarten_valid.shp')
+
+    alkis = gpd.sjoin(alkis, geoheiz, how='left', op='within')
+    del alkis['index_right']
+
+    logging.info("Add block data for non-matching points using buffers.")
+    remain = len(alkis.loc[alkis['PLR'].isnull()])
+    logging.info("This will take some time. Number of points: {0}".format(
+        remain))
+
+    # I think it is possible to make this faster and more elegant but I do not
+    # not have the time to think about it. As it has to be done only once it
+    # is not really time-sensitive.
+    for row in alkis.loc[alkis['PLR'].isnull()].iterrows():
+        idx = int(row[0].copy())
+        point = row[1].geometry
+        intersec = False
+        n = 0
+        block_id = 0
+        while not intersec and n < 500:
+            bi = block_j.loc[block_j.intersects(point.buffer(n / 100000))]
+            if len(bi) > 0:
+                intersec = True
+                bi = bi.iloc[0]
+                block_id = bi['SCHL5']
+                del bi['geometry']
+                alkis.loc[idx, bi.index] = bi
+            n += 1
+        remain -= 1
+
+        if intersec:
+            logging.info(
+                "Block found for {0}: {1}, Buffer: {2}. Remains: {3}".format(
+                    alkis.loc[idx, 'gml_id'][-12:], block_id[-16:], n, remain))
+        else:
+            warnings.warn(
+                "{0} does not intersect with any region. Please check".format(
+                    row[1]))
+
+    logging.info("Check: Number of buildings without PLR attribute: {0}".format(
+        len(alkis.loc[alkis['PLR'].isnull()])))
+
+    # Merge with polygon layer to dump polygons instead of points.
+    logging.info("Merge new alkis layer with alkis polygon layer.")
+    alkis = pd.DataFrame(alkis)
+    del alkis['geometry']
+    alkis_poly = gpd.read_file(alkis_path)[['gml_id', 'geometry']]
+    alkis_poly = alkis_poly.merge(alkis, on='gml_id')
+    alkis_poly = alkis_poly.set_geometry('geometry')
+    logging.info("Dump new alkis layer with additional block data.")
+    alkis_poly.to_file('/home/uwe/alkis_polygon.shp')
+    alkis_poly.to_csv('/home/uwe/alkis_polygon.csv')
+    alkis_poly.to_hdf('/home/uwe/alkis_polygon.hdf', 'buildings')
+    exit(0)
 
 
 if __name__ == "__main__":
     log_file = os.path.join(cfg.get('paths', 'berlin_hp'), 'download.log')
     logger.define_logging()
-    alkis = {'table': 's_wfs_alkis_gebaeudeflaechen',
-             'senstadt_server': 'data'}
+
     # alkis = {'table': 'alkis_test',
     #          'senstadt_server': 'data'}
-    nutz = {'table': 're_nutz2015_nutzsa',
-            'senstadt_server': 'geometry'}
-    ew = {'table': 's06_06ewdichte2016',
-          'senstadt_server': 'data'}
-    block = {'table': 's_ISU5_2015_UA',
-             'senstadt_server': 'data'}
+    maps = {
+        'alkis': {'table': 's_wfs_alkis_gebaeudeflaechen',
+                  'senstadt_server': 'data'},
+        'nutz': {'table': 're_nutz2015_nutzsa',
+                 'senstadt_server': 'geometry'},
+        'ew': {'table': 's06_06ewdichte2016',
+               'senstadt_server': 'data'},
+        'block': {'table': 's_ISU5_2015_UA',
+                  'senstadt_server': 'data'}}
 
-    maps = [nutz, block, alkis]
-    maps = [ew]
-
-    for fisbroker_map in maps:
+    for key in maps.keys():
         logging.info("Dump table {0} from {1}".format(
-            fisbroker_map['table'], fisbroker_map['senstadt_server']))
-        shapefile_from_fisbroker(**fisbroker_map)
+            maps[key]['table'], maps[key]['senstadt_server']))
+        shapefile_from_fisbroker(**maps[key])
 
     # process_alkis_buildings()
-    # merge_test()
+    merge_test(maps)
