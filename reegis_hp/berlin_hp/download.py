@@ -22,7 +22,10 @@ def feature2gml(bbox, file, table, wfs11):
     response = wfs11.getfeature(typename='fis:' + table,
                                 bbox=bbox, srsname='EPSG:25833')
     out = open(file, 'wb')
-    out.write(bytes(response.read(), 'UTF-8'))
+    try:
+        out.write(bytes(response.read(), 'UTF-8'))
+    except TypeError:
+        out.write(response.read())
     out.close()
 
 
