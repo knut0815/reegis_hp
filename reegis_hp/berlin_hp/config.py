@@ -147,7 +147,7 @@ def set_berlin_hp_paths():
 
     # Set default paths for 'basic' and 'data' if set to 'None' in the ini-file
     if get('paths', 'basic') is None:
-        basicpath = os.path.join(os.path.dirname(__file__), 'berlin_hp')
+        basicpath = os.path.join(os.path.dirname(__file__))
         cfg.set('paths', 'basic', basicpath)
         logging.debug("Set default path for basic path: {0}".format(basicpath))
 
@@ -161,12 +161,18 @@ def set_berlin_hp_paths():
     # *************************************************************************
 
     # general sources
+    cfg.set('paths', 'data', extend_path(
+        get('paths', get('data', 'path')),
+        get('data', 'dir')))
+    cfg.set('paths', 'static', extend_path(
+        get('paths', get('static_sources', 'path')),
+        get('static_sources', 'dir')))
     cfg.set('paths', 'fis_broker', extend_path(
         get('paths', get('fis_broker', 'path')),
         get('fis_broker', 'dir')))
-    cfg.set('paths', 'fis_broker', extend_path(
-        get('paths', get('fis_broker', 'path')),
-        get('fis_broker', 'dir')))
+    cfg.set('paths', 'oeq', extend_path(
+        get('paths', get('oeq', 'path')),
+        get('oeq', 'dir')))
 
 
 if __name__ == "__main__":

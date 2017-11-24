@@ -8,163 +8,57 @@ import logging
 import datetime
 import os
 import pandas as pd
-import oemof.db as db
-from oemof.tools import logger
+from oemof import tools as otools
 import Open_eQuarterPy.building_evaluation as be
 from reegis_hp.berlin_hp import config as cfg
 
 
-def sql_string(spacetype, space_gid=None):
-    """
-    spacetype (string): Type of space (berlin, bezirk, block, planungsraum...)
-    space_gid (tuple): chosen gids for
-    """
-    if space_gid is None:
-        space_gid = "everything"
-    logging.info("From table berlin.{1} get {0}.".format(
-        space_gid, spacetype))
-    if spacetype != "berlin":
-        if isinstance(space_gid, int):
-            space_gid = "({0})".format(space_gid)
-        where_space = "space.gid in {0} AND".format(space_gid)
-    else:
-        where_space = ''
-
-    return '''
-        SELECT DISTINCT ag.gid, ew.ew_ha2014, block.schluessel,
-            ag.anzahldero, ag.strassen_n,
-            ag.hausnummer, ag.pseudonumm, st_area(st_transform(ag.geom, 3068)),
-            st_perimeter(st_transform(ag.geom, 3068)), ag.gebaeudefu,
-            sn.typklar, hz."PRZ_NASTRO", hz."PRZ_FERN", hz."PRZ_GAS",
-            hz."PRZ_OEL", hz."PRZ_KOHLE", plr.schluessel, st_astext(ag.geom),
-            ag.year_of_construction
-        FROM berlin.{0} as space, berlin.alkis_gebaeude ag
-        INNER JOIN berlin.stadtnutzung sn ON st_within(
-            st_centroid(ag.geom), sn.geom)
-        INNER JOIN berlin.einwohner ew ON st_within(
-            st_centroid(ag.geom), ew.geom)
-        INNER JOIN berlin.heizungsarten_geo hz ON st_within(
-            st_centroid(ag.geom), hz.geom)
-        INNER JOIN berlin.block block ON st_within(
-            st_centroid(ag.geom), block.geom)
-        INNER JOIN berlin.planungsraum  plr ON st_within(
-            st_centroid(ag.geom), plr.geom)
-        WHERE
-            {1}
-            ag.bauart_sch is NULL AND
-            space.geom && ag.geom AND
-            st_contains(space.geom, st_centroid(ag.geom))
-        ;
-    '''.format(spacetype, where_space)
-
-
-def get_buildings_from_db():
-    start_db = time.time()
-    conn = db.connection()
-    logging.debug("SQL query: {0}".format(sql))
-    logging.info("Retrieving data from db...")
-    logging.info(sql)
-    results = (conn.execute(sql))
-    logging.info("Success.")
-    db_data = pd.DataFrame(results.fetchall(), columns=[
-        'gid', 'population_density', 'spatial_na', 'floors', 'name_street',
-        'number', 'alt_number', 'area', 'perimeter', 'building_function',
-        'blocktype', 'frac_off-peak_electricity_heating',
-        'frac_district_heating', 'frac_natural_gas_heating',
-        'frac_oil_heating', 'frac_coal_stove', 'plr_key', 'geom',
-        'age_from_scan'])
-
-    db_data.number.fillna(db_data.alt_number, inplace=True)
-    db_data.drop('alt_number', 1, inplace=True)
-
-    # Convert objects from db to floats:
-    db_data.floors = db_data.floors.astype(float)
-    db_data.population_density = db_data.population_density.astype(float)
-    db_data.building_function = db_data.building_function.astype(int)
-
-    # Dump data into file
-    path = cfg.get('paths', 'fis_broker')
-    db_data.to_csv(os.path.join(path,
-                                cfg.get('fis_broker', 'alkis_buildings_csv')))
-    db_data.to_hdf(os.path.join(path,
-                                cfg.get('fis_broker', 'alkis_buildings_hdf')),
-                   'alkis')
-
-    logging.info("DB time: {0}".format(datetime.datetime.now() - start_db))
-    return db_data
-
-
-logger.define_logging()
+otools.logger.define_logging()
 start = datetime.datetime.now()
-
-# Select region
-level, selection = ('berlin', None)
-# level, selection = ('bezirk', 6)
-# level, selection = ('planungsraum', 384)
-# level, selection = ('block', (5812, 9335))
 overwrite = False
 
-sql = sql_string(level, selection)
+filename_hdf = os.path.join(cfg.get('paths', 'fis_broker'),
+                            cfg.get('fis_broker', 'alkis_joined_hdf'))
+filename_csv = os.path.join(cfg.get('paths', 'fis_broker'),
+                            cfg.get('fis_broker', 'alkis_joined_csv'))
+filename_geo_csv = os.path.join(cfg.get('paths', 'fis_broker'),
+                                cfg.get('fis_broker', 'alkis_geometry_csv'))
+filename_oeq_results = os.path.join(cfg.get('paths', 'oeq'),
+                                    cfg.get('oeq', 'results'))
 
-basicpath = os.path.join(os.path.expanduser('~'), '.reegis_hp', 'heat_demand')
-if not os.path.isdir(os.path.join(os.path.expanduser('~'), '.reegis_hp')):
-    os.mkdir(os.path.join(os.path.expanduser('~'), '.reegis_hp'))
-if not os.path.isdir(basicpath):
-    os.mkdir(basicpath)
+if not os.path.isfile(filename_hdf) or overwrite:
+    # fetch data from download module
+    pass
 
-filepath = os.path.join(basicpath, "eQuarter_{0}.hdf".format(level))
-datafilepath = os.path.join(basicpath, "eQuarter_data_{0}.hdf".format(level))
+data = pd.read_hdf(filename_hdf, 'alkis')
+data['alkis_id'] = data.index
 
-if not os.path.isfile(datafilepath) or overwrite:
+sn_data = pd.read_csv(os.path.join(cfg.get('paths', 'static'),
+                                   'data_by_blocktype.csv'), ';')
 
-    data = get_buildings_from_db()
-else:
-    filename_hdf = os.path.join(cfg.get('paths', 'fis_broker'),
-                                cfg.get('fis_broker', 'alkis_buildings_hdf'))
-    filename_csv = os.path.join(cfg.get('paths', 'fis_broker'),
-                                cfg.get('fis_broker', 'alkis_buildings_csv'))
-    start = datetime.datetime.now()
-    # data = pd.read_csv(filename_csv)
-    print(datetime.datetime.now() - start)
-    start = datetime.datetime.now()
-    data = pd.read_hdf(filename_hdf, 'alkis')
-    print(datetime.datetime.now() - start)
+pd.DataFrame(data['TYPKLAR'].unique()).to_excel('/home/uwe/test1.xlsx')
+data = data.merge(sn_data, on='TYPKLAR', how='left')
+data.set_index('alkis_id', drop=True, inplace=True)
 
-if True:
-    sn_data = pd.read_csv(os.path.join(os.path.expanduser('~'),
-                                       'chiba/RLI/data/data_by_blocktype.csv'),
-                          ';')
-    data = data.merge(sn_data, on='blocktype')
-    str_cols = ['spatial_na', 'name_street', 'number', 'blocktype',
-                'age_from_scan', 'floors_average', 'floor_area_fraction',
-                'building_age']
-    data.loc[:, str_cols] = data[str_cols].applymap(str)
-    data['building_age'] = data['building_age'].astype(str)
-    data['population_density'] = data['population_density'].astype(float)
-    data['floors'] = data['floors'].astype(float)
-    # print(data['building_age'])
-    # print(data.dtypes)
-    # exit(0)
-    logging.info("Store query results to {0}".format(datafilepath))
-    store = pd.HDFStore(datafilepath)
-    store['data'] = data
-    if isinstance(selection, int):
-        selection = (selection,)
-    if selection is None:
-        selection = (0, )
-    store['selection'] = pd.Series(list(selection), name=level)
-    store.close()
-    logging.info("DB time: {0}".format(datetime.datetime.now() - start))
-    exit(0)
-else:
-    logging.info("Retrieving data from file: {0}".format(datafilepath))
-    load = pd.HDFStore(datafilepath)
-    data = load.data
-    level = load.selection.name
-    selection = load.selection
-    load.close()
-    logging.warning("Existing file loaded:\n{0}.".format(selection))
+rename_alkis = {
+    'AnzahlDerO': 'floors',
+    'Gebaeudefu': 'building_function',
+    'SCHL5': 'block',
+    'PLR': 'lor',
+    'STAT': 'statistical_region',
+    'TYPKLAR': 'block_type_name',
+    'EW_HA': 'population_density',
+    'PRZ_FERN': 'frac_district_heating',
+    'PRZ_GAS': 'frac_gas',
+    'PRZ_KOHLE': 'frac_coal',
+    'PRZ_NASTRO': 'frac_elec',
+    'PRZ_OEL': 'frac_oil',
+    'type': 'block_type',
+    }
 
+data = data.rename(columns=rename_alkis)
+
+# data = data.loc[data['lor'] == 1011101]
 # *** Year of construction ***
 
 # Replace ranges with one year.
@@ -191,13 +85,11 @@ year_of_construction = {
     'NaN': None,
     'nan': None
     }
-data['age_scan'].replace(year_of_construction, inplace=True)
+# data['age_scan'].replace(year_of_construction, inplace=True)
 data['building_age'].replace(year_of_construction, inplace=True)
 
-# Fill up the nan values in the scan data with the data from the area types
-data['age_scan'].fillna(data['building_age'], inplace=True)
 # Fill all remaining nan values with a default value of 1960
-data['year_of_construction'] = data['age_scan'].fillna(1960)
+data['year_of_construction'] = data['building_age'].fillna(1960)
 
 # *** Type of the building ***
 # 1100 - Gemischt genutztes Gebäude mit Wohnen
@@ -241,23 +133,22 @@ result = be.evaluate_building(data, **parameter)
 
 result['total'] = result.total_loss_pres
 
-str_cols = ['spatial_na', 'name_street', 'number', 'blocktype',
-            'age_scan', 'floors_average', 'floor_area_fraction',
-            'share_non_tilted_roof']
+print(result.dtypes)
+str_cols = ['block', 'block_type_name', 'share_non_tilted_roof']
 result.loc[:, str_cols] = result[str_cols].applymap(str)
 
 # Store results to hdf5 file
-logging.info("Store results to {0}".format(filepath))
-store = pd.HDFStore(filepath)
+logging.info("Store results to {0}".format(filename_oeq_results))
+store = pd.HDFStore(filename_oeq_results)
 store['oeq'] = result
 store['year_of_construction'] = pd.Series(year_of_construction)
 store['typelist'] = pd.Series(typelist)
 store['parameter'] = pd.Series(parameter)
-if isinstance(selection, int):
-    selection = (selection,)
-if selection is None:
-    selection = (0,)
-store['selection'] = pd.Series(list(selection), name=level)
+# if isinstance(selection, int):
+#     selection = (selection,)
+# if selection is None:
+#     selection = (0,)
+# store['selection'] = pd.Series(list(selection), name=level)
 store.close()
 logging.warning('No date saved! Please add date to hdf5-file.')
-logging.info("Elapsed time: {0}".format(time.time() - start))
+logging.info("Elapsed time: {0}".format(datetime.datetime.now() - start))

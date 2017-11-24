@@ -162,7 +162,7 @@ def process_alkis_buildings(table='s_wfs_alkis_gebaeudeflaechen'):
     geo_table = geo_table[geo_table['Gebaeudefu'] != 2462]
     logging.info("Length of data set after removing parts: {0}".format(
         len(geo_table)))
-    logging.info("Calculate perimeter and are of each polygon...")
+    logging.info("Calculate perimeter and area of each polygon...")
     geo_table = geo_table.to_crs({'init': 'epsg:3035'})
     geo_table['area'] = geo_table['geometry'].area
     geo_table['perimeter'] = geo_table['geometry'].length
@@ -224,8 +224,8 @@ def merge_test(tables):
     print(alkis.iloc[0]['geometry'])
 
     logging.info("Join alkis buildings with block data...")
-    alkis = alkis[['AnzahlDerO', 'Strassen_n', 'Hausnummer', 'PseudoNumm',
-                   'area', 'perimeter', 'Gebaeudefu', 'gml_id', 'geometry']]
+    alkis = alkis[['AnzahlDerO', 'area', 'perimeter', 'Gebaeudefu', 'gml_id',
+                   'geometry']]
     block_j = polygons[['SCHL5', 'PLR', 'STAT', 'TYPKLAR', 'EW_HA', 'geometry']]
     alkis['geometry'] = alkis.representative_point()
     alkis = gpd.sjoin(alkis, block_j, how='left', op='within')
@@ -259,7 +259,7 @@ def merge_test(tables):
     # not have the time to think about it. As it has to be done only once it
     # is not really time-sensitive.
     for row in alkis.loc[alkis['PLR'].isnull()].iterrows():
-        idx = int(row[0].copy())
+        idx = int(row[0])
         point = row[1].geometry
         intersec = False
         n = 0
@@ -295,10 +295,34 @@ def merge_test(tables):
     alkis_poly = alkis_poly.merge(alkis, on='gml_id')
     alkis_poly = alkis_poly.set_geometry('geometry')
     logging.info("Dump new alkis layer with additional block data.")
-    alkis_poly.to_file('/home/uwe/alkis_polygon.shp')
-    alkis_poly.to_csv('/home/uwe/alkis_polygon.csv')
-    alkis_poly.to_hdf('/home/uwe/alkis_polygon.hdf', 'buildings')
-    exit(0)
+
+    filename_shp = os.path.join(cfg.get('paths', 'fis_broker'),
+                                cfg.get('fis_broker', 'alkis_joined_shp'))
+    alkis_poly.to_file(filename_shp)
+
+
+def convert_file_format():
+    filename_hdf = os.path.join(cfg.get('paths', 'fis_broker'),
+                                cfg.get('fis_broker', 'alkis_joined_hdf'))
+    filename_csv = os.path.join(cfg.get('paths', 'fis_broker'),
+                                cfg.get('fis_broker', 'alkis_joined_csv'))
+    filename_shp = os.path.join(cfg.get('paths', 'fis_broker'),
+                                cfg.get('fis_broker', 'alkis_joined_shp'))
+    filename_geo_csv = os.path.join(cfg.get('paths', 'fis_broker'),
+                                    cfg.get('fis_broker', 'alkis_geometry_csv'))
+
+    alkis = gpd.read_file(filename_shp)
+    alkis.to_csv(filename_csv)
+
+    data = pd.read_csv(filename_csv, index_col=[0])
+    data['gml_id'] = data['gml_id'].str.replace(
+        's_wfs_alkis_gebaeudeflaechen.', '')
+    data['SCHL5'] = data['SCHL5'].str.replace('s_ISU5_2015_UA.', '')
+    data.set_index('gml_id', drop=True, inplace=True)
+    data['geometry'].to_csv(filename_geo_csv)
+    del data['geometry']
+    data.to_csv(filename_csv)
+    data.to_hdf(filename_hdf, 'alkis')
 
 
 if __name__ == "__main__":
@@ -323,4 +347,5 @@ if __name__ == "__main__":
         shapefile_from_fisbroker(**maps[key])
 
     # process_alkis_buildings()
-    merge_test(maps)
+    # merge_test(maps)
+    convert_file_format()

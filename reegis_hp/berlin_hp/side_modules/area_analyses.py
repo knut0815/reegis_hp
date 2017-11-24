@@ -13,6 +13,7 @@ import pandas as pd
 import geoplot
 import oemof.db as db
 import numpy as np
+from reegis_hp.berlin_hp import config as cfg
 from oemof.tools import logger
 plt.style.use('ggplot')
 
@@ -62,10 +63,11 @@ basic_path = '/home/uwe/.oemof/reegis_hp'
 logging.info("Datapath: {0}:".format(basic_path))
 
 # Read tables from csv
-df = pd.read_hdf(os.path.join(sync_path, 'eQuarter_0-73_berlin_newage.hdf'),
-                 'oeq')
+filename_oeq_results = os.path.join(cfg.get('paths', 'oeq'),
+                                    cfg.get('oeq', 'results'))
+df = pd.read_hdf(filename_oeq_results, 'oeq')
 # df.to_csv(os.path.join(basic_path, 'eQuarter_0-73_berlin_newage.csv'))
-df['spatial_int'] = df.spatial_na.apply(int)
+df['spatial_int'] = df.block.apply(int)
 bloecke = pd.read_hdf(os.path.join(sync_path, 'bloecke.hdf'), 'block')
 stadtnutzung = pd.read_hdf(
     os.path.join(sync_path, 'stadtnutzung_erweitert.hdf'), 'stadtnutzung')
@@ -140,7 +142,7 @@ area_plr['area_alkis'] *= (area_plr.area_stadtnutz.sum() /
                            area_plr.area_alkis.sum())
 
 # Calculate living area per habitant
-area_plr = area_plr.div(area_plr.ew, axis='index')
+area_plr = area_plr.div(area_plr.ew_x, axis='index')
 
 # Convert key (schluessel) from string to float
 planungsraum['key'] = planungsraum.schluessel.astype(float)
