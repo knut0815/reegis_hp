@@ -15,7 +15,8 @@ bbox = tuple(shapes[0].bbox)  # Retrieves the bounding box of the first shape
 print(bbox)
 
 wms = WebMapService(
-    'http://fbinter.stadt-berlin.de/fb/wms/senstadt/gebaeudealter',
+    # 'http://fbinter.stadt-berlin.de/fb/wms/senstadt/gebaeudealter',
+    'http://fbinter.stadt-berlin.de/fb/wms/senstadt/step_fernw',
     version='1.1.1')
 print(wms.identification.type)
 print(wms.identification.title)
@@ -41,9 +42,9 @@ print(wms.getOperationByName('GetMap').formatOptions)
 # https://geopython.github.io/OWSLib/#wms
 img = wms.getmap(layers=['0'],
                  styles=['gdi_default'],
-                 srs='EPSG:3068',
-                 bbox=(25702, 18332, 27280, 20110),
-                 size=(1578, 1778),
+                 srs='EPSG:4326',
+                 bbox=bbox,
+                 # size=(1578, 1778),
                  format='image/png',
                  transparent=True
                  )

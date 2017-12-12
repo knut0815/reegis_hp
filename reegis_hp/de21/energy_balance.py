@@ -334,7 +334,6 @@ def edit_balance():
 
     new_index_values = list()
     sector = cfg.get_dict('SECTOR')
-    print(pd.Series(sector))
     for value in eb.index.get_level_values(2):
         new_index_values.append(sector[value])
     eb.index.set_levels(new_index_values, level=2, inplace=True)
@@ -363,7 +362,7 @@ def edit_balance():
     electricity = {2012: 9150, 2013: 7095}
     gas = {2012: -27883, 2013: -13317}
     total = {2012: -18733, 2013: -6223}
-    for row in ['total', 'domestic and retail', 'domestic']:
+    for row in ['total', 'domestic and retail', 'retail']:
         for y in [2012, 2013]:
             eb.loc[(y, 'BE', row), 'electricity'] += electricity[y]
             eb.loc[(y, 'BE', row), 'natural gas'] += gas[y]
@@ -488,12 +487,11 @@ def get_states_balance(year=None, grouped=False, overwrite=False):
 
 if __name__ == "__main__":
     logger.define_logging()
-    # fn = os.path.join(cfg.get('paths', 'static'),
-    #                   cfg.get('general_sources', 'energiebilanzen_laender'))
-    # check_balance(orig=True, ebfile=fn)
-    # fn = fix_balance()
-    # check_balance(orig=False, ebfile=fn)
-    # print(get_de_balance(year=None, grouped=False).columns)
-    # exit(0)
-    print(get_states_balance(2013, overwrite=True))
-    print(get_domestic_retail_share(2013))
+    fn = os.path.join(cfg.get('paths', 'static'),
+                      cfg.get('general_sources', 'energiebilanzen_laender'))
+    check_balance(orig=True, ebfile=fn)
+    fn = edit_balance()
+    check_balance(orig=False, ebfile=fn)
+    print(get_de_balance(year=None, grouped=False).columns)
+    print(get_states_balance(2012, overwrite=True))
+    print(get_domestic_retail_share(2012))

@@ -32,8 +32,9 @@ def query2df(sql_string, columns=None):
     return pd.DataFrame(results.fetchall(), columns=columns)
 
 
-sql = "SELECT DISTINCT gebaeude_1 FROM berlin.alkis_gebaeude"
+sql = "SELECT DISTINCT gebaeude_1, gebaeudefu FROM berlin.alkis_gebaeude"
 types = query2df(sql)
+types.to_csv("/home/uwe/alkis_gebaeudefunktion_name_id.csv")
 buildings = pd.DataFrame()
 
 for typ in types.gebaeude_1:

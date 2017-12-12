@@ -188,7 +188,7 @@ def get_de21_profile(year, kind, annual_demand=None, overwrite=False):
         logging.error('Method "{0}" not found.'.format(kind))
 
 
-def test_elec_demand(year):
+def elec_demand_tester(year):
     oe = get_de21_profile(year, 'openego') * 1000000
     rp = get_de21_profile(year, 'renpass') * 1000000
     ege = get_de21_profile(year, 'openego_entsoe') * 1000000

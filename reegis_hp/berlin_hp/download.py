@@ -11,9 +11,8 @@ from reegis_hp.berlin_hp import config as cfg
 import subprocess as sub
 import geopandas as gpd
 import pandas as pd
-from shapely.wkt import loads as wkt_loads
 import logging
-from oemof.tools import logger
+import oemof.tools.logger as logger
 from shutil import copyfile
 import warnings
 
@@ -326,8 +325,8 @@ def convert_file_format():
 
 
 if __name__ == "__main__":
-    log_file = os.path.join(cfg.get('paths', 'berlin_hp'), 'download.log')
-    logger.define_logging()
+    log_path = os.path.join(cfg.get('paths', 'berlin_hp'))
+    logger.define_logging(log_path, 'download.log')
 
     # alkis = {'table': 'alkis_test',
     #          'senstadt_server': 'data'}
@@ -348,4 +347,4 @@ if __name__ == "__main__":
 
     # process_alkis_buildings()
     # merge_test(maps)
-    convert_file_format()
+    # convert_file_format()

@@ -26,6 +26,23 @@ filename_geo_csv = os.path.join(cfg.get('paths', 'fis_broker'),
 filename_oeq_results = os.path.join(cfg.get('paths', 'oeq'),
                                     cfg.get('oeq', 'results'))
 
+res = pd.read_hdf(filename_oeq_results, 'oeq')
+
+print(res.columns)
+res['count'] = 1
+res_count = res.groupby('building_function').sum()
+print(type(res_count))
+types = pd.read_csv("/home/uwe/alkis_gebaeudefunktion_name_id.csv",
+                    index_col=[0]).fillna(0)
+types['gebaeudefu'] = types['gebaeudefu'].apply(int)
+types = types.set_index('gebaeudefu', drop=True)
+# print(types)
+new = pd.merge(res_count, types, left_index=True, right_index=True, how='left')
+print(new[['living_area', 'count', 'gebaeude_1']].to_csv('/home/uwe/liv.csv'))
+print(new.columns)
+# print(res['building_function'].unique())
+exit(0)
+
 if not os.path.isfile(filename_hdf) or overwrite:
     # fetch data from download module
     pass
