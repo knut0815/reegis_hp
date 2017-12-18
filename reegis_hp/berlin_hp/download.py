@@ -238,7 +238,8 @@ def merge_test(tables):
     # geoheiz = gpd.GeoDataFrame(heiz, crs={'init': 'epsg:4326'})[[
     #     'PRZ_FERN', 'PRZ_GAS', 'PRZ_KOHLE', 'PRZ_NASTRO', 'PRZ_OEL',
     #     'geometry']]
-    geoheiz = gpd.read_file('/home/uwe/heizungsarten.shp')[[
+
+    geoheiz = gpd.read_file(cfg.get('tmp_sources', 'heat_src'))[[
         'PRZ_FERN', 'PRZ_GAS', 'PRZ_KOHLE', 'PRZ_NASTRO', 'PRZ_OEL',
         'geometry']]
 
@@ -346,5 +347,5 @@ if __name__ == "__main__":
         shapefile_from_fisbroker(**maps[key])
 
     # process_alkis_buildings()
-    # merge_test(maps)
-    # convert_file_format()
+    merge_test(maps)
+    convert_file_format()
