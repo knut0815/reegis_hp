@@ -1,10 +1,11 @@
 import pandas as pd
+import geopandas as gpd
 import time
 import logging
 import os
 
-from reegis_hp.berlin_hp import config as cfg
-from oemof.tools import logger
+import reegis_hp.berlin_hp.config as cfg
+import oemof.tools.logger as logger
 
 logger.define_logging()
 start = time.time()
@@ -32,6 +33,26 @@ logging.info("Query...")
 
 subset = data.query("building_function == 1010")
 logging.info("Sum...")
+# print(data.columns)
+print(data.block.unique())
+
+path = '/home/uwe/chiba/Promotion/Statstik/Fernwaerme/Fernwaerme_2007'
+fw_map = gpd.read_file(os.path.join(path, 'district_heat_blocks.shp'))
+stift2name = fw_map.groupby(['STIFT', 'KLASSENNAM']).size().reset_index(
+    level='KLASSENNAM')['KLASSENNAM']
+print(stift2name)
+
+fw_map['gml_id'] = fw_map['gml_id'].str.replace('s_ISU5_2015_UA.', '')
+
+# fw = fw_map[['gml_id', 'STIFT']]
+data = data.merge(fw_map[['gml_id', 'STIFT']], left_on='block',
+                  right_on='gml_id', how='left')
+# print(data.columns)
+# grp = pd.Series(data.groupby('STIFT').size())
+# print(type(grp))
+# print(type(stift2name))
+# print(pd.concat([grp, stift2name], axis=1))
+
 cols = ['air_change_heat_loss', 'total_trans_loss_pres',
         'total_trans_loss_contemp', 'total_loss_pres', 'total_loss_contemp',
         'HLAC', 'HLAP', 'AHDC', 'AHDP', 'total']
@@ -57,6 +78,12 @@ data[frac_cols] = data[frac_cols].multiply(data['total'] * 0.01, axis=0)
 print((data['total'].sum() - data['frac_elec'].sum()) / 1000 / 1000 / 1000)
 print(data[frac_cols].sum() / 1000 / 1000 / 1000)
 print(data[frac_cols].sum().sum() / 1000 / 1000 / 1000)
+
+neuer = data.groupby('STIFT').sum()['frac_district_heating']
+grt = pd.concat([neuer, stift2name], axis=1)
+print(grt)
+print(grt.sum())
+
 
 print(subset.total_loss_contemp.sum() / subset.living_area.sum())
 print(subset.total_loss_pres.sum() / subset.living_area.sum())
