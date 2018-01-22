@@ -8,7 +8,7 @@ from oemof import network
 from oemof.solph import EnergySystem
 from oemof.solph.options import BinaryFlow, Investment
 from oemof.solph.plumbing import sequence
-from oemof.solph.network import (Bus, Source, Sink, Flow, Transformer,
+from oemof.solph.network import (Bus, Source, Sink, Flow, LinearTransformer,
                                  Storage)
 
 
@@ -349,7 +349,7 @@ def nodes_from_csv(file_nodes_flows=None, file_nodes_flows_sequences=None,
 
     # class dictionary for dynamic instantiation
     classes = {'Source': Source, 'Sink': Sink,
-               'LinearTransformer': Transformer,
+               'LinearTransformer': LinearTransformer,
                'Storage': Storage, 'Bus': Bus}
     classes.update(additional_classes)
 

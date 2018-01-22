@@ -22,6 +22,8 @@ filename_heat_factor = os.path.join(cfg.get('paths', 'static'),
 heat = pd.read_csv(filename_heat_profile, index_col=[0], header=[0, 1, 2],
                    parse_dates=True)
 heat_factor = pd.read_csv(filename_heat_factor, index_col=[0])
+print(heat_factor)
+exit(0)
 print(heat['BE'].sum())
 print(heat['BE'].sum().groupby(level=1).sum() * 1/3.6e+3)
 print(heat['BE'].sum().groupby(level=0).sum() * 1/3.6e+3)
@@ -87,3 +89,4 @@ print(grt.sum())
 
 print(subset.total_loss_contemp.sum() / subset.living_area.sum())
 print(subset.total_loss_pres.sum() / subset.living_area.sum())
+

@@ -32,5 +32,6 @@ def powerplants():
     btb_group['JNGel'] = btb_group['out_el'] / btb_group['el Leistung MW']
     print(btb_group)
 
+
 if __name__ == "__main__":
     powerplants()

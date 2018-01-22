@@ -31,7 +31,7 @@ def initialise_energy_system():
     return solph.EnergySystem(timeindex=time_index)
 
 
-def berlin_model(berlin_e_system):
+def heat_model(berlin_e_system):
     """
 
     Parameters
@@ -42,25 +42,24 @@ def berlin_model(berlin_e_system):
     -------
 
     """
-    time_index = berlin_e_system.timeindex
     p = preferences.Basic()
     d = preferences.Data()
 
-    logging.info("Adding objects to the energy system...")
+    heat_demand = heat.DemandHeat(berlin_e_system.timeindex)
+    # print(heat_demand.get(columns=['block', 'lor', 'statistical_region']))
 
-    # Electricity Bus
-    solph.Bus(label='bus_el')
-
-    heat_demand = heat.DemandHeat(time_index)
+    # Get all columns with heating system fraction
     heating_systems = [s for s in heat_demand.get().columns if "frac_" in s]
+    print(heat_demand.get().columns)
 
-    remove_string = 'frac_'
+    # get
     heat_demand.demand_by('total_loss_pres', heating_systems, d.bt_dict,
-                          remove_string, percentage=True)
+                          remove_string='frac_', percentage=True)
+
     heat_demand.print(table='oeq')
     heat_demand.df = heat_demand.dissolve('bezirk', 'demand_by', index=True)
     print(heat_demand.df)
-    exit()
+
     heat_demand.df = heat_demand.df.rename(
         columns={k: k.replace('frac_', '')
                  for k in heat_demand.df.columns.get_level_values(1)})
@@ -186,7 +185,7 @@ def berlin_model(berlin_e_system):
         dsum[b, 'bhkw'] = new[b]['bhkw']
         dsum[b, 'wp'] = new[b]['wp']
 
-    dsum.drop('district_heating', 0, 'second', True)
+    # dsum.drop('district_heating', 0, 'second', True)
     dsum.sort_index(inplace=True)
 
     ew = pd.read_csv('/home/uwe/chiba/RLI/data/stadtnutzung_erweitert.csv')[
@@ -283,7 +282,7 @@ import pickle
 plot_only = False
 
 if not plot_only:
-    opmodel = berlin_model(initialise_energy_system())
+    opmodel = heat_model(initialise_energy_system())
     results = outputlib.processing.results(opmodel)
     pickle.dump(results, open('data.pkl', 'wb'), -1)
 else:

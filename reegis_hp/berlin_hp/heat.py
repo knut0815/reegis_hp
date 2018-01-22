@@ -3,6 +3,7 @@ import pandas as pd
 import os
 
 from matplotlib import pyplot as plt
+from reegis_hp.berlin_hp import config as cfg
 
 
 class DemandHeat:
@@ -21,8 +22,10 @@ class DemandHeat:
     def load_data(self):
         if self.method == 'oeq':
             if not self.filename:
-                self.filename = 'eQuarter_berlin.hdf'
-            self.data = pd.HDFStore(os.path.join(self.datapath, self.filename))
+                self.filename = cfg.get('oeq', 'results')
+            self.data = pd.HDFStore(os.path.join(cfg.get('paths', 'oeq'),
+                                                 self.filename),
+                                    mode='r')
 
         elif self.method == 'wt':
             if not self.filename:
@@ -69,40 +72,68 @@ class DemandHeat:
         else:
             prz = 1
 
+        # Open the hdf-file
         self.data.open()
+
+        # if building_types is None all building will be fetched
         if building_types is None:
             building_types = {'all': '{0} == {0}'.format(demand_column)}
+
+        # Create an empty DataFrame with the same index as the data DataFrame
         demand_by_building = pd.DataFrame(
             index=self.data[self.method].index)
+
+        # Loop over the building types and use the condition to filter.
+        # The value from demand column is written into the new condition
+        # column if the condition  is true
         for btype, condition in building_types.items():
             demand_by_building.loc[self.data[self.method].query(
                 condition).index, btype] = (
                 self.data[self.method][demand_column][self.data[
                     self.method].query(condition).index])
 
+        # Create an empty DataFrame with the same index as the data DataFrame
         demand = pd.DataFrame(index=self.data[self.method].index)
+
+        # Get the columns from the buildings condition
         loop_list = demand_by_building.keys()
+
+        # If heating system is None do not filter.
         if heating_systems is None:
             loop_list = []
             heating_systems = []
+
         blist = list()
         for btype in loop_list:
+            # Create renaming dictionary
             rename_dict = {
                 col: 'demand_' + btype + '_' + col.replace(
                     remove_string, '')
                 for col in heating_systems}
+
+            # Multiply each buildings column with the heating system fraction
             demand = demand.combine_first(
                 self.data[self.method][heating_systems].multiply(
                     demand_by_building[btype], axis='index').div(prz))
+
+            # Rename the columns
             demand = demand.rename(columns=rename_dict)
+
+            # Create a list with name of building columns with
             blist.extend(list((btype, )) * len(heating_systems))
         hlist = heating_systems * len(set(blist))
+        # print(blist)
+        # print(hlist)
+        # print(demand.columns)
         multindex = pd.MultiIndex.from_tuples(list(zip(blist, hlist)),
                                               names=['first', 'second'])
+        # print(multindex)
         self.data['demand_by'] = pd.DataFrame(
             data=demand.as_matrix(), columns=multindex,
-            index=self.data[self.method].plr_key)
+            index=self.data[self.method].index)
         self.data['building_types'] = pd.Series(building_types)
+        # print(self.data['demand_by'])
+        # print(self.data['building_types'])
         self.data.close()
 
     def dissolve(self, level, table, column=None,
@@ -144,6 +175,8 @@ class DemandHeat:
             logging.error("Wrong level: {0}".format(error_level))
 
         level *= 2
+        level += 6
+        print(self.data[table].index.str[:level])
         if index:
             results = self.data[table].groupby(
                 self.data[table].index.str[:level])[
