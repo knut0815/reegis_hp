@@ -259,6 +259,7 @@ def heat_demand(year):
     # The use of electricity belongs to the electricity sector. It is possible
     # to connect it to the heating sector for future scenarios.
     del eb['electricity']
+    del eb['total']  # if electricity is removed total is not correct anymore.
 
     # get fraction of mechanical energy use and subtract it from the balance to
     # get the use of heat only.
@@ -268,6 +269,7 @@ def heat_demand(year):
             eb.loc[(slice(None), c), i] -= (
                 eb.loc[(slice(None), c), i] * share_mech.loc[i, c])
     eb.sort_index(inplace=True)
+
     return eb
 
 
@@ -367,6 +369,8 @@ def get_heat_profile_from_demandlib(temperature, annual_demand, sector, year,
         shlp_type = 'EFH'
     elif 'mfh' in sector:
         shlp_type = 'MFH'
+    elif 'domestic' in sector:
+        shlp_type = 'MFH'
     elif 'retail' in sector:
         shlp_type = 'ghd'
         build_class = 0
@@ -382,7 +386,7 @@ def get_heat_profile_from_demandlib(temperature, annual_demand, sector, year,
         ).get_bdew_profile()
 
 
-def get_heat_profiles_by_state(year, to_csv=False):
+def get_heat_profiles_by_state(year, to_csv=False, divide_domestic=False):
     building_class = {}
     for (k, v) in cfg.get_dict('building_class').items():
         for s in v.split(', '):
@@ -391,18 +395,19 @@ def get_heat_profiles_by_state(year, to_csv=False):
     house_flats = share_houses_flats('share_area')
     demand_state = heat_demand(year).sort_index()
 
-    for state in demand_state.index.get_level_values(0).unique():
-        dom = demand_state.loc[state, 'domestic']
-        demand_state.loc[(state, 'domestic_efh'), ] = (
-            dom * house_flats.loc[state, '1 + 2 Wohnungen'])
-        demand_state.sort_index(0, inplace=True)
-        dom = demand_state.loc[state, 'domestic']
-        demand_state.loc[(state, 'domestic_mfh'), ] = (
-            dom * house_flats.loc[state, '3 und mehr Wohnungen'])
-        demand_state.sort_index(0, inplace=True)
+    if divide_domestic:
+        for state in demand_state.index.get_level_values(0).unique():
+            dom = demand_state.loc[state, 'domestic']
+            demand_state.loc[(state, 'domestic_efh'), ] = (
+                dom * house_flats.loc[state, '1 + 2 Wohnungen'])
+            demand_state.sort_index(0, inplace=True)
+            dom = demand_state.loc[state, 'domestic']
+            demand_state.loc[(state, 'domestic_mfh'), ] = (
+                dom * house_flats.loc[state, '3 und mehr Wohnungen'])
+            demand_state.sort_index(0, inplace=True)
 
-    demand_state.sort_index(inplace=True)
-    demand_state.drop('domestic', level=1, inplace=True)
+        demand_state.sort_index(inplace=True)
+        demand_state.drop('domestic', level=1, inplace=True)
 
     temperature_file = os.path.join(
         cfg.get('paths', 'weather'),
@@ -447,7 +452,7 @@ def get_heat_profiles_by_region(year):
         demand_state = demand_state.tz_localize('UTC').tz_convert(
             'Europe/Berlin')
     else:
-        demand_state = get_heat_profiles_by_state(year, to_csv=False)
+        demand_state = get_heat_profiles_by_state(year, to_csv=True)
 
     my_columns = pd.MultiIndex(levels=[[], [], [], []], labels=[[], [], [], []])
     demand_region = pd.DataFrame(index=demand_state.index, columns=my_columns)
@@ -483,5 +488,6 @@ def get_heat_profiles_by_region(year):
 if __name__ == "__main__":
     logger.define_logging()
     for y in [2012, 2013]:
-        get_heat_profiles_by_region(y)
+        # get_heat_profiles_by_region(y)
+        print(heat_demand(y).loc['BE'].sum().sum() / 3.6)
     logging.info("Done!")

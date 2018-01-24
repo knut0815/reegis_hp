@@ -143,7 +143,7 @@ def extend_path(basic_path, new_dir):
 
 def set_berlin_hp_paths():
     # initialise de21 configuration
-    logging.info('Loading de21 configuration....')
+    logging.info('Loading berlin_hp configuration....')
 
     # Set default paths for 'basic' and 'data' if set to 'None' in the ini-file
     if get('paths', 'basic') is None:
