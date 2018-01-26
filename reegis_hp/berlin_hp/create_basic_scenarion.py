@@ -11,11 +11,78 @@ import oemof.tools.logger as logger
 import demandlib.bdew as bdew
 
 from workalendar.europe import Germany
+from matplotlib import pyplot as plt
 
 
 def time_logger(txt, start):
     msg = "{0}.Elapsed time: {1}".format(txt, datetime.datetime.now() - start)
     logging.info(msg)
+
+
+def heat_profile_singel():
+    pass
+
+
+def get_heat_profiles(shlp, year):
+    """
+
+    Parameters
+    ----------
+    shlp : dict
+    year : int
+
+    Returns
+    -------
+    pandas.DataFrame
+
+    """
+    # Todo Der Pfad muss besser werden. Repository strukturieren.
+    # Get the average temperature for the state of Berlin
+    weather = pd.HDFStore(
+        '/home/uwe/express/reegis/data/weather/coastDat2_de_2013.h5',
+        mode='r')
+
+    # Coastdat ids of the raster fields that touches Berlin
+    berlin_coastdat_id = [1137095, 1137096, 1138095, 1138096, 1138097, 1139095,
+                          1139096]
+
+    # Get temperature timeseries for every data point.
+    temperature = pd.DataFrame()
+    for cd_id in berlin_coastdat_id:
+        temperature[cd_id] = weather['A{0}'.format(cd_id)]['temp_air']
+    weather.close()
+
+    # Calculate the average temperature in degree Celsius
+    temperature -= 272.15
+    temperature = temperature.sum(axis=1).div(len(berlin_coastdat_id))
+
+    # Fetch the holidays of Germany from the workalendar package
+    cal = Germany()
+    holidays = dict(cal.holidays(year))
+
+    fuel_list = shlp[list(shlp.keys())[0]]['demand'].index
+
+    profile_fuel = pd.DataFrame()
+    for fuel in fuel_list:
+        fuel_name = fuel.replace('frac_', '')
+        profile_type = pd.DataFrame()
+        for shlp_type in shlp.keys():
+            shlp_name = str(shlp_type)
+            profile_type[fuel_name + '_' + shlp_name] = bdew.HeatBuilding(
+                temperature.index, holidays=holidays, temperature=temperature,
+                shlp_type=shlp_type, wind_class=0,
+                building_class=shlp[shlp_type]['build_class'],
+                annual_heat_demand=shlp[shlp_type]['demand'][fuel],
+                name=fuel_name + shlp_name, ww_incl=True).get_bdew_profile()
+
+        if fuel_name == 'district_heating':
+            for n in profile_type.columns:
+                profile_fuel[n] = profile_type[n]
+        else:
+            profile_fuel[fuel_name] = profile_type.sum(axis=1)
+    # profile_fuel.plot()
+    # plt.show()
+    return profile_fuel
 
 
 def create():
@@ -43,8 +110,8 @@ def create():
     time_logger('Heat factor loaded.', start)
 
     # Heat demand from energy balance (de21)
-    filename_heat_reference = os.path.join(cfg.get('paths', 'oeq'),
-                                           'heat_reference{0}.csv'.format(year))
+    filename_heat_reference = os.path.join(
+        cfg.get('paths', 'oeq'), 'heat_reference{0}.csv'.format(year))
 
     if not os.path.isfile(filename_heat_reference):
         heat_reference = de21_demand.heat_demand(year).loc['BE'].div(3.6)
@@ -59,7 +126,7 @@ def create():
     filename_map = os.path.join(chiba, 'Promotion', 'Statstik', 'Fernwaerme',
                                 'Fernwaerme_2007', 'district_heat_blocks.shp')
     fw_map = gpd.read_file(filename_map)
-    time_logger('District heating areas loaded.', start)
+
     # Create translation Series with STIFT (numeric) and KLASSENNAM (text)
     stift2name = fw_map.groupby(['STIFT', 'KLASSENNAM']).size().reset_index(
         level='KLASSENNAM')['KLASSENNAM']
@@ -69,9 +136,9 @@ def create():
     fw_map['gml_id'] = fw_map['gml_id'].str.replace('s_ISU5_2015_UA.', '')
 
     # Every building has a block id from the block the building is located.
-    # Every block that touches a district heating area has the STIFT (number) of
-    # this district heating system. By merging this information every building
-    # gets the STIFT (number) of the district heating area.
+    # Every block that touches a district heating area has the STIFT (number)
+    # of this district heating system. By merging this information every
+    # building gets the STIFT (number) of the district heating area.
     data = data_oeq.merge(fw_map[['gml_id', 'STIFT']], left_on='block',
                           right_on='gml_id', how='left')
 
@@ -118,81 +185,76 @@ def create():
     # Multiply the heat demand of the buildings with the heat factor
     data['total'] *= data['heat_factor']
 
-    # Level the overall heat demand with the heat demand from the energy balance
+    # Level the overall heat demand with the heat demand from the energy
+    # balance
     factor = heat_reference.sum().sum() / (data['total'].sum() / 1000 / 1000)
     data['total'] = data['total'] * factor
     # data['ghd'] = data['ghd'] * data['total']
     # data['mfh'] = data['mfh'] * data['total']
     # data.to_excel('dasf.xlsx')
-    # Todo: Prozesswärme
     # print(data['tot_gud'].sum())
     # exit(0)
 
-    # Multiply fraction columns with total heat demand to get the total demand
-    # for each fuel type.
-    ghd = data[frac_cols].multiply(data['total'] * data['ghd'], axis=0)
-    mfh = data[frac_cols].multiply(data['total'] * data['mfh'], axis=0)
+    # Todo: Prozesswärme
 
-    print(ghd.sum())
-    print(mfh.sum())
-    print(data['total'].sum())
-    exit(0)
-    weather = pd.HDFStore(
-        '/home/local/RL-INSTITUT/uwe.krien/reegis/de21/weather/coastDat2_de_2013.h5',
-        mode='r')
-    berlin_coastdat_id = [1137095, 1137096, 1138095, 1138096, 1138097, 1139095,
-                          1139096]
-    from matplotlib import pyplot as plt
-    temperature = pd.DataFrame()
-    for cd_id in berlin_coastdat_id:
-        temperature[cd_id] = weather['A{0}'.format(cd_id)]['temp_air']
+    shlp = {'ghd': {'build_class': 0},
+            'mfh': {'build_class': 1}}
 
-    temperature -= 272.15
-    temperature = temperature.sum(axis=1).div(len(berlin_coastdat_id))
-    temperature.plot()
-    cal = Germany()
-    holidays = dict(cal.holidays(year))
-    plt.show()
+    for t in shlp.keys():
+        # Multiply fraction columns with total heat demand to get the total
+        # demand for each fuel type
+        shlp[t]['demand'] = data[frac_cols].multiply(data['total'] * data[t],
+                                                     axis=0).sum()
+        print(t, shlp[t]['demand'])
 
-    # Divide the heat demand by building type
-    demand_ghd = data['total'].multiply(data['ghd']).sum()
-    demand_mfh = data['total'].multiply(data['mfh']).sum()
+    # ************Von hier Kommentare schreiben
 
-    ghd = {'shlp_type': 'ghd', 'build_class': 0, 'demand': demand_ghd}
-    mfh = {'shlp_type': 'mfh', 'build_class': 1, 'demand': demand_mfh}
+    # Create h
+    heat_profiles = get_heat_profiles(shlp, year)
 
-    slp_list = [ghd, mfh]
+    data['district_mfh'] = (data['frac_district_heating'] *
+                            data['mfh'] * data['total'])
+    data['district_ghd'] = (data['frac_district_heating'] *
+                            data['ghd'] * data['total'])
 
-    demand_profile = pd.DataFrame()
-    for slp in slp_list:
-        demand_profile[slp['shlp_type']] = bdew.HeatBuilding(
-            temperature.index, holidays=holidays, temperature=temperature,
-            shlp_type=slp['shlp_type'], wind_class=0,
-            building_class=slp['build_class'], annual_heat_demand=slp['demand'],
-            name=slp['shlp_type'], ww_incl=True
-            ).get_bdew_profile()
 
-    demand_profile = demand_profile.sum(axis=1)
-    demand_profile.plot()
-    plt.show()
-    print(data[frac_cols].sum())
 
-    neuer = data.groupby('STIFT').sum()['frac_district_heating']
+    cols = ['district_mfh', 'district_ghd']
+    neuer = data.groupby('STIFT').sum()[cols]
     grt = pd.concat([neuer, stift2name], axis=1)
     print(grt)
+
     # Hierbei fällt STIFT 0, also die unbestimmten FW-Nutzer unter den Tisch.
     g = grt.set_index('KLASSENNAM').groupby(by=district_heating_groups).sum()
     print(g)
+    m = g.div(g.sum())
+    print('frac:', m)
+    print('fracsum', m.sum())
+    for nr in m.index:
+        print(nr)
+        heat_profiles[nr] = (
+            heat_profiles['district_heating_mfh'] * m.loc[nr, 'district_mfh'] +
+            heat_profiles['district_heating_ghd'] * m.loc[nr, 'district_ghd'])
+    del heat_profiles['district_heating_ghd']
+    del heat_profiles['district_heating_mfh']
+
+    # DAS IST DAS ERGEBNIS-DATAFRAME() mit Lastkurven für alle demands!!!
+    # Jetzt noch die PV und Wind Kurven! Vielleicht nochmal bei Julia gucken.
+    # Oder in den anderen Scripten. Dachte eigentlich da wäre schon was. Sonst
+    # gucken ob aus de21 was recyled werden kann.
+    print(heat_profiles.sum().sum())
+    exit(0)
+
     print(g.sum())
     print(grt.sum())
     print(grt.sum() - g.sum())
     exit(0)
     print(grt)
     print(grt.sum())
-    f = grt.sum()['frac_district_heating'] / 100
-    print(grt['frac_district_heating'])
+    f = grt.sum()[cols]
+    print(grt[cols])
     print(f)
-    grt['prz'] = grt['frac_district_heating'].div(f)
+    grt['prz'] = grt[cols].div(f)
     print(grt)
 
     logging.info("Done: {0}".format(datetime.datetime.now() - start))
