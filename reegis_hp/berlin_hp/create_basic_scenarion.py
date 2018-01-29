@@ -11,11 +11,10 @@ import oemof.tools.logger as logger
 import demandlib.bdew as bdew
 
 from workalendar.europe import Germany
-from matplotlib import pyplot as plt
 
 
-def time_logger(txt, start):
-    msg = "{0}.Elapsed time: {1}".format(txt, datetime.datetime.now() - start)
+def time_logger(txt, ref):
+    msg = "{0}.Elapsed time: {1}".format(txt, datetime.datetime.now() - ref)
     logging.info(msg)
 
 
@@ -38,8 +37,9 @@ def get_heat_profiles(shlp, year):
     """
     # Todo Der Pfad muss besser werden. Repository strukturieren.
     # Get the average temperature for the state of Berlin
-    weather = pd.HDFStore(
-        '/home/uwe/express/reegis/data/weather/coastDat2_de_2013.h5',
+    weather = pd.HDFStore(os.path.join(
+        cfg.get('paths', 'berlin_hp'), os.path.pardir,
+        'de21/weather/coastDat2_de_2013.h5'),
         mode='r')
 
     # Coastdat ids of the raster fields that touches Berlin
@@ -75,6 +75,8 @@ def get_heat_profiles(shlp, year):
                 annual_heat_demand=shlp[shlp_type]['demand'][fuel],
                 name=fuel_name + shlp_name, ww_incl=True).get_bdew_profile()
 
+        # for district heating the systems the profile will not be summed up
+        # but kept as different profiles ('district_heating_' + shlp_name).
         if fuel_name == 'district_heating':
             for n in profile_type.columns:
                 profile_fuel[n] = profile_type[n]
@@ -87,7 +89,6 @@ def get_heat_profiles(shlp, year):
 
 def create():
     year = 2013
-    start = datetime.datetime.now()
     logging.info("Starting...")
 
     # Get filenames for needed file from config file
@@ -99,7 +100,7 @@ def create():
     filename_oeq_results = os.path.join(cfg.get('paths', 'oeq'),
                                         cfg.get('oeq', 'results'))
     data_oeq = pd.read_hdf(filename_oeq_results, 'oeq')
-    time_logger('OEQ loaded.', start)
+
     # A file with a heat factor for each building type of the alkis
     # classification. Buildings like garages etc get the heat-factor 0. It is
     # possible to define building factors between 0 and 1.
@@ -107,7 +108,6 @@ def create():
                                         'heat_factor_by_building_type.csv')
     heat_factor = pd.read_csv(filename_heat_factor, index_col=[0])
     del heat_factor['gebaeude_1']
-    time_logger('Heat factor loaded.', start)
 
     # Heat demand from energy balance (de21)
     filename_heat_reference = os.path.join(
@@ -118,7 +118,6 @@ def create():
         heat_reference.to_csv(filename_heat_reference)
     else:
         heat_reference = pd.read_csv(filename_heat_reference, index_col=[0])
-    time_logger('Heat reference fetched.', start)
 
     # TODO: Hier muss noch ein besserer Ort her
     # Read map with areas of district heating systems in Berlin
@@ -197,69 +196,61 @@ def create():
 
     # Todo: Prozesswärme
 
+    # Create a dictionary for each demand profile group
     shlp = {'ghd': {'build_class': 0},
             'mfh': {'build_class': 1}}
 
+    # Add the annual demand to the profile dictionary.
     for t in shlp.keys():
         # Multiply fraction columns with total heat demand to get the total
         # demand for each fuel type
         shlp[t]['demand'] = data[frac_cols].multiply(data['total'] * data[t],
                                                      axis=0).sum()
-        print(t, shlp[t]['demand'])
 
-    # ************Von hier Kommentare schreiben
-
-    # Create h
+    # Create the standardised heat load profiles (shlp) for each group
     heat_profiles = get_heat_profiles(shlp, year)
 
-    data['district_mfh'] = (data['frac_district_heating'] *
-                            data['mfh'] * data['total'])
-    data['district_ghd'] = (data['frac_district_heating'] *
-                            data['ghd'] * data['total'])
+    # Create a summable column for each demand group for district heating
+    cols = []
+    for shlp_type in shlp.keys():
+        name = 'district_' + shlp_type
+        data[name] = (data['frac_district_heating'] *
+                      data[shlp_type] * data['total'])
+        cols.append(name)
 
+    # Group district heating by district heating systems (STIFT = id)
+    district_by_stift = data.groupby('STIFT').sum()[cols]
 
+    # Group district heating by own definition (ini) of district heating systems
+    district_groups = pd.DataFrame(
+        pd.concat([district_by_stift, stift2name], axis=1)).set_index(
+            'KLASSENNAM').groupby(by=district_heating_groups).sum()
 
-    cols = ['district_mfh', 'district_ghd']
-    neuer = data.groupby('STIFT').sum()[cols]
-    grt = pd.concat([neuer, stift2name], axis=1)
-    print(grt)
+    # Calculate the fraction of each distric heating group.
+    frac_district_groups = district_groups.div(district_groups.sum())
 
-    # Hierbei fällt STIFT 0, also die unbestimmten FW-Nutzer unter den Tisch.
-    g = grt.set_index('KLASSENNAM').groupby(by=district_heating_groups).sum()
-    print(g)
-    m = g.div(g.sum())
-    print('frac:', m)
-    print('fracsum', m.sum())
-    for nr in m.index:
+    # Create standardised heat load profile for each group
+    for nr in frac_district_groups.index:
         print(nr)
         heat_profiles[nr] = (
-            heat_profiles['district_heating_mfh'] * m.loc[nr, 'district_mfh'] +
-            heat_profiles['district_heating_ghd'] * m.loc[nr, 'district_ghd'])
+            (heat_profiles['district_heating_mfh'] *
+             frac_district_groups.loc[nr, 'district_mfh']) +
+            (heat_profiles['district_heating_ghd'] *
+             frac_district_groups.loc[nr, 'district_ghd']))
     del heat_profiles['district_heating_ghd']
     del heat_profiles['district_heating_mfh']
+
+    print(heat_profiles.sum().sum())
+    return heat_profiles
 
     # DAS IST DAS ERGEBNIS-DATAFRAME() mit Lastkurven für alle demands!!!
     # Jetzt noch die PV und Wind Kurven! Vielleicht nochmal bei Julia gucken.
     # Oder in den anderen Scripten. Dachte eigentlich da wäre schon was. Sonst
     # gucken ob aus de21 was recyled werden kann.
-    print(heat_profiles.sum().sum())
-    exit(0)
-
-    print(g.sum())
-    print(grt.sum())
-    print(grt.sum() - g.sum())
-    exit(0)
-    print(grt)
-    print(grt.sum())
-    f = grt.sum()[cols]
-    print(grt[cols])
-    print(f)
-    grt['prz'] = grt[cols].div(f)
-    print(grt)
-
-    logging.info("Done: {0}".format(datetime.datetime.now() - start))
 
 
 if __name__ == "__main__":
     logger.define_logging()
+    start = datetime.datetime.now()
     create()
+    logging.info("Done: {0}".format(datetime.datetime.now() - start))
