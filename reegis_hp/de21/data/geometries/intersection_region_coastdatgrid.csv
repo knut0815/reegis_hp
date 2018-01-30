@@ -1,4 +1,4 @@
-id,coastdat,region,region_number
+id,weather_id,region_name,region_id
 0,1111111,DE21,21
 1,1111112,DE20,20
 2,1112110,DE21,21

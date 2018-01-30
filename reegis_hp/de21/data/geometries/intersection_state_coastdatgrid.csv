@@ -1,4 +1,4 @@
-id,gid,state
+id,weather_id,region_id
 0,1117088,NW
 1,1117089,NW
 2,1118082,SL

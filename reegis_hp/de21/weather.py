@@ -108,14 +108,19 @@ def get_average_wind_speed(weather_path, grid_geometry_file, geometry_path,
         logging.info("Skipped: Calculating the average wind speed.")
 
 
-def calculate_average_temperature_by_region(year):
+def calculate_average_parameter_by_region(year, filename, parameter='temp_air'):
     """
-    Calculate the average temperature for every de21-region.
+    Calculate the average temperature for all regions (de21, states...).
 
     Parameters
     ----------
     year : int
         Select the year you want to calculate the average temperature for.
+    filename : str
+        Name of a csv file with two columns. One column with the weather id (id)
+        and one with the region id (region).
+    parameter : str
+        Name of the item (temperature, wind speed,... of the weather data set.
 
     """
     weatherfile = os.path.join(
@@ -123,25 +128,37 @@ def calculate_average_temperature_by_region(year):
         cfg.get('weather', 'file_pattern').format(year=year))
     groupingfile = os.path.join(
         cfg.get('paths', 'geometry'),
-        cfg.get('geometry', 'intersection_coastdat_state'))
-    outfile = os.path.join(
-        cfg.get('paths', 'weather'),
-        cfg.get('weather', 'avg_temperature_state').format(year=year))
+        filename)
     groups = pd.read_csv(groupingfile, index_col=[0, 1, 2])
     groups = groups.swaplevel(0, 2).sort_index()
     weather = pd.HDFStore(weatherfile, mode='r')
 
-    temperature = pd.DataFrame()
+    avg_value = pd.DataFrame()
     for region in groups.index.get_level_values(0).unique():
-        cid_list = groups.loc[region].index.get_level_values(0).unique()
-        number_of_sets = len(cid_list)
-        tmp = pd.DataFrame(index=weather['A' + str(cid_list[0])].index)
+        w_id_list = groups.loc[region].index.get_level_values(0).unique()
+        number_of_sets = len(w_id_list)
+        tmp = pd.DataFrame(index=weather['A' + str(w_id_list[0])].index)
         for cid in groups.loc[region].index.get_level_values(0).unique():
-            key = 'A' + str(cid)
-            tmp[cid] = weather[key]['temp_air']
-        temperature[region] = tmp.sum(1).div(number_of_sets)
+            try:
+                cid = int(cid)
+            except ValueError:
+                pass
+            if isinstance(cid, int):
+                key = 'A' + str(cid)
+            else:
+                key = cid
+            tmp[cid] = weather[key][parameter]
+        avg_value[region] = tmp.sum(1).div(number_of_sets)
     weather.close()
-    temperature.to_csv(outfile)
+
+    regions = sorted(groups.index.get_level_values(0).unique())
+    outname = '{0}_{1}'.format(regions[0], regions[-1])
+    outfile = os.path.join(
+        cfg.get('paths', 'weather'),
+        cfg.get('weather', 'avg_temperature_region').format(year=year,
+                                                            type=outname))
+
+    avg_value.to_csv(outfile)
     logging.info("Average temperature saved to {0}".format(outfile))
     return outfile
 
@@ -210,5 +227,6 @@ def coastdat_id2coord():
 
 if __name__ == "__main__":
     logger.define_logging()
-    fetch_coastdat2_year_from_db()
-    # calculate_average_temperature_by_region(2013)
+    # fetch_coastdat2_year_from_db()
+    # calculate_average_parameter_by_region(
+    #     2012, 'intersection_state_coastdatgrid.csv')
